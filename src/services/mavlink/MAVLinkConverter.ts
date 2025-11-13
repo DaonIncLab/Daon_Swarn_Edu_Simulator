@@ -8,6 +8,7 @@
 import type { Command } from '@/types/websocket'
 import type { DroneState } from '@/types/websocket'
 import type { CommandLongMessage, GlobalPositionIntMessage } from '@/types/mavlink'
+import { MAV_STATE } from '@/types/mavlink'
 import { CommandAction, FormationType, Direction } from '@/constants/commands'
 import { MAV_CMD, createCommandLong, createMissionItem, type CommandLongParams } from './MAVLinkCommands'
 import { createCommandLong as createCmdLongMsg } from './MAVLinkMessages'
@@ -19,6 +20,10 @@ import { coordinateConverter } from './CoordinateConverter'
 export class MAVLinkConverter {
   /**
    * Convert Blockly Command to MAVLink COMMAND_LONG message
+   *
+   * Note: Formation commands (SET_FORMATION, MOVE_FORMATION) return empty arrays
+   * because they require multi-drone coordination handled by the simulator/service layer.
+   * Use convertFormationCommand() for formation-specific conversion.
    */
   static blocklyToMAVLink(command: Command, droneId: number = 0): CommandLongParams[] {
     const params = command.params || {}
@@ -54,12 +59,8 @@ export class MAVLinkConverter {
         }]
 
       case CommandAction.SET_FORMATION:
-        // Formation is calculated by GCS, then individual waypoints sent
-        // This will be handled by MAVLinkSimulator
-        return []
-
       case CommandAction.MOVE_FORMATION:
-        // Formation movement - calculate offset for each drone
+        // Formation commands handled by convertFormationCommand()
         return []
 
       case CommandAction.WAIT:
@@ -75,6 +76,70 @@ export class MAVLinkConverter {
         console.warn(`[MAVLinkConverter] Unsupported command: ${command.action}`)
         return []
     }
+  }
+
+  /**
+   * Convert formation command to individual drone waypoints
+   * Returns a map of droneId -> CommandLongParams
+   */
+  static convertFormationCommand(
+    command: Command,
+    droneIds: number[]
+  ): Map<number, CommandLongParams> {
+    const params = command.params || {}
+    const result = new Map<number, CommandLongParams>()
+
+    if (command.action === CommandAction.SET_FORMATION) {
+      // Calculate formation positions
+      const formationType = params.formationType || FormationType.LINE
+      const spacing = params.spacing || 2
+      const centerX = params.x || 0
+      const centerY = params.y || 0
+      const centerZ = params.z || 2
+
+      const positions = this.calculateFormationPositions(
+        formationType,
+        droneIds.length,
+        spacing,
+        params.rows,
+        params.cols,
+        centerX,
+        centerY,
+        centerZ
+      )
+
+      // Create waypoint for each drone
+      droneIds.forEach((droneId, index) => {
+        if (index < positions.length) {
+          const pos = positions[index]
+          result.set(droneId, {
+            command: MAV_CMD.NAV_WAYPOINT,
+            param5: pos.x,
+            param6: pos.y,
+            param7: pos.z,
+            target_system: droneId,
+          })
+        }
+      })
+    } else if (command.action === CommandAction.MOVE_FORMATION) {
+      // Move formation by applying direction offset to all drones
+      const direction = params.direction || Direction.FORWARD
+      const distance = params.distance || 1
+      const offset = this.getDirectionOffset(direction, distance)
+
+      droneIds.forEach((droneId) => {
+        result.set(droneId, {
+          command: MAV_CMD.NAV_WAYPOINT,
+          // Relative movement - actual position calculated by simulator
+          param5: offset.x,
+          param6: offset.y,
+          param7: offset.z,
+          target_system: droneId,
+        })
+      })
+    }
+
+    return result
   }
 
   /**
@@ -317,8 +382,6 @@ export class MAVLinkConverter {
    * Map drone status to MAV_STATE
    */
   static droneStatusToMAVState(status: DroneState['status']): number {
-    const { MAV_STATE } = require('@/types/mavlink')
-
     switch (status) {
       case 'landed':
         return MAV_STATE.STANDBY
@@ -336,8 +399,6 @@ export class MAVLinkConverter {
    * Map MAV_STATE to drone status
    */
   static mavStateTodroneStatus(mavState: number): DroneState['status'] {
-    const { MAV_STATE } = require('@/types/mavlink')
-
     switch (mavState) {
       case MAV_STATE.STANDBY:
         return 'landed'
