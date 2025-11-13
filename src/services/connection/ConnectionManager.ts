@@ -34,8 +34,9 @@ export class ConnectionManager {
    * 연결 설정 및 시작
    */
   async connect(config: ConnectionConfig): Promise<void> {
-    // 기존 연결이 있으면 종료
+    // 기존 연결이 있으면 완전히 종료
     if (this.currentService) {
+      console.log('[ConnectionManager] Cleaning up previous connection before new connect')
       await this.disconnect()
     }
 
@@ -65,12 +66,20 @@ export class ConnectionManager {
    */
   async disconnect(): Promise<void> {
     if (this.currentService) {
+      console.log('[ConnectionManager] Disconnecting and cleaning up service')
       await this.currentService.disconnect()
       this.currentService.cleanup()
+
+      // Explicitly null out service reference
       this.currentService = null
     }
+
+    // Clear all connection state
     this.currentMode = null
     this.config = null
+    // Note: listeners are kept so they can be reused on reconnect
+    // If you want to clear listeners too, uncomment:
+    // this.listeners = null
   }
 
   /**
@@ -182,13 +191,20 @@ export class ConnectionManager {
   }
 
   /**
-   * 클린업
+   * 클린업 (완전한 정리)
    */
   cleanup(): void {
+    console.log('[ConnectionManager] Complete cleanup')
+
     if (this.currentService) {
       this.currentService.cleanup()
       this.currentService = null
     }
+
+    // Clear all state
+    this.currentMode = null
+    this.config = null
+    this.listeners = null
   }
 
   // Private methods

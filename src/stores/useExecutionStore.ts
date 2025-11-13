@@ -9,6 +9,20 @@ import { Interpreter } from '@/services/execution'
 import { parseBlocklyWorkspace } from '@/services/execution'
 import { getConnectionManager } from '@/services/connection/ConnectionManager'
 import type { ExecutionState } from '@/types/execution'
+import * as Blockly from 'blockly'
+
+/**
+ * Simple string hash function for cache validation
+ */
+function simpleHash(str: string): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+  return hash.toString(36)
+}
 
 /**
  * 스크립트 실행 상태
@@ -71,22 +85,46 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
      * 스크립트 실행 (Interpreter 사용)
      */
     executeScript: async () => {
-      const workspace = useBlocklyStore.getState().workspace
+      const blocklyStore = useBlocklyStore.getState()
+      const workspace = blocklyStore.workspace
 
       if (!workspace) {
         set({ error: 'Blockly workspace not initialized' })
         return
       }
 
-      // Blockly 워크스페이스를 실행 트리로 파싱
-      const executionTree = parseBlocklyWorkspace(workspace)
+      // Calculate workspace hash for cache validation
+      const workspaceXml = Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace))
+      const currentHash = simpleHash(workspaceXml)
+
+      // Check if we can use cached parsed tree
+      let executionTree = null
+      const cachedHash = blocklyStore.getWorkspaceHash()
+
+      if (cachedHash === currentHash && blocklyStore.getParsedTree()) {
+        console.log('[ExecutionStore] Using cached execution tree')
+        executionTree = blocklyStore.getParsedTree()
+      } else {
+        // Blockly 워크스페이스를 실행 트리로 파싱
+        console.log('[ExecutionStore] Parsing workspace (cache miss)')
+        executionTree = parseBlocklyWorkspace(workspace)
+
+        if (!executionTree) {
+          set({ error: 'No blocks to execute' })
+          return
+        }
+
+        // Cache the parsed tree
+        blocklyStore.setCachedParsedTree(executionTree, currentHash)
+        console.log('[ExecutionStore] Cached execution tree')
+      }
 
       if (!executionTree) {
         set({ error: 'No blocks to execute' })
         return
       }
 
-      console.log('[ExecutionStore] Parsed execution tree:', executionTree)
+      console.log('[ExecutionStore] Using execution tree:', executionTree)
 
       // ConnectionManager에서 현재 연결 서비스 가져오기
       const connectionManager = getConnectionManager()
