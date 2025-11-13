@@ -7,6 +7,8 @@
  * Reference: https://en.wikipedia.org/wiki/North_east_down
  */
 
+import { MAVLinkCoordinateError } from './MAVLinkError'
+
 const EARTH_RADIUS = 6378137.0 // meters (WGS84 equatorial radius)
 
 /**
@@ -54,6 +56,7 @@ export class CoordinateConverter {
    * @param longitude - Longitude in degrees
    * @param altitude - Altitude in meters (MSL)
    * @returns Local NED coordinates { north, east, down } in meters
+   * @throws {MAVLinkCoordinateError} If home position is not set
    */
   gpsToLocal(
     latitude: number,
@@ -61,7 +64,10 @@ export class CoordinateConverter {
     altitude: number
   ): { north: number; east: number; down: number } {
     if (!this.isHomeSet) {
-      console.warn('[CoordinateConverter] Home position not set, using (0,0,0) as reference')
+      throw new MAVLinkCoordinateError(
+        'Home position not set. Call setHome() before converting coordinates.',
+        { latitude, longitude, altitude }
+      )
     }
 
     // Convert degrees to radians
@@ -89,6 +95,7 @@ export class CoordinateConverter {
    * @param east - East position in meters
    * @param down - Down position in meters (positive down)
    * @returns GPS coordinates { latitude, longitude, altitude }
+   * @throws {MAVLinkCoordinateError} If home position is not set
    */
   localToGPS(
     north: number,
@@ -96,7 +103,10 @@ export class CoordinateConverter {
     down: number
   ): { latitude: number; longitude: number; altitude: number } {
     if (!this.isHomeSet) {
-      console.warn('[CoordinateConverter] Home position not set, using (0,0,0) as reference')
+      throw new MAVLinkCoordinateError(
+        'Home position not set. Call setHome() before converting coordinates.',
+        { north, east, down }
+      )
     }
 
     // Convert home position to radians
