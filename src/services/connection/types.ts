@@ -8,16 +8,18 @@ import type { Command } from '@/types/blockly'
 /**
  * 연결 모드
  */
-export enum ConnectionMode {
+export const ConnectionMode = {
   /** Unity WebSocket 시뮬레이션 (별도 서버) */
-  SIMULATION = 'simulation',
+  SIMULATION: 'simulation',
   /** Unity WebGL 임베드 모드 (클라이언트 내장) */
-  UNITY_WEBGL = 'unity_webgl',
+  UNITY_WEBGL: 'unity_webgl',
   /** 실제 드론 MAVLink 연동 (2차 목표) */
-  REAL_DRONE = 'real_drone',
+  REAL_DRONE: 'real_drone',
   /** 테스트/더미 모드 */
-  TEST = 'test',
-}
+  TEST: 'test',
+} as const
+
+export type ConnectionMode = typeof ConnectionMode[keyof typeof ConnectionMode]
 
 /**
  * 연결 설정

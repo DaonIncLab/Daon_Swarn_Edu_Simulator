@@ -11,7 +11,8 @@ import type { DroneHistory, DroneHistoryPoint } from '@/types/telemetry'
 interface TelemetryStore {
   // State
   history: Map<number, DroneHistory> // droneId -> history
-  maxHistoryPoints: number
+  maxHistoryPoints: number // Max points per drone
+  maxTotalDataPoints: number // Max total points across all drones
   isRecording: boolean
 
   // Actions
@@ -21,21 +22,24 @@ interface TelemetryStore {
   startRecording: () => void
   stopRecording: () => void
   setMaxHistoryPoints: (max: number) => void
+  setMaxTotalDataPoints: (max: number) => void
 
   // Getters
   getDroneHistory: (droneId: number) => DroneHistory | undefined
   getAllHistory: () => Map<number, DroneHistory>
+  getTotalDataPoints: () => number
 }
 
 export const useTelemetryStore = create<TelemetryStore>((set, get) => ({
   // Initial state
   history: new Map(),
   maxHistoryPoints: 100, // Default: keep last 100 data points per drone
+  maxTotalDataPoints: 10000, // Default: keep max 10,000 total data points across all drones
   isRecording: true, // Auto-start recording
 
   // Add new telemetry data from Unity
   addTelemetryData: (drones: DroneState[]) => {
-    const { isRecording, maxHistoryPoints, history } = get()
+    const { isRecording, maxHistoryPoints, maxTotalDataPoints, history } = get()
 
     if (!isRecording) return
 
@@ -67,10 +71,45 @@ export const useTelemetryStore = create<TelemetryStore>((set, get) => ({
       // Add to history
       droneHistory.dataPoints.push(dataPoint)
 
-      // Trim if exceeds max points (keep most recent)
+      // Trim if exceeds max points per drone (keep most recent)
       if (droneHistory.dataPoints.length > maxHistoryPoints) {
         droneHistory.dataPoints = droneHistory.dataPoints.slice(-maxHistoryPoints)
       }
+    }
+
+    // Check total data points across all drones
+    let totalPoints = 0
+    for (const droneHistory of newHistory.values()) {
+      totalPoints += droneHistory.dataPoints.length
+    }
+
+    // If exceeds max total, prune oldest data from drones with most history
+    if (totalPoints > maxTotalDataPoints) {
+      const pointsToRemove = totalPoints - maxTotalDataPoints
+
+      // Sort drones by history size (descending)
+      const dronesSortedBySize = Array.from(newHistory.values()).sort(
+        (a, b) => b.dataPoints.length - a.dataPoints.length
+      )
+
+      let removed = 0
+      for (const droneHistory of dronesSortedBySize) {
+        if (removed >= pointsToRemove) break
+
+        const toRemoveFromThisDrone = Math.min(
+          pointsToRemove - removed,
+          droneHistory.dataPoints.length - 10 // Keep at least 10 points
+        )
+
+        if (toRemoveFromThisDrone > 0) {
+          droneHistory.dataPoints = droneHistory.dataPoints.slice(toRemoveFromThisDrone)
+          removed += toRemoveFromThisDrone
+        }
+      }
+
+      console.log(
+        `[TelemetryStore] Pruned ${removed} old data points (total was ${totalPoints}, limit is ${maxTotalDataPoints})`
+      )
     }
 
     set({ history: newHistory })
@@ -116,6 +155,11 @@ export const useTelemetryStore = create<TelemetryStore>((set, get) => ({
     set({ history: newHistory })
   },
 
+  // Set maximum total data points across all drones
+  setMaxTotalDataPoints: (max: number) => {
+    set({ maxTotalDataPoints: Math.max(100, max) }) // Minimum 100 points total
+  },
+
   // Get history for specific drone
   getDroneHistory: (droneId: number) => {
     return get().history.get(droneId)
@@ -124,5 +168,14 @@ export const useTelemetryStore = create<TelemetryStore>((set, get) => ({
   // Get all history
   getAllHistory: () => {
     return get().history
+  },
+
+  // Get total number of data points across all drones
+  getTotalDataPoints: () => {
+    let total = 0
+    for (const droneHistory of get().history.values()) {
+      total += droneHistory.dataPoints.length
+    }
+    return total
   },
 }))

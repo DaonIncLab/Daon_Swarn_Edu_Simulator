@@ -5,6 +5,8 @@ import { NavigationPanel } from "@/components/layout/NavigationPanel";
 import { SimulatorPanel } from "@/components/layout/SimulatorPanel";
 import { MonitoringPanel } from "@/components/layout/MonitoringPanel";
 import { SettingsPanel } from "@/components/layout/SettingsPanel";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { ErrorFallback } from "@/components/common/ErrorFallback";
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useProjectStore } from "@/stores/useProjectStore";
 import { ConnectionStatus, ConnectionMode } from "@/constants/connection";
@@ -58,38 +60,93 @@ function App() {
   ]);
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
-      <Header
-        onOpenMonitoring={() => setShowMonitoring(true)}
-        onOpenSettings={() => setShowSettings(true)}
-      />
-
-      {/* Main Work Area - 3 Column Layout */}
-      {isConnected ? (
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left: Navigation Panel (15%) */}
-          <NavigationPanel
-            className="w-[15%] min-w-[200px] max-w-[250px]"
-            selectedCategory={selectedCategory}
-            onCategorySelect={setSelectedCategory}
-            onOpenProject={() => setShowSettings(true)}
-            onOpenSettings={() => setShowSettings(true)}
+    <ErrorBoundary>
+      <div className="h-screen flex flex-col bg-gray-50">
+        {/* Header */}
+        <ErrorBoundary
+          fallback={(error, errorInfo, retry) => (
+            <ErrorFallback
+              error={error}
+              errorInfo={errorInfo}
+              retry={retry}
+              title="Header Error"
+              description="The application header encountered an error."
+            />
+          )}
+        >
+          <Header
             onOpenMonitoring={() => setShowMonitoring(true)}
-            isConnected={isConnected}
+            onOpenSettings={() => setShowSettings(true)}
           />
+        </ErrorBoundary>
 
-          {/* Center: Blockly Workspace (40%) */}
-          <div className="w-[40%] flex flex-col bg-white border-r border-gray-200">
-            <BlocklyWorkspace selectedCategory={selectedCategory} />
-          </div>
+        {/* Main Work Area - 3 Column Layout */}
+        {isConnected ? (
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left: Navigation Panel (15%) */}
+            <ErrorBoundary
+              fallback={(error, errorInfo, retry) => (
+                <div className="w-[15%] min-w-[200px] max-w-[250px] p-4">
+                  <ErrorFallback
+                    error={error}
+                    errorInfo={errorInfo}
+                    retry={retry}
+                    title="Navigation Error"
+                    description="The navigation panel could not be loaded."
+                  />
+                </div>
+              )}
+            >
+              <NavigationPanel
+                className="w-[15%] min-w-[200px] max-w-[250px]"
+                selectedCategory={selectedCategory}
+                onCategorySelect={setSelectedCategory}
+                onOpenProject={() => setShowSettings(true)}
+                onOpenSettings={() => setShowSettings(true)}
+                onOpenMonitoring={() => setShowMonitoring(true)}
+                isConnected={isConnected}
+              />
+            </ErrorBoundary>
 
-          {/* Right: Simulator Panel (45%) */}
-          <div className="w-[45%] flex flex-col">
-            <SimulatorPanel />
+            {/* Center: Blockly Workspace (40%) */}
+            <ErrorBoundary
+              fallback={(error, errorInfo, retry) => (
+                <div className="w-[40%] flex flex-col bg-white border-r border-gray-200 p-6">
+                  <ErrorFallback
+                    error={error}
+                    errorInfo={errorInfo}
+                    retry={retry}
+                    title="Blockly Workspace Error"
+                    description="The visual programming workspace could not be loaded."
+                  />
+                </div>
+              )}
+            >
+              <div className="w-[40%] flex flex-col bg-white border-r border-gray-200">
+                <BlocklyWorkspace selectedCategory={selectedCategory} />
+              </div>
+            </ErrorBoundary>
+
+            {/* Right: Simulator Panel (45%) */}
+            <ErrorBoundary
+              fallback={(error, errorInfo, retry) => (
+                <div className="w-[45%] flex flex-col p-6">
+                  <ErrorFallback
+                    error={error}
+                    errorInfo={errorInfo}
+                    retry={retry}
+                    title="Simulator Error"
+                    description="The simulator panel could not be loaded."
+                  />
+                </div>
+              )}
+            >
+              <div className="w-[45%] flex flex-col">
+                <SimulatorPanel />
+              </div>
+            </ErrorBoundary>
           </div>
-        </div>
-      ) : (
+        ) : (
         // Not Connected State
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md px-6">
@@ -138,18 +195,43 @@ function App() {
         </div>
       )}
 
-      {/* Monitoring Panel (Full-screen Modal) */}
-      <MonitoringPanel
-        isOpen={showMonitoring}
-        onClose={() => setShowMonitoring(false)}
-      />
+        {/* Monitoring Panel (Full-screen Modal) */}
+        <ErrorBoundary
+          fallback={(error, errorInfo, retry) => (
+            <ErrorFallback
+              error={error}
+              errorInfo={errorInfo}
+              retry={retry}
+              title="Monitoring Panel Error"
+              description="The monitoring panel could not be loaded."
+            />
+          )}
+        >
+          <MonitoringPanel
+            isOpen={showMonitoring}
+            onClose={() => setShowMonitoring(false)}
+          />
+        </ErrorBoundary>
 
-      {/* Settings Panel (Full-screen Modal) */}
-      <SettingsPanel
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
-    </div>
+        {/* Settings Panel (Full-screen Modal) */}
+        <ErrorBoundary
+          fallback={(error, errorInfo, retry) => (
+            <ErrorFallback
+              error={error}
+              errorInfo={errorInfo}
+              retry={retry}
+              title="Settings Panel Error"
+              description="The settings panel could not be loaded."
+            />
+          )}
+        >
+          <SettingsPanel
+            isOpen={showSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        </ErrorBoundary>
+      </div>
+    </ErrorBoundary>
   );
 }
 

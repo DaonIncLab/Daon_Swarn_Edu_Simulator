@@ -58,26 +58,30 @@ export interface CreateProjectOptions {
 /**
  * 프로젝트 템플릿
  */
-export enum ProjectTemplate {
+export const ProjectTemplate = {
   /** 빈 프로젝트 */
-  BLANK = 'blank',
+  BLANK: 'blank',
   /** 기본 예제 (이륙 → 이동 → 착륙) */
-  BASIC_FLIGHT = 'basic_flight',
+  BASIC_FLIGHT: 'basic_flight',
   /** 반복문 예제 */
-  REPEAT_EXAMPLE = 'repeat_example',
+  REPEAT_EXAMPLE: 'repeat_example',
   /** 조건문 예제 */
-  CONDITIONAL_EXAMPLE = 'conditional_example',
+  CONDITIONAL_EXAMPLE: 'conditional_example',
   /** 대형 비행 예제 */
-  FORMATION_EXAMPLE = 'formation_example',
-}
+  FORMATION_EXAMPLE: 'formation_example',
+} as const
+
+export type ProjectTemplate = typeof ProjectTemplate[keyof typeof ProjectTemplate]
 
 /**
  * 저장소 타입
  */
-export enum StorageType {
-  INDEXED_DB = 'indexedDB',
-  LOCAL_STORAGE = 'localStorage',
-}
+export const StorageType = {
+  INDEXED_DB: 'indexedDB',
+  LOCAL_STORAGE: 'localStorage',
+} as const
+
+export type StorageType = typeof StorageType[keyof typeof StorageType]
 
 /**
  * 프로젝트 필터 옵션

@@ -8,34 +8,36 @@ import type { Command } from './websocket'
 /**
  * 노드 타입
  */
-export enum NodeType {
+export const NodeType = {
   /** 단일 명령 */
-  COMMAND = 'command',
+  COMMAND: 'command',
   /** 순차 실행 (여러 명령을 순서대로) */
-  SEQUENCE = 'sequence',
+  SEQUENCE: 'sequence',
   /** 반복 실행 */
-  REPEAT = 'repeat',
+  REPEAT: 'repeat',
   /** For 루프 */
-  FOR_LOOP = 'for_loop',
+  FOR_LOOP: 'for_loop',
   /** While 루프 (조건 기반) */
-  WHILE_LOOP = 'while_loop',
+  WHILE_LOOP: 'while_loop',
   /** Repeat Until 루프 (조건이 참이 될 때까지) */
-  UNTIL_LOOP = 'until_loop',
+  UNTIL_LOOP: 'until_loop',
   /** 조건 분기 (if) */
-  IF = 'if',
+  IF: 'if',
   /** 조건 분기 (if-else) */
-  IF_ELSE = 'if_else',
+  IF_ELSE: 'if_else',
   /** 대기 */
-  WAIT = 'wait',
+  WAIT: 'wait',
   /** 변수 설정 */
-  VARIABLE_SET = 'variable_set',
+  VARIABLE_SET: 'variable_set',
   /** 변수 값 가져오기 */
-  VARIABLE_GET = 'variable_get',
+  VARIABLE_GET: 'variable_get',
   /** 함수 정의 */
-  FUNCTION_DEF = 'function_def',
+  FUNCTION_DEF: 'function_def',
   /** 함수 호출 */
-  FUNCTION_CALL = 'function_call',
-}
+  FUNCTION_CALL: 'function_call',
+} as const
+
+export type NodeType = typeof NodeType[keyof typeof NodeType]
 
 /**
  * 기본 실행 노드 인터페이스

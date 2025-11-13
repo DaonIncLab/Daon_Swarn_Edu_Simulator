@@ -34,7 +34,10 @@ export class MAVLinkConnectionService implements IConnectionService {
     // - MAVLink 핸드셰이크
     // - 텔레메트리 스트림 시작
 
-    throw new Error('MAVLink service not implemented yet')
+    throw new Error(
+      'MAVLink connection is not yet implemented. This feature is planned for Phase 2. ' +
+      'Please use "Unity WebGL" or "Test Mode" instead.'
+    )
   }
 
   async disconnect(): Promise<void> {
@@ -52,7 +55,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     return {
       success: false,
-      error: 'MAVLink service not implemented',
+      error: 'MAVLink service not implemented. This feature is planned for Phase 2.',
       timestamp: Date.now(),
     }
   }
@@ -62,7 +65,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     return {
       success: false,
-      error: 'MAVLink service not implemented',
+      error: 'MAVLink service not implemented. This feature is planned for Phase 2.',
       timestamp: Date.now(),
     }
   }
@@ -87,13 +90,15 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     return {
       success: false,
-      error: 'MAVLink service not implemented',
+      error: 'MAVLink emergency stop not implemented. This feature is planned for Phase 2.',
       timestamp: Date.now(),
     }
   }
 
   async ping(): Promise<number> {
-    throw new Error('MAVLink ping not implemented')
+    throw new Error(
+      'MAVLink ping not implemented. This feature is planned for Phase 2.'
+    )
   }
 
   cleanup(): void {

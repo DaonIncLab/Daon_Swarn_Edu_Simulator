@@ -28,6 +28,9 @@ export class Interpreter {
   private state: ExecutionState
   private stateListener: ExecutionStateListener | null = null
   private shouldStop: boolean = false
+  private isPaused: boolean = false
+  private resumePromise: Promise<void> | null = null
+  private resumeResolver: (() => void) | null = null
 
   constructor(connectionService: IConnectionService) {
     this.connectionService = connectionService
@@ -73,7 +76,12 @@ export class Interpreter {
   async execute(tree: ExecutableNode): Promise<ExecutionResult> {
     console.log('[Interpreter] Starting execution', tree)
 
+    // Reset execution flags
     this.shouldStop = false
+    this.isPaused = false
+    this.resumePromise = null
+    this.resumeResolver = null
+
     this.updateState({
       status: 'running',
       currentNodeId: null,
@@ -117,26 +125,67 @@ export class Interpreter {
   }
 
   /**
-   * 일시정지 (추후 구현)
+   * 일시정지
    */
   pause(): void {
+    if (this.state.status !== 'running') {
+      console.warn('[Interpreter] Cannot pause: not running')
+      return
+    }
+
+    console.log('[Interpreter] Pausing execution')
+    this.isPaused = true
+
+    // Create a new promise that will be resolved when resume() is called
+    this.resumePromise = new Promise((resolve) => {
+      this.resumeResolver = resolve
+    })
+
     this.updateState({ status: 'paused' })
   }
 
   /**
-   * 재개 (추후 구현)
+   * 재개
    */
   resume(): void {
+    if (this.state.status !== 'paused') {
+      console.warn('[Interpreter] Cannot resume: not paused')
+      return
+    }
+
+    console.log('[Interpreter] Resuming execution')
+    this.isPaused = false
+
+    // Resolve the pause promise to unblock execution
+    if (this.resumeResolver) {
+      this.resumeResolver()
+      this.resumeResolver = null
+      this.resumePromise = null
+    }
+
     this.updateState({ status: 'running' })
+  }
+
+  /**
+   * Check if paused and wait until resumed
+   */
+  private async checkPause(): Promise<void> {
+    if (this.isPaused && this.resumePromise) {
+      await this.resumePromise
+    }
   }
 
   /**
    * 개별 노드 실행 (재귀적)
    */
   private async executeNode(node: ExecutableNode, path: number[]): Promise<number> {
+    // Check for stop signal
     if (this.shouldStop) {
       return 0
     }
+
+    // Check for pause and wait if paused
+    await this.checkPause()
 
     this.updateState({ currentNodeId: node.id, currentNodePath: path })
 

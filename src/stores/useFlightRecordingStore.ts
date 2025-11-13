@@ -72,6 +72,23 @@ interface FlightRecordingStore {
 }
 
 const STORAGE_KEY = 'drone-swarm-flight-recordings'
+const MAX_STORAGE_SIZE = 5 * 1024 * 1024 // 5MB limit for recordings
+
+// Estimate size of recordings in bytes
+function estimateStorageSize(recordings: FlightRecording[]): number {
+  try {
+    const serializable = recordings.map((rec) => ({
+      ...rec,
+      droneHistories: Object.fromEntries(rec.droneHistories),
+    }))
+    const jsonString = JSON.stringify(serializable)
+    // Rough estimate: 2 bytes per character in UTF-16
+    return jsonString.length * 2
+  } catch (error) {
+    console.error('[FlightRecordingStore] Failed to estimate size:', error)
+    return 0
+  }
+}
 
 // Load recordings from localStorage
 function loadRecordingsFromStorage(): FlightRecording[] {
@@ -152,11 +169,34 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
         },
       }
 
-      const newRecordings = [...get().recordings, recording]
+      let newRecordings = [...get().recordings, recording]
+
+      // Check storage size and remove oldest recordings if needed
+      let estimatedSize = estimateStorageSize(newRecordings)
+
+      while (estimatedSize > MAX_STORAGE_SIZE && newRecordings.length > 1) {
+        console.warn(
+          `[FlightRecordingStore] Storage size (${(estimatedSize / 1024 / 1024).toFixed(2)}MB) exceeds limit. Removing oldest recording.`
+        )
+
+        // Remove oldest recording (but keep the one we're adding)
+        newRecordings = newRecordings.filter((rec) => rec.id !== newRecordings[0].id)
+        estimatedSize = estimateStorageSize(newRecordings)
+      }
+
+      if (estimatedSize > MAX_STORAGE_SIZE) {
+        console.error(
+          `[FlightRecordingStore] Cannot save recording: would exceed storage limit (${(estimatedSize / 1024 / 1024).toFixed(2)}MB > ${(MAX_STORAGE_SIZE / 1024 / 1024).toFixed(2)}MB)`
+        )
+        return
+      }
+
       set({ recordings: newRecordings })
       saveRecordingsToStorage(newRecordings)
 
-      console.log(`[FlightRecordingStore] Saved recording: ${name} (${duration}ms, ${droneHistories.size} drones)`)
+      console.log(
+        `[FlightRecordingStore] Saved recording: ${name} (${duration}ms, ${droneHistories.size} drones, storage: ${(estimatedSize / 1024).toFixed(1)}KB)`
+      )
     },
 
     // Load a recording by ID
@@ -362,9 +402,86 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
         return null
       }
 
-      // For now, return the full histories
-      // TODO: Implement interpolation to get exact positions at currentTime
-      return playback.recording.droneHistories
+      // Interpolate drone positions at current playback time
+      const interpolatedHistories = new Map<number, DroneHistory>()
+
+      for (const [droneId, history] of playback.recording.droneHistories) {
+        if (!history.dataPoints || history.dataPoints.length === 0) {
+          continue
+        }
+
+        // Use binary search to find the two data points surrounding currentTime
+        const currentTime = playback.currentTime + (playback.recording.metadata?.startTime || 0)
+        const dataPoints = history.dataPoints
+
+        // Find index using binary search
+        let left = 0
+        let right = dataPoints.length - 1
+        let insertIndex = 0
+
+        while (left <= right) {
+          const mid = Math.floor((left + right) / 2)
+          if (dataPoints[mid].timestamp <= currentTime) {
+            insertIndex = mid + 1
+            left = mid + 1
+          } else {
+            right = mid - 1
+          }
+        }
+
+        // Get the two surrounding points
+        const beforeIndex = Math.max(0, insertIndex - 1)
+        const afterIndex = Math.min(dataPoints.length - 1, insertIndex)
+
+        const beforePoint = dataPoints[beforeIndex]
+        const afterPoint = dataPoints[afterIndex]
+
+        // Linear interpolation
+        let interpolatedPoint
+
+        if (beforeIndex === afterIndex || beforePoint.timestamp === afterPoint.timestamp) {
+          // No interpolation needed (at exact point or only one point)
+          interpolatedPoint = beforePoint
+        } else {
+          // Calculate interpolation factor (0 to 1)
+          const t =
+            (currentTime - beforePoint.timestamp) /
+            (afterPoint.timestamp - beforePoint.timestamp)
+
+          // Clamp t to [0, 1]
+          const clampedT = Math.max(0, Math.min(1, t))
+
+          // Interpolate all numeric fields
+          interpolatedPoint = {
+            timestamp: currentTime,
+            position: {
+              x: beforePoint.position.x + (afterPoint.position.x - beforePoint.position.x) * clampedT,
+              y: beforePoint.position.y + (afterPoint.position.y - beforePoint.position.y) * clampedT,
+              z: beforePoint.position.z + (afterPoint.position.z - beforePoint.position.z) * clampedT,
+            },
+            rotation: {
+              x: beforePoint.rotation.x + (afterPoint.rotation.x - beforePoint.rotation.x) * clampedT,
+              y: beforePoint.rotation.y + (afterPoint.rotation.y - beforePoint.rotation.y) * clampedT,
+              z: beforePoint.rotation.z + (afterPoint.rotation.z - beforePoint.rotation.z) * clampedT,
+            },
+            velocity: {
+              x: beforePoint.velocity.x + (afterPoint.velocity.x - beforePoint.velocity.x) * clampedT,
+              y: beforePoint.velocity.y + (afterPoint.velocity.y - beforePoint.velocity.y) * clampedT,
+              z: beforePoint.velocity.z + (afterPoint.velocity.z - beforePoint.velocity.z) * clampedT,
+            },
+            battery: beforePoint.battery + (afterPoint.battery - beforePoint.battery) * clampedT,
+            status: clampedT < 0.5 ? beforePoint.status : afterPoint.status, // Use closest point's status
+          }
+        }
+
+        // Create interpolated history with single data point at current time
+        interpolatedHistories.set(droneId, {
+          droneId,
+          dataPoints: [interpolatedPoint],
+        })
+      }
+
+      return interpolatedHistories
     },
   })
 )
