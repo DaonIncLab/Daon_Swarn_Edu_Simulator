@@ -54,45 +54,69 @@ export function UnitySimulatorPanel() {
   })
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900">
-        Unity Simulator
-      </h2>
-
-      {/* Unity WebGL Embed */}
-      <UnityWebGLEmbed
-        unityProvider={unityBridge.unityProvider}
-        isReady={unityBridge.isReady}
-        loadingProgress={unityBridge.loadingProgress}
-        height="600px"
-      />
-
-      {/* Simulator Info */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Loading Progress:</span>
-          <span className="font-mono font-semibold text-gray-900">
-            {Math.round(unityBridge.loadingProgress * 100)}%
+    <div className="h-full flex flex-col bg-gray-900">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-3 bg-gray-800 text-white flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold">Unity Simulator</h3>
+          <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
+            {unityBridge.isReady ? '준비됨' : '로딩 중...'}
           </span>
         </div>
+
+        {/* Emergency Stop Button */}
         {unityBridge.isReady && (
-          <div className="mt-2 text-xs text-success">
-            ✓ Unity simulator is ready to receive commands
+          <button
+            onClick={() => unityBridge.emergencyStop()}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors"
+          >
+            🛑 긴급 정지
+          </button>
+        )}
+      </div>
+
+      {/* Unity WebGL Embed - Full Height */}
+      <div className="flex-1 relative">
+        <UnityWebGLEmbed
+          unityProvider={unityBridge.unityProvider}
+          isReady={unityBridge.isReady}
+          loadingProgress={unityBridge.loadingProgress}
+          height="100%"
+        />
+
+        {/* Loading Overlay */}
+        {!unityBridge.isReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90">
+            <div className="text-center">
+              <div className="text-white mb-4">
+                <div className="text-4xl mb-2">🎮</div>
+                <div className="text-lg font-semibold">Unity 시뮬레이터 로딩 중...</div>
+              </div>
+              <div className="w-64 bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.round(unityBridge.loadingProgress * 100)}%` }}
+                />
+              </div>
+              <div className="text-gray-400 text-sm mt-2">
+                {Math.round(unityBridge.loadingProgress * 100)}%
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Unity Controls (Future) */}
-      {unityBridge.isReady && (
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => unityBridge.emergencyStop()}
-            className="px-4 py-2 bg-danger text-white rounded-lg text-sm font-medium hover:bg-danger-dark transition-colors"
-          >
-            🛑 Emergency Stop
-          </button>
+      {/* Bottom Status Bar */}
+      <div className="px-4 py-2 bg-gray-800 text-white flex items-center justify-between text-xs flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <span className="text-gray-400">시뮬레이터 상태:</span>
+          {unityBridge.isReady ? (
+            <span className="text-green-400">✓ 명령 수신 준비 완료</span>
+          ) : (
+            <span className="text-yellow-400">⏳ 초기화 중...</span>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as Blockly from 'blockly'
-import { toolboxConfig } from './toolbox'
+import { toolboxConfig, getCategoryBlocks } from './toolbox'
 import { generateCommands } from './generators/swarmGenerator'
 import { useBlocklyStore } from '@/stores/useBlocklyStore'
 import { useExecutionStore, ExecutionStatus } from '@/stores/useExecutionStore'
@@ -12,9 +12,10 @@ import 'blockly/blocks'
 
 interface BlocklyWorkspaceProps {
   className?: string
+  selectedCategory?: string
 }
 
-export function BlocklyWorkspace({ className }: BlocklyWorkspaceProps) {
+export function BlocklyWorkspace({ className, selectedCategory = 'basic' }: BlocklyWorkspaceProps) {
   const blocklyDiv = useRef<HTMLDivElement>(null)
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null)
 
@@ -30,10 +31,11 @@ export function BlocklyWorkspace({ className }: BlocklyWorkspaceProps) {
   const isRunning = status === ExecutionStatus.RUNNING
   const hasCommands = commands.length > 0
 
+  // Blockly 워크스페이스 초기화
   useEffect(() => {
     if (!blocklyDiv.current) return
 
-    // Blockly 워크스페이스 초기화
+    // Blockly 워크스페이스 초기화 (flyout 모드)
     const workspace = Blockly.inject(blocklyDiv.current, {
       toolbox: toolboxConfig,
       grid: {
@@ -81,11 +83,31 @@ export function BlocklyWorkspace({ className }: BlocklyWorkspaceProps) {
     }
   }, [setWorkspace, setGeneratedCommands, setCommands, setHasUnsavedChanges])
 
+  // 선택된 카테고리에 따라 flyout 업데이트
+  useEffect(() => {
+    if (!workspaceRef.current) return
+
+    const blocks = getCategoryBlocks(selectedCategory)
+    const flyoutXml = {
+      kind: 'flyoutToolbox',
+      contents: blocks
+    }
+
+    workspaceRef.current.updateToolbox(flyoutXml)
+  }, [selectedCategory])
+
   return (
-    <div className={className}>
-      {/* Header with Execution Controls */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Blockly Workspace</h3>
+    <div className={`h-full flex flex-col ${className || ''}`}>
+      {/* Toolbar with Execution Controls */}
+      <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-gray-900">블록 코딩</h3>
+          {hasCommands && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+              {commands.length}개 명령
+            </span>
+          )}
+        </div>
 
         {/* Execution Control Buttons */}
         <div className="flex items-center gap-2">
@@ -107,23 +129,16 @@ export function BlocklyWorkspace({ className }: BlocklyWorkspaceProps) {
               ⏹ 중지
             </Button>
           )}
-
-          {hasCommands && (
-            <span className="text-xs text-gray-600 ml-2">
-              {commands.length}개 명령
-            </span>
-          )}
         </div>
       </div>
 
-      {/* Blockly Workspace */}
+      {/* Blockly Workspace - Full Height */}
       <div
         ref={blocklyDiv}
+        className="flex-1"
         style={{
           width: '100%',
-          height: '500px',
-          border: '1px solid #ddd',
-          borderRadius: '8px'
+          height: '100%'
         }}
       />
     </div>

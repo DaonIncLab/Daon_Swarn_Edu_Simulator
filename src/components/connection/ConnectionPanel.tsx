@@ -235,6 +235,17 @@ export function ConnectionPanel() {
                 Select how many drones to simulate
               </p>
             </div>
+
+            {/* Connect Button for Test Mode - Prominent placement */}
+            <div className="pt-4">
+              <button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isConnecting ? 'Connecting...' : 'Connect (Test Mode)'}
+              </button>
+            </div>
           </>
         )}
 
@@ -308,18 +319,33 @@ export function ConnectionPanel() {
           </div>
         )}
 
-        {/* Connect/Disconnect Button */}
-        <div className="flex gap-2">
-          {!isConnected ? (
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={handleConnect}
-              disabled={isConnecting}
-            >
-              {isConnecting ? 'Connecting...' : 'Connect'}
+        {/* Connect/Disconnect Button - Not for Test Mode (has its own button above) */}
+        {!isTestMode && (
+          <div className="flex gap-2">
+            {!isConnected ? (
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={handleConnect}
+                disabled={isConnecting}
+              >
+                {isConnecting ? 'Connecting...' : 'Connect'}
+              </Button>
+            ) : (
+              <Button
+                variant="danger"
+                fullWidth
+                onClick={handleDisconnect}
+              >
+                Disconnect
             </Button>
-          ) : (
+            )}
+          </div>
+        )}
+
+        {/* Disconnect Button for Test Mode */}
+        {isTestMode && isConnected && (
+          <div className="flex gap-2">
             <Button
               variant="danger"
               fullWidth
@@ -327,8 +353,8 @@ export function ConnectionPanel() {
             >
               Disconnect
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Quick Connect Buttons - Only in WebSocket Mode */}
         {isSimMode && !isConnected && !isConnecting && (
