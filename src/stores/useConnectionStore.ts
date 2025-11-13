@@ -1,122 +1,134 @@
+/**
+ * WebSocket 연결 상태 관리 스토어 (v2 - ConnectionManager 사용)
+ */
+
 import { create } from 'zustand'
 import { ConnectionStatus, DEFAULT_WS_PORT } from '@/constants/connection'
-import { wsService } from '@/services/websocket'
+import {
+  getConnectionManager,
+  ConnectionMode,
+  type ConnectionConfig,
+  type TelemetryData,
+} from '@/services/connection'
 
 /**
- * WebSocket 연결 상태 관리 스토어
+ * 연결 상태 관리 스토어
  */
 interface ConnectionStore {
   // State
   status: ConnectionStatus
+  mode: ConnectionMode
   ipAddress: string
   port: number
   error: string | null
-  isDummyMode: boolean
+  latestTelemetry: TelemetryData | null
 
   // Actions
+  setMode: (mode: ConnectionMode) => void
   setIpAddress: (ip: string) => void
   setPort: (port: number) => void
-  connect: () => void
-  disconnect: () => void
+  connect: () => Promise<void>
+  disconnect: () => Promise<void>
   setStatus: (status: ConnectionStatus) => void
   setError: (error: string | null) => void
   clearError: () => void
-  toggleDummyMode: () => void
-  connectDummy: () => void
+  updateTelemetry: (data: TelemetryData) => void
 }
 
-export const useConnectionStore = create<ConnectionStore>((set, get) => ({
-  // Initial state
-  status: ConnectionStatus.DISCONNECTED,
-  ipAddress: '',
-  port: DEFAULT_WS_PORT,
-  error: null,
-  isDummyMode: false,
+export const useConnectionStore = create<ConnectionStore>((set, get) => {
+  // ConnectionManager 인스턴스
+  const manager = getConnectionManager()
 
-  // Actions
-  setIpAddress: (ip) => set({ ipAddress: ip }),
+  return {
+    // Initial state
+    status: ConnectionStatus.DISCONNECTED,
+    mode: ConnectionMode.SIMULATION, // 기본값: 시뮬레이션 모드
+    ipAddress: '',
+    port: DEFAULT_WS_PORT,
+    error: null,
+    latestTelemetry: null,
 
-  setPort: (port) => set({ port }),
+    // Actions
+    setMode: (mode) => set({ mode }),
 
-  connect: () => {
-    const { ipAddress, port, isDummyMode } = get()
+    setIpAddress: (ip) => set({ ipAddress: ip }),
 
-    // 더미 모드인 경우 바로 연결
-    if (isDummyMode) {
-      get().connectDummy()
-      return
-    }
+    setPort: (port) => set({ port }),
 
-    if (!ipAddress) {
-      set({ error: 'Please enter IP address' })
-      return
-    }
+    connect: async () => {
+      const { mode, ipAddress, port } = get()
 
-    // WebSocket 서비스에 이벤트 리스너 등록
-    wsService.setStatusChangeListener((status) => {
-      set({ status })
-    })
+      set({ error: null })
 
-    wsService.setErrorListener((error) => {
-      set({ error, status: ConnectionStatus.ERROR })
-    })
+      try {
+        // 이벤트 리스너 등록 (연결 전에)
+        manager.setEventListeners({
+          onStatusChange: (status) => {
+            console.log('[Store] Status changed to:', status)
+            set({ status })
+          },
+          onError: (error) => {
+            console.log('[Store] Error:', error)
+            set({ error, status: ConnectionStatus.ERROR })
+          },
+          onTelemetry: (data) => {
+            set({ latestTelemetry: data })
+          },
+          onLog: (log) => {
+            console.log('[Connection]', log)
+          },
+        })
 
-    // 연결 시도
-    set({ error: null, status: ConnectionStatus.CONNECTING })
-    wsService.connect(ipAddress, port)
-  },
+        const config: ConnectionConfig = { mode }
 
-  disconnect: () => {
-    const { isDummyMode } = get()
+        // 모드별 설정
+        switch (mode) {
+          case ConnectionMode.SIMULATION:
+            if (!ipAddress) {
+              set({ error: 'Please enter IP address' })
+              return
+            }
+            config.websocket = { ipAddress, port }
+            break
 
-    if (!isDummyMode) {
-      wsService.disconnect()
-    }
+          case ConnectionMode.REAL_DRONE:
+            // MAVLink 설정 (2차 목표)
+            config.mavlink = {
+              connectionType: 'udp',
+              udpPort: 14550,
+            }
+            break
 
-    set({ status: ConnectionStatus.DISCONNECTED, error: null })
-  },
+          case ConnectionMode.TEST:
+            // 테스트 모드는 추가 설정 불필요
+            break
+        }
 
-  setStatus: (status) => set({ status }),
+        // ConnectionManager를 통해 연결
+        await manager.connect(config)
 
-  setError: (error) => set({ error }),
+        console.log(`[Store] Connected in ${mode} mode`)
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Connection failed'
+        set({ error: errorMsg, status: ConnectionStatus.ERROR })
+      }
+    },
 
-  clearError: () => set({ error: null }),
+    disconnect: async () => {
+      try {
+        await manager.disconnect()
+        set({ status: ConnectionStatus.DISCONNECTED, error: null })
+      } catch (error) {
+        console.error('[Store] Disconnect error:', error)
+      }
+    },
 
-  toggleDummyMode: () => {
-    const { isDummyMode, status } = get()
+    setStatus: (status) => set({ status }),
 
-    // 연결 중이면 토글 불가
-    if (status === ConnectionStatus.CONNECTED || status === ConnectionStatus.CONNECTING) {
-      set({ error: 'Disconnect first to change mode' })
-      return
-    }
+    setError: (error) => set({ error }),
 
-    const newDummyMode = !isDummyMode
-    set({ isDummyMode: newDummyMode, error: null })
+    clearError: () => set({ error: null }),
 
-    // 테스트 모드를 활성화하면 자동으로 연결
-    if (newDummyMode) {
-      setTimeout(() => {
-        get().connectDummy()
-      }, 100)
-    }
-  },
-
-  connectDummy: () => {
-    set({
-      error: null,
-      status: ConnectionStatus.CONNECTING,
-      ipAddress: 'dummy-mode',
-      port: 0
-    })
-
-    // 더미 연결 시뮬레이션 (1초 후 연결 성공)
-    setTimeout(() => {
-      // 연결 성공 상태로 변경
-      set({
-        status: ConnectionStatus.CONNECTED,
-        error: null
-      })
-    }, 1000)
-  },
-}))
+    updateTelemetry: (data) => set({ latestTelemetry: data }),
+  }
+})

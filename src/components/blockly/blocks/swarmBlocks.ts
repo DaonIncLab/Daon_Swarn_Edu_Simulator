@@ -48,7 +48,10 @@ Blockly.Blocks['swarm_set_formation'] = {
         ['그리드 (Grid)', FormationType.GRID],
         ['일렬 (Line)', FormationType.LINE],
         ['원형 (Circle)', FormationType.CIRCLE],
-        ['V자 (V-Shape)', FormationType.V_SHAPE]
+        ['V자 (V-Shape)', FormationType.V_SHAPE],
+        ['삼각형 (Triangle)', FormationType.TRIANGLE],
+        ['사각형 (Square)', FormationType.SQUARE],
+        ['다이아몬드 (Diamond)', FormationType.DIAMOND]
       ]), 'FORMATION_TYPE')
     this.appendDummyInput()
       .appendField('행(rows)')
@@ -144,6 +147,171 @@ Blockly.Blocks['swarm_hover'] = {
     this.setNextStatement(true, null)
     this.setColour(120)
     this.setTooltip('모든 드론이 현재 위치에서 호버링합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * 반복 (Repeat N times)
+ */
+Blockly.Blocks['controls_repeat'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('🔁 반복')
+      .appendField(new Blockly.FieldNumber(3, 1, 100, 1), 'TIMES')
+      .appendField('번')
+    this.appendStatementInput('DO')
+      .appendField('실행')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(210)
+    this.setTooltip('블록들을 지정된 횟수만큼 반복합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * For 반복문
+ */
+Blockly.Blocks['controls_for'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('🔢 For')
+      .appendField(new Blockly.FieldVariable('i'), 'VAR')
+      .appendField('=')
+      .appendField(new Blockly.FieldNumber(1, -100, 100, 1), 'FROM')
+      .appendField('부터')
+    this.appendDummyInput()
+      .appendField(new Blockly.FieldNumber(10, -100, 100, 1), 'TO')
+      .appendField('까지')
+      .appendField(new Blockly.FieldNumber(1, 1, 10, 1), 'BY')
+      .appendField('씩 증가')
+    this.appendStatementInput('DO')
+      .appendField('실행')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(210)
+    this.setTooltip('변수를 사용한 반복문입니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * If 조건문
+ */
+Blockly.Blocks['controls_if_simple'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('❓ 만약')
+      .appendField(new Blockly.FieldDropdown([
+        ['모든 드론 연결됨', 'all_connected'],
+        ['배터리 부족', 'low_battery'],
+        ['고도 달성', 'altitude_reached'],
+        ['대형 완료', 'formation_complete']
+      ]), 'CONDITION')
+    this.appendStatementInput('DO')
+      .appendField('이면 실행')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(210)
+    this.setTooltip('조건이 참일 때 블록들을 실행합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * If-Else 조건문
+ */
+Blockly.Blocks['controls_if_else'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('❓ 만약')
+      .appendField(new Blockly.FieldDropdown([
+        ['모든 드론 연결됨', 'all_connected'],
+        ['배터리 부족', 'low_battery'],
+        ['고도 달성', 'altitude_reached'],
+        ['대형 완료', 'formation_complete']
+      ]), 'CONDITION')
+    this.appendStatementInput('DO_IF')
+      .appendField('이면 실행')
+    this.appendStatementInput('DO_ELSE')
+      .appendField('아니면 실행')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(210)
+    this.setTooltip('조건에 따라 다른 블록들을 실행합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * 모든 드론 동기화
+ */
+Blockly.Blocks['swarm_sync_all'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('⏸️ 모든 드론 동기화')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(120)
+    this.setTooltip('모든 드론이 현재 명령을 완료할 때까지 대기합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * 모든 드론 대기
+ */
+Blockly.Blocks['swarm_wait_all'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('⏳ 모든 드론 대기')
+      .appendField(new Blockly.FieldNumber(3, 0.1, 60, 0.5), 'DURATION')
+      .appendField('초')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(120)
+    this.setTooltip('모든 드론이 지정된 시간 동안 대기합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * 변수 설정
+ */
+Blockly.Blocks['variables_set'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('📦 변수')
+      .appendField(new Blockly.FieldVariable('altitude'), 'VAR')
+      .appendField('=')
+      .appendField(new Blockly.FieldNumber(0, -100, 100, 0.5), 'VALUE')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(330)
+    this.setTooltip('변수에 값을 저장합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * 수식 계산
+ */
+Blockly.Blocks['math_arithmetic'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('🧮')
+      .appendField(new Blockly.FieldNumber(0), 'A')
+      .appendField(new Blockly.FieldDropdown([
+        ['+', 'ADD'],
+        ['-', 'MINUS'],
+        ['×', 'MULTIPLY'],
+        ['÷', 'DIVIDE']
+      ]), 'OP')
+      .appendField(new Blockly.FieldNumber(0), 'B')
+    this.setOutput(true, 'Number')
+    this.setColour(230)
+    this.setTooltip('수식 계산')
     this.setHelpUrl('')
   }
 }

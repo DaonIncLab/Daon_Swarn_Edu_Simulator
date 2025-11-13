@@ -12,6 +12,9 @@ export const ConnectionStatus = {
 
 export type ConnectionStatus = typeof ConnectionStatus[keyof typeof ConnectionStatus]
 
+// 연결 모드 (Re-export from services)
+export { ConnectionMode } from '@/services/connection/types'
+
 // WebSocket 기본 설정
 export const WS_CONFIG = {
   RECONNECT_INTERVAL: 3000, // 재연결 시도 간격 (ms)

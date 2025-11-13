@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Unity WebGL Builds
+public/unity/Build/
+public/unity/TemplateData/
+public/unity/index.html

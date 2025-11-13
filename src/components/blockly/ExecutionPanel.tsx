@@ -1,29 +1,32 @@
 import { Button } from '@/components/common/Button'
 import { useExecutionStore, ExecutionStatus } from '@/stores/useExecutionStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
-import { ConnectionStatus } from '@/constants/connection'
+import { ConnectionStatus, ConnectionMode } from '@/constants/connection'
 
 export function ExecutionPanel() {
   const {
     status,
     commands,
     currentCommandIndex,
+    currentNodeId,
+    currentNodePath,
     error,
     executeScript,
     stopExecution,
     reset
   } = useExecutionStore()
 
-  const { status: connectionStatus, isDummyMode } = useConnectionStore()
+  const { status: connectionStatus, mode } = useConnectionStore()
   const isConnected = connectionStatus === ConnectionStatus.CONNECTED
   const isRunning = status === ExecutionStatus.RUNNING
   const hasCommands = commands.length > 0
+  const isTestMode = mode === ConnectionMode.TEST
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">실행 제어</h3>
-        {isDummyMode && (
+        {isTestMode && (
           <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
             🧪 테스트 모드
           </span>
@@ -41,6 +44,20 @@ export function ExecutionPanel() {
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>명령 수:</span>
             <span className="font-mono font-semibold">{commands.length}개</span>
+          </div>
+        )}
+
+        {/* 현재 실행 노드 정보 */}
+        {isRunning && currentNodeId && (
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <div className="text-xs text-gray-600">
+              <div>현재 노드: <span className="font-mono text-primary-600">{currentNodeId}</span></div>
+              {currentNodePath.length > 0 && (
+                <div className="mt-1">
+                  실행 경로: <span className="font-mono text-gray-500">{currentNodePath.join(' → ')}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -88,7 +105,7 @@ export function ExecutionPanel() {
             fullWidth
             onClick={stopExecution}
           >
-            ⏸ 실행 중지
+            ⏹ 실행 중지
           </Button>
         )}
 
@@ -107,7 +124,7 @@ export function ExecutionPanel() {
       {!isConnected && (
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
-            ⚠️ {isDummyMode ? '테스트 모드를 활성화하려면 연결해주세요' : 'Unity에 먼저 연결해주세요'}
+            ⚠️ 먼저 연결해주세요
           </p>
         </div>
       )}
@@ -120,11 +137,25 @@ export function ExecutionPanel() {
         </div>
       )}
 
-      {isConnected && isDummyMode && hasCommands && (
+      {isConnected && isTestMode && hasCommands && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
             🧪 테스트 모드: 실행 버튼을 클릭하면 명령이 시뮬레이션됩니다 (Unity 서버로 전송되지 않음)
           </p>
+        </div>
+      )}
+
+      {/* 제어 흐름 도움말 */}
+      {isConnected && hasCommands && !isRunning && (
+        <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+          <p className="text-sm text-purple-800 font-medium mb-1">
+            ✨ 제어 흐름 블록 사용 가능
+          </p>
+          <ul className="text-xs text-purple-700 space-y-0.5 list-disc list-inside">
+            <li>🔁 반복 블록으로 명령 반복 실행</li>
+            <li>❓ If 조건문으로 조건부 실행</li>
+            <li>🔢 For 루프로 변수 기반 반복</li>
+          </ul>
         </div>
       )}
     </div>

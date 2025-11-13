@@ -95,6 +95,74 @@ function blockToCommand(block: Blockly.Block): Command | null {
         params: {}
       }
 
+    case 'controls_repeat':
+      return {
+        action: CommandAction.REPEAT,
+        params: {
+          times: block.getFieldValue('TIMES') as number
+        }
+      }
+
+    case 'controls_for':
+      return {
+        action: CommandAction.FOR_LOOP,
+        params: {
+          variable: block.getFieldValue('VAR') as string,
+          from: block.getFieldValue('FROM') as number,
+          to: block.getFieldValue('TO') as number,
+          by: block.getFieldValue('BY') as number
+        }
+      }
+
+    case 'controls_if_simple':
+      return {
+        action: CommandAction.IF,
+        params: {
+          condition: block.getFieldValue('CONDITION') as string
+        }
+      }
+
+    case 'controls_if_else':
+      return {
+        action: CommandAction.IF_ELSE,
+        params: {
+          condition: block.getFieldValue('CONDITION') as string
+        }
+      }
+
+    case 'swarm_sync_all':
+      return {
+        action: CommandAction.SYNC_ALL,
+        params: {}
+      }
+
+    case 'swarm_wait_all':
+      return {
+        action: CommandAction.WAIT_ALL,
+        params: {
+          duration: block.getFieldValue('DURATION') as number
+        }
+      }
+
+    case 'variables_set':
+      return {
+        action: 'set_variable',
+        params: {
+          variable: block.getFieldValue('VAR') as string,
+          value: block.getFieldValue('VALUE') as number
+        }
+      }
+
+    case 'math_arithmetic':
+      return {
+        action: 'math_op',
+        params: {
+          a: block.getFieldValue('A') as number,
+          op: block.getFieldValue('OP') as string,
+          b: block.getFieldValue('B') as number
+        }
+      }
+
     default:
       return null
   }

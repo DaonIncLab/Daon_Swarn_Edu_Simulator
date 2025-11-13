@@ -3,6 +3,11 @@ import type { Command, WSMessage, DroneState } from '@/types/websocket'
 import { MessageType } from '@/constants/commands'
 import { wsService } from '@/services/websocket'
 import { useConnectionStore } from './useConnectionStore'
+import { useBlocklyStore } from './useBlocklyStore'
+import { Interpreter } from '@/services/execution'
+import { parseBlocklyWorkspace } from '@/services/execution'
+import { getConnectionManager } from '@/services/connection/ConnectionManager'
+import type { ExecutionState } from '@/types/execution'
 
 /**
  * 스크립트 실행 상태
@@ -24,15 +29,21 @@ interface ExecutionStore {
   status: ExecutionStatus
   commands: Command[]
   currentCommandIndex: number
+  currentNodeId: string | null
+  currentNodePath: number[]
   error: string | null
   drones: DroneState[]
+  interpreter: Interpreter | null
 
   // Actions
   setCommands: (commands: Command[]) => void
-  executeScript: () => void
+  executeScript: () => Promise<void>
   stopExecution: () => void
+  pauseExecution: () => void
+  resumeExecution: () => void
   reset: () => void
   handleMessage: (message: WSMessage) => void
+  updateExecutionState: (state: ExecutionState) => void
 }
 
 export const useExecutionStore = create<ExecutionStore>((set, get) => {
@@ -46,121 +57,189 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
     status: ExecutionStatus.IDLE,
     commands: [],
     currentCommandIndex: -1,
+    currentNodeId: null,
+    currentNodePath: [],
     error: null,
     drones: [],
+    interpreter: null,
 
     // Actions
     setCommands: (commands) => set({ commands }),
 
-    executeScript: () => {
-      const { commands } = get()
-      const isDummyMode = useConnectionStore.getState().isDummyMode
+    /**
+     * 스크립트 실행 (Interpreter 사용)
+     */
+    executeScript: async () => {
+      const workspace = useBlocklyStore.getState().workspace
 
-      if (commands.length === 0) {
-        set({ error: 'No commands to execute' })
+      if (!workspace) {
+        set({ error: 'Blockly workspace not initialized' })
         return
       }
 
-      // 더미 모드인 경우 시뮬레이션 실행
-      if (isDummyMode) {
-        set({
-          status: ExecutionStatus.RUNNING,
-          currentCommandIndex: 0,
-          error: null,
-        })
+      // Blockly 워크스페이스를 실행 트리로 파싱
+      const executionTree = parseBlocklyWorkspace(workspace)
 
-        // 각 명령을 순차적으로 시뮬레이션
-        let currentIndex = 0
-        const simulateCommand = () => {
-          if (currentIndex >= commands.length) {
-            set({ status: ExecutionStatus.COMPLETED })
-            return
-          }
-
-          set({ currentCommandIndex: currentIndex })
-
-          // 다음 명령으로 (1초 간격)
-          setTimeout(() => {
-            currentIndex++
-            if (get().status === ExecutionStatus.RUNNING) {
-              simulateCommand()
-            }
-          }, 1000)
-        }
-
-        simulateCommand()
+      if (!executionTree) {
+        set({ error: 'No blocks to execute' })
         return
       }
 
-      // 실제 Unity 연결 확인
-      if (!wsService.isConnected()) {
-        set({ error: 'Not connected to Unity' })
+      console.log('[ExecutionStore] Parsed execution tree:', executionTree)
+
+      // ConnectionManager에서 현재 연결 서비스 가져오기
+      const connectionManager = getConnectionManager()
+      const connectionService = (connectionManager as any).currentService
+
+      if (!connectionService) {
+        set({ error: 'Not connected to any service' })
         return
       }
+
+      // Interpreter 생성
+      const interpreter = new Interpreter(connectionService)
+
+      // 상태 업데이트 리스너 등록
+      interpreter.setStateListener((state) => {
+        get().updateExecutionState(state)
+      })
+
+      // 드론 상태를 인터프리터에 전달
+      interpreter.updateDroneStates(get().drones)
+
+      // 인터프리터 저장
+      set({ interpreter })
 
       // 실행 시작
       set({
         status: ExecutionStatus.RUNNING,
-        currentCommandIndex: 0,
         error: null,
+        currentCommandIndex: 0,
+        currentNodeId: null,
+        currentNodePath: [],
       })
 
-      // Unity에 스크립트 전송
-      const success = wsService.send({
-        type: MessageType.EXECUTE_SCRIPT,
-        commands,
-        timestamp: Date.now(),
-      })
+      try {
+        const result = await interpreter.execute(executionTree)
 
-      if (!success) {
+        if (result.success) {
+          console.log(`[ExecutionStore] Execution completed. Executed ${result.executedNodes} nodes.`)
+          set({ status: ExecutionStatus.COMPLETED })
+        } else {
+          console.error(`[ExecutionStore] Execution failed: ${result.error}`)
+          set({
+            status: ExecutionStatus.ERROR,
+            error: result.error || 'Execution failed',
+          })
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[ExecutionStore] Execution error:', error)
         set({
           status: ExecutionStatus.ERROR,
-          error: 'Failed to send script to Unity',
+          error: errorMsg,
         })
       }
     },
 
+    /**
+     * 실행 중단
+     */
     stopExecution: () => {
+      const { interpreter } = get()
+      if (interpreter) {
+        interpreter.stop()
+      }
       set({
         status: ExecutionStatus.IDLE,
         currentCommandIndex: -1,
+        currentNodeId: null,
+        currentNodePath: [],
       })
     },
 
+    /**
+     * 일시정지
+     */
+    pauseExecution: () => {
+      const { interpreter } = get()
+      if (interpreter) {
+        interpreter.pause()
+      }
+    },
+
+    /**
+     * 재개
+     */
+    resumeExecution: () => {
+      const { interpreter } = get()
+      if (interpreter) {
+        interpreter.resume()
+      }
+    },
+
+    /**
+     * 리셋
+     */
     reset: () => {
       set({
         status: ExecutionStatus.IDLE,
         commands: [],
         currentCommandIndex: -1,
+        currentNodeId: null,
+        currentNodePath: [],
         error: null,
         drones: [],
+        interpreter: null,
       })
     },
 
+    /**
+     * 실행 상태 업데이트 (Interpreter로부터)
+     */
+    updateExecutionState: (state: ExecutionState) => {
+      console.log('[ExecutionStore] State update from interpreter:', state)
+
+      set({
+        currentNodeId: state.currentNodeId,
+        currentNodePath: state.currentNodePath,
+      })
+
+      // 상태 매핑
+      if (state.status === 'running') {
+        set({ status: ExecutionStatus.RUNNING })
+      } else if (state.status === 'completed') {
+        set({ status: ExecutionStatus.COMPLETED })
+      } else if (state.status === 'error') {
+        set({
+          status: ExecutionStatus.ERROR,
+          error: state.error || 'Unknown error',
+        })
+      }
+    },
+
+    /**
+     * WebSocket 메시지 핸들러
+     */
     handleMessage: (message) => {
       switch (message.type) {
-        case MessageType.COMMAND_FINISH:
-          set({
-            currentCommandIndex: message.commandIndex,
-          })
+        case MessageType.TELEMETRY:
+          const newDrones = message.drones
+          set({ drones: newDrones })
 
-          // 모든 명령 완료 확인
-          const { commands, currentCommandIndex } = get()
-          if (currentCommandIndex >= commands.length - 1) {
-            set({ status: ExecutionStatus.COMPLETED })
+          // 인터프리터에 드론 상태 업데이트
+          const { interpreter } = get()
+          if (interpreter) {
+            interpreter.updateDroneStates(newDrones)
           }
           break
 
-        case MessageType.ERROR:
-          set({
-            status: ExecutionStatus.ERROR,
-            error: message.error,
-            currentCommandIndex: message.commandIndex ?? -1,
-          })
+        case MessageType.COMMAND_FINISH:
+          // 인터프리터가 명령 완료를 직접 처리하므로 여기서는 무시
           break
 
-        case MessageType.TELEMETRY:
-          set({ drones: message.drones })
+        case MessageType.ERROR:
+          console.error('[ExecutionStore] Server error:', message.error)
           break
 
         case MessageType.ACK:
@@ -168,7 +247,7 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
           break
 
         default:
-          console.warn('Unknown message type:', message)
+          console.warn('[ExecutionStore] Unknown message type:', message)
       }
     },
   }

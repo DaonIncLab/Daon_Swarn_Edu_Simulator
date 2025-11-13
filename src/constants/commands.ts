@@ -30,6 +30,16 @@ export const CommandAction = {
   // 고급 제어
   HOVER: 'hover',
   WAIT: 'wait',
+
+  // 제어 흐름
+  REPEAT: 'repeat',
+  FOR_LOOP: 'for_loop',
+  IF: 'if',
+  IF_ELSE: 'if_else',
+
+  // 동기화
+  SYNC_ALL: 'sync_all',
+  WAIT_ALL: 'wait_all',
 } as const
 
 export type CommandAction = typeof CommandAction[keyof typeof CommandAction]
@@ -40,6 +50,9 @@ export const FormationType = {
   LINE: 'line',
   CIRCLE: 'circle',
   V_SHAPE: 'v_shape',
+  TRIANGLE: 'triangle',
+  SQUARE: 'square',
+  DIAMOND: 'diamond',
 } as const
 
 export type FormationType = typeof FormationType[keyof typeof FormationType]

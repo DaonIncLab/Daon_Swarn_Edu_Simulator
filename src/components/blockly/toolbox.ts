@@ -69,7 +69,67 @@ export const toolboxConfig = {
     },
     {
       kind: 'category',
-      name: '유틸리티',
+      name: '제어 흐름',
+      colour: '210',
+      contents: [
+        {
+          kind: 'block',
+          type: 'controls_repeat',
+          fields: {
+            TIMES: 3
+          }
+        },
+        {
+          kind: 'block',
+          type: 'controls_for',
+          fields: {
+            FROM: 1,
+            TO: 10,
+            BY: 1
+          }
+        },
+        {
+          kind: 'block',
+          type: 'controls_if_simple',
+          fields: {
+            CONDITION: 'all_connected'
+          }
+        },
+        {
+          kind: 'block',
+          type: 'controls_if_else',
+          fields: {
+            CONDITION: 'all_connected'
+          }
+        },
+      ]
+    },
+    {
+      kind: 'category',
+      name: '변수 & 수식',
+      colour: '330',
+      contents: [
+        {
+          kind: 'block',
+          type: 'variables_set',
+          fields: {
+            VALUE: 0
+          }
+        },
+        {
+          kind: 'block',
+          type: 'math_arithmetic',
+          fields: {
+            A: 0,
+            OP: 'ADD',
+            B: 0
+          }
+        },
+      ]
+    },
+    {
+      kind: 'category',
+      name: '동기화',
       colour: '120',
       contents: [
         {
@@ -78,6 +138,17 @@ export const toolboxConfig = {
           fields: {
             DURATION: 2
           }
+        },
+        {
+          kind: 'block',
+          type: 'swarm_wait_all',
+          fields: {
+            DURATION: 3
+          }
+        },
+        {
+          kind: 'block',
+          type: 'swarm_sync_all',
         },
       ]
     },

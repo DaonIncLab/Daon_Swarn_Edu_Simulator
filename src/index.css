@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
-/* Base styles */
+/* Global Light Mode Styles (하드코딩) */
+html,
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: rgb(249 250 251);
-  color: rgb(17 24 39);
+  background-color: rgb(249 250 251); /* gray-50 */
+  color: rgb(17 24 39); /* gray-900 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

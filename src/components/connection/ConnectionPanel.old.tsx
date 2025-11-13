@@ -24,7 +24,6 @@ export function ConnectionPanel() {
 
   const isTestMode = mode === ConnectionMode.TEST
   const isSimMode = mode === ConnectionMode.SIMULATION
-  const isUnityWebGLMode = mode === ConnectionMode.UNITY_WEBGL
 
   const [localIp, setLocalIp] = useState(ipAddress)
   const [localPort, setLocalPort] = useState(port.toString())
@@ -68,13 +67,12 @@ export function ConnectionPanel() {
   const handleConnect = () => {
     clearError()
 
-    // 테스트 모드 또는 Unity WebGL 모드면 바로 연결
-    if (isTestMode || isUnityWebGLMode) {
+    // 테스트 모드면 바로 연결
+    if (isTestMode) {
       connect()
       return
     }
 
-    // WebSocket 모드는 IP 검증 필요
     if (!validateIpAddress(localIp)) {
       return
     }
@@ -90,11 +88,13 @@ export function ConnectionPanel() {
     connect()
   }
 
-  const handleModeChange = (newMode: ConnectionMode) => {
+  const handleToggleMode = () => {
     if (isConnected || isConnecting) {
       return
     }
 
+    // Test ↔ Simulation 모드 토글
+    const newMode = isTestMode ? ConnectionMode.SIMULATION : ConnectionMode.TEST
     setMode(newMode)
 
     // 테스트 모드로 전환 시 자동 연결
@@ -117,83 +117,26 @@ export function ConnectionPanel() {
   return (
     <Card
       title="Unity Connection"
-      description="Select connection mode and configure settings"
+      description="Connect to Unity Control Server via WebSocket"
     >
       <div className="space-y-4">
-        {/* Mode Selector */}
-        <div className="pb-4 border-b border-gray-200">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Connection Mode
-          </label>
-          <div className="grid grid-cols-1 gap-2">
-            {/* WebSocket Mode */}
-            <button
-              onClick={() => handleModeChange(ConnectionMode.SIMULATION)}
+        {/* Mode Toggle */}
+        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="test-mode"
+              checked={isTestMode}
+              onChange={handleToggleMode}
               disabled={isConnected || isConnecting}
-              className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                isSimMode
-                  ? 'border-primary-600 bg-primary-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2 disabled:opacity-50"
+            />
+            <label
+              htmlFor="test-mode"
+              className="text-sm font-medium text-gray-700 select-none cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isSimMode ? 'border-primary-600' : 'border-gray-300'
-                }`}>
-                  {isSimMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">WebSocket Server</div>
-                  <div className="text-xs text-gray-600">Connect to separate Unity server</div>
-                </div>
-              </div>
-            </button>
-
-            {/* Unity WebGL Mode */}
-            <button
-              onClick={() => handleModeChange(ConnectionMode.UNITY_WEBGL)}
-              disabled={isConnected || isConnecting}
-              className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                isUnityWebGLMode
-                  ? 'border-primary-600 bg-primary-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isUnityWebGLMode ? 'border-primary-600' : 'border-gray-300'
-                }`}>
-                  {isUnityWebGLMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">Unity WebGL Embed</div>
-                  <div className="text-xs text-gray-600">Built-in Unity simulator</div>
-                </div>
-              </div>
-            </button>
-
-            {/* Test Mode */}
-            <button
-              onClick={() => handleModeChange(ConnectionMode.TEST)}
-              disabled={isConnected || isConnecting}
-              className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                isTestMode
-                  ? 'border-primary-600 bg-primary-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isTestMode ? 'border-primary-600' : 'border-gray-300'
-                }`}>
-                  {isTestMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">🧪 Test Mode</div>
-                  <div className="text-xs text-gray-600">Dummy mode (no Unity)</div>
-                </div>
-              </div>
-            </button>
+              🧪 Test Mode (No Unity Server)
+            </label>
           </div>
         </div>
 
@@ -203,31 +146,21 @@ export function ConnectionPanel() {
           <ConnectionStatus status={status} />
         </div>
 
-        {/* Mode-specific Info */}
+        {/* Test Mode Info */}
         {isTestMode && !isConnected && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-800">
               🧪 <strong>Test Mode Enabled</strong>
             </p>
             <p className="text-xs text-blue-700 mt-1">
-              You can test the Blockly workspace without Unity. Click "Connect" to start.
+              You can test the Blockly workspace without connecting to Unity server.
+              Click "Connect" to start testing.
             </p>
           </div>
         )}
 
-        {isUnityWebGLMode && !isConnected && (
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-            <p className="text-sm text-purple-800">
-              🎮 <strong>Unity WebGL Mode</strong>
-            </p>
-            <p className="text-xs text-purple-700 mt-1">
-              Unity simulator will be embedded in the app. Make sure Unity build files are in <code className="bg-purple-100 px-1 rounded">public/unity/Build/</code>
-            </p>
-          </div>
-        )}
-
-        {/* IP Address Input - Only for WebSocket Mode */}
-        {isSimMode && !isConnected && (
+        {/* IP Address Input - Hidden in Test Mode */}
+        {!isTestMode && (
           <>
             <Input
               label="Unity Server IP Address"
@@ -275,9 +208,7 @@ export function ConnectionPanel() {
           <div className="bg-success/10 border border-success rounded-lg p-3">
             <p className="text-sm text-success-dark">
               {isTestMode ? (
-                <>🧪 <strong>Test Mode Active</strong> - Blockly workspace ready</>
-              ) : isUnityWebGLMode ? (
-                <>🎮 <strong>Unity WebGL Ready</strong> - Simulator loaded</>
+                <>🧪 <strong>Test Mode Active</strong> - Blockly workspace ready for testing</>
               ) : (
                 <>Connected to <span className="font-mono font-semibold">{ipAddress}:{port}</span></>
               )}
@@ -307,8 +238,8 @@ export function ConnectionPanel() {
           )}
         </div>
 
-        {/* Quick Connect Buttons - Only in WebSocket Mode */}
-        {isSimMode && !isConnected && !isConnecting && (
+        {/* Quick Connect Buttons - Only in Simulation Mode */}
+        {!isTestMode && !isConnected && !isConnecting && (
           <div className="pt-4 border-t border-gray-200">
             <p className="text-xs text-gray-600 mb-2">Quick Connect:</p>
             <div className="grid grid-cols-2 gap-2">
