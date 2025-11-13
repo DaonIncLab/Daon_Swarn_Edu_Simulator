@@ -10,6 +10,7 @@ import {
   type ConnectionConfig,
   type TelemetryData,
 } from '@/services/connection'
+import { wsService } from '@/services/websocket'
 
 /**
  * 연결 상태 관리 스토어
@@ -22,11 +23,13 @@ interface ConnectionStore {
   port: number
   error: string | null
   latestTelemetry: TelemetryData | null
+  testModeDroneCount: number
 
   // Actions
   setMode: (mode: ConnectionMode) => void
   setIpAddress: (ip: string) => void
   setPort: (port: number) => void
+  setTestModeDroneCount: (count: number) => void
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   setStatus: (status: ConnectionStatus) => void
@@ -47,6 +50,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
     port: DEFAULT_WS_PORT,
     error: null,
     latestTelemetry: null,
+    testModeDroneCount: 4,
 
     // Actions
     setMode: (mode) => set({ mode }),
@@ -55,8 +59,10 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
 
     setPort: (port) => set({ port }),
 
+    setTestModeDroneCount: (count) => set({ testModeDroneCount: count }),
+
     connect: async () => {
-      const { mode, ipAddress, port } = get()
+      const { mode, ipAddress, port, testModeDroneCount } = get()
 
       set({ error: null })
 
@@ -100,12 +106,18 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
             break
 
           case ConnectionMode.TEST:
-            // 테스트 모드는 추가 설정 불필요
+            // 테스트 모드 설정 (드론 수)
+            config.test = { droneCount: testModeDroneCount }
             break
         }
 
         // ConnectionManager를 통해 연결
         await manager.connect(config)
+
+        // TestConnectionService에 message listener 설정 (WebSocket 메시지 형식으로)
+        manager.setMessageListener((message) => {
+          wsService.getMessageListener()?.(message)
+        })
 
         console.log(`[Store] Connected in ${mode} mode`)
       } catch (error) {

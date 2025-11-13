@@ -77,6 +77,32 @@ export class ConditionEvaluator {
       return this._evaluateAltitudeCondition(operator, threshold)
     }
 
+    // 3a. 개별 드론 배터리 조건 (Phase 6-A) (drone_1_battery > 50)
+    const droneBatteryMatch = trimmed.match(/^drone_(\d+)_battery\s*([><=]+)\s*(\d+)$/)
+    if (droneBatteryMatch) {
+      const droneId = parseInt(droneBatteryMatch[1], 10)
+      const operator = droneBatteryMatch[2]
+      const threshold = parseFloat(droneBatteryMatch[3])
+      return this._evaluateDroneBatteryCondition(droneId, operator, threshold)
+    }
+
+    // 3b. 개별 드론 고도 조건 (Phase 6-A) (drone_1_altitude > 10)
+    const droneAltitudeMatch = trimmed.match(/^drone_(\d+)_altitude\s*([><=]+)\s*([0-9.]+)$/)
+    if (droneAltitudeMatch) {
+      const droneId = parseInt(droneAltitudeMatch[1], 10)
+      const operator = droneAltitudeMatch[2]
+      const threshold = parseFloat(droneAltitudeMatch[3])
+      return this._evaluateDroneAltitudeCondition(droneId, operator, threshold)
+    }
+
+    // 3c. 경과 시간 조건 (Phase 6-A) (elapsed_time > 30)
+    const elapsedTimeMatch = trimmed.match(/^elapsed_time\s*([><=]+)\s*([0-9.]+)$/)
+    if (elapsedTimeMatch) {
+      const operator = elapsedTimeMatch[1]
+      const threshold = parseFloat(elapsedTimeMatch[2])
+      return this._evaluateElapsedTimeCondition(operator, threshold)
+    }
+
     // 4. 변수 비교 (x > 5, count <= 10)
     const variableMatch = trimmed.match(/^(\w+)\s*([><=]+)\s*([0-9.]+)$/)
     if (variableMatch) {
@@ -146,6 +172,50 @@ export class ConditionEvaluator {
     }
 
     return this._compareNumbers(value, operator, threshold)
+  }
+
+  /**
+   * 개별 드론 배터리 조건 평가 (Phase 6-A)
+   */
+  private _evaluateDroneBatteryCondition(droneId: number, operator: string, threshold: number): boolean {
+    const drone = this.droneStates.find(d => d.id === droneId)
+
+    if (!drone) {
+      console.warn(`[ConditionEvaluator] Drone ${droneId} not found`)
+      return false
+    }
+
+    return this._compareNumbers(drone.battery, operator, threshold)
+  }
+
+  /**
+   * 개별 드론 고도 조건 평가 (Phase 6-A)
+   */
+  private _evaluateDroneAltitudeCondition(droneId: number, operator: string, threshold: number): boolean {
+    const drone = this.droneStates.find(d => d.id === droneId)
+
+    if (!drone) {
+      console.warn(`[ConditionEvaluator] Drone ${droneId} not found`)
+      return false
+    }
+
+    return this._compareNumbers(drone.position.z, operator, threshold)
+  }
+
+  /**
+   * 경과 시간 조건 평가 (Phase 6-A)
+   */
+  private _evaluateElapsedTimeCondition(operator: string, threshold: number): boolean {
+    const startTime = this.context.executionStartTime
+
+    if (!startTime) {
+      console.warn('[ConditionEvaluator] Execution start time not set')
+      return false
+    }
+
+    const elapsedSeconds = (Date.now() - startTime) / 1000
+
+    return this._compareNumbers(elapsedSeconds, operator, threshold)
   }
 
   /**

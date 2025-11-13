@@ -39,8 +39,8 @@ export class ConnectionManager {
       await this.disconnect()
     }
 
-    // 모드에 따라 적절한 서비스 선택
-    this.currentService = this._createService(config.mode)
+    // 모드에 따라 적절한 서비스 선택 (config 전달)
+    this.currentService = this._createService(config.mode, config)
     this.currentMode = config.mode
     this.config = config
 
@@ -152,6 +152,15 @@ export class ConnectionManager {
   }
 
   /**
+   * Set message listener (for services that support it like TestConnectionService)
+   */
+  setMessageListener(listener: (message: any) => void): void {
+    if (this.currentService && 'setMessageListener' in this.currentService) {
+      ;(this.currentService as any).setMessageListener(listener)
+    }
+  }
+
+  /**
    * 핑 테스트
    */
   async ping(): Promise<number> {
@@ -187,7 +196,7 @@ export class ConnectionManager {
   /**
    * 모드에 따라 적절한 연결 서비스 생성
    */
-  private _createService(mode: ConnectionMode): IConnectionService {
+  private _createService(mode: ConnectionMode, config?: ConnectionConfig): IConnectionService {
     switch (mode) {
       case 'simulation':
         console.log('[ConnectionManager] Creating WebSocket service')
@@ -202,8 +211,9 @@ export class ConnectionManager {
         return new MAVLinkConnectionService()
 
       case 'test':
-        console.log('[ConnectionManager] Creating Test service')
-        return new TestConnectionService()
+        const droneCount = config?.test?.droneCount || 4
+        console.log('[ConnectionManager] Creating Test service with', droneCount, 'drones')
+        return new TestConnectionService(droneCount)
 
       default:
         throw new Error(`Unsupported connection mode: ${mode}`)

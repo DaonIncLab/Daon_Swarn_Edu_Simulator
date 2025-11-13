@@ -1,76 +1,267 @@
 /**
- * 테스트/더미 연결 서비스
- * Unity 서버 없이 로컬에서 테스트할 수 있는 더미 구현
+ * Test Connection Service
+ *
+ * Simulates Unity server for testing without Unity
+ * - Multiple drone simulation
+ * - Command execution simulation
+ * - Telemetry generation matching Unity format
  */
 
 import { ConnectionStatus } from '@/constants/connection'
-import type { Command } from '@/types/blockly'
+import { MessageType, CommandAction } from '@/constants/commands'
+import type { Command } from '@/types/websocket'
 import type { IConnectionService } from './IConnectionService'
 import type {
   ConnectionConfig,
   ConnectionEventListeners,
   CommandResponse,
-  TelemetryData,
 } from './types'
+import { DroneSimulator } from './DroneSimulator'
 
 /**
- * 테스트 연결 서비스
+ * Test Connection Service
  */
 export class TestConnectionService implements IConnectionService {
   private status: ConnectionStatus = ConnectionStatus.DISCONNECTED
   private listeners: ConnectionEventListeners = {}
-  private telemetryTimer: number | null = null
+  private simulator: DroneSimulator | null = null
+  private messageListener: ((message: any) => void) | null = null
+  private droneCount: number = 4
+
+  constructor(droneCount: number = 4) {
+    this.droneCount = droneCount
+  }
 
   async connect(config: ConnectionConfig): Promise<void> {
     console.log('[Test] Connecting to test mode...')
 
     this._updateStatus(ConnectionStatus.CONNECTING)
 
-    // 연결 시뮬레이션 (1초 후 연결 성공)
+    // Simulate connection delay
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    this._updateStatus(ConnectionStatus.CONNECTED)
-    this._startDummyTelemetry()
+    // Initialize simulator
+    this.simulator = new DroneSimulator(this.droneCount)
 
-    console.log('[Test] Connected successfully (dummy mode)')
+    // Start telemetry updates
+    this.simulator.start((drones) => {
+      if (this.messageListener) {
+        this.messageListener({
+          type: MessageType.TELEMETRY,
+          drones,
+          timestamp: Date.now(),
+        })
+      }
+    })
+
+    this._updateStatus(ConnectionStatus.CONNECTED)
+
+    // Send ACK message
+    if (this.messageListener) {
+      this.messageListener({
+        type: MessageType.ACK,
+        message: 'Test mode connected successfully',
+        timestamp: Date.now(),
+      })
+    }
+
+    console.log('[Test] Connected successfully (simulating', this.droneCount, 'drones)')
   }
 
   async disconnect(): Promise<void> {
     console.log('[Test] Disconnecting...')
 
-    this._stopDummyTelemetry()
+    if (this.simulator) {
+      this.simulator.stop()
+      this.simulator = null
+    }
+
     this._updateStatus(ConnectionStatus.DISCONNECTED)
   }
 
   async sendCommand(command: Command): Promise<CommandResponse> {
-    console.log('[Test] Command sent (dummy):', command)
+    console.log('[Test] Command sent:', command)
 
-    // 더미 응답 시뮬레이션
+    if (!this.simulator) {
+      return {
+        success: false,
+        error: 'Simulator not initialized',
+        timestamp: Date.now(),
+      }
+    }
+
+    // Execute command on simulator
+    this._executeCommand(command)
+
+    // Simulate processing delay
     await new Promise((resolve) => setTimeout(resolve, 100))
 
     return {
       success: true,
-      commandId: `dummy-${Date.now()}`,
+      commandId: `test-${Date.now()}`,
       timestamp: Date.now(),
     }
   }
 
   async sendCommands(commands: Command[]): Promise<CommandResponse> {
-    console.log('[Test] Commands sent (dummy):', commands.length)
+    console.log('[Test] Executing script with', commands.length, 'commands')
 
-    // 더미 응답 시뮬레이션
-    await new Promise((resolve) => setTimeout(resolve, 200))
-
-    // 명령 실행 로그 시뮬레이션
-    for (const cmd of commands) {
-      if (this.listeners.onLog) {
-        this.listeners.onLog(`[Dummy] Executing: ${cmd.action}`)
+    if (!this.simulator) {
+      return {
+        success: false,
+        error: 'Simulator not initialized',
+        timestamp: Date.now(),
       }
     }
+
+    // Send ACK for script received
+    if (this.messageListener) {
+      this.messageListener({
+        type: MessageType.ACK,
+        message: `Received script with ${commands.length} commands`,
+        timestamp: Date.now(),
+      })
+    }
+
+    // Execute commands sequentially with delays
+    this._executeCommandSequence(commands)
 
     return {
       success: true,
       timestamp: Date.now(),
+    }
+  }
+
+  /**
+   * Execute commands sequentially (async)
+   */
+  private async _executeCommandSequence(commands: Command[]): Promise<void> {
+    for (let i = 0; i < commands.length; i++) {
+      const command = commands[i]
+
+      // Log command start
+      if (this.listeners.onLog) {
+        this.listeners.onLog(`[Test] Executing command ${i + 1}/${commands.length}: ${command.action}`)
+      }
+
+      // Execute command
+      this._executeCommand(command)
+
+      // Wait based on command type
+      const delay = this._getCommandDelay(command)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+
+      // Send command_finish message
+      if (this.messageListener) {
+        this.messageListener({
+          type: MessageType.COMMAND_FINISH,
+          commandIndex: i,
+          message: `Command ${command.action} completed`,
+          timestamp: Date.now(),
+        })
+      }
+
+      // Log command completion
+      if (this.listeners.onLog) {
+        this.listeners.onLog(`[Test] Command ${i + 1} completed: ${command.action}`)
+      }
+    }
+
+    console.log('[Test] All commands completed')
+  }
+
+  /**
+   * Execute single command on simulator
+   */
+  private _executeCommand(command: Command): void {
+    if (!this.simulator) return
+
+    const { action, params } = command
+
+    switch (action) {
+      case CommandAction.TAKEOFF_ALL:
+        this.simulator.executeTakeoffAll((params as any).altitude || 2)
+        break
+
+      case CommandAction.LAND_ALL:
+        this.simulator.executeLandAll()
+        break
+
+      case CommandAction.SET_FORMATION:
+        this.simulator.executeSetFormation(
+          (params as any).type,
+          {
+            rows: (params as any).rows,
+            cols: (params as any).cols,
+            spacing: (params as any).spacing,
+            radius: (params as any).radius,
+          }
+        )
+        break
+
+      case CommandAction.MOVE_FORMATION:
+        this.simulator.executeMoveFormation(
+          (params as any).direction,
+          (params as any).distance
+        )
+        break
+
+      case CommandAction.MOVE_DRONE:
+        this.simulator.executeMoveDrone(
+          (params as any).droneId,
+          (params as any).x,
+          (params as any).y,
+          (params as any).z
+        )
+        break
+
+      case CommandAction.ROTATE_DRONE:
+        this.simulator.executeRotateDrone(
+          (params as any).droneId,
+          (params as any).yaw
+        )
+        break
+
+      case CommandAction.WAIT:
+        // Wait is handled by delay, no action needed
+        break
+
+      default:
+        console.warn('[Test] Unknown command action:', action)
+    }
+  }
+
+  /**
+   * Get delay for command execution simulation
+   */
+  private _getCommandDelay(command: Command): number {
+    const { action, params } = command
+
+    switch (action) {
+      case CommandAction.TAKEOFF_ALL:
+        return 3000 // 3 seconds to takeoff
+
+      case CommandAction.LAND_ALL:
+        return 3000 // 3 seconds to land
+
+      case CommandAction.SET_FORMATION:
+        return 2000 // 2 seconds to set formation
+
+      case CommandAction.MOVE_FORMATION:
+        const distance = (params as any).distance || 1
+        return Math.max(1000, distance * 500) // 500ms per meter, min 1s
+
+      case CommandAction.MOVE_DRONE:
+        return 2000 // 2 seconds to move single drone
+
+      case CommandAction.ROTATE_DRONE:
+        return 1000 // 1 second to rotate
+
+      case CommandAction.WAIT:
+        return ((params as any).duration || 1) * 1000 // duration in seconds
+
+      default:
+        return 1000 // 1 second default
     }
   }
 
@@ -86,8 +277,23 @@ export class TestConnectionService implements IConnectionService {
     this.listeners = { ...this.listeners, ...listeners }
   }
 
+  /**
+   * Set message listener for WebSocket-style messages
+   */
+  setMessageListener(listener: (message: any) => void): void {
+    this.messageListener = listener
+  }
+
   async emergencyStop(): Promise<CommandResponse> {
-    console.warn('[Test] EMERGENCY STOP (dummy)')
+    console.warn('[Test] EMERGENCY STOP')
+
+    if (this.simulator) {
+      this.simulator.emergencyStop()
+    }
+
+    if (this.listeners.onLog) {
+      this.listeners.onLog('[Test] Emergency stop activated!')
+    }
 
     return {
       success: true,
@@ -96,60 +302,28 @@ export class TestConnectionService implements IConnectionService {
   }
 
   async ping(): Promise<number> {
-    // 더미 핑 (10-50ms 랜덤)
+    // Simulate ping latency (10-50ms random)
     const latency = Math.random() * 40 + 10
     return Promise.resolve(latency)
   }
 
   cleanup(): void {
-    this._stopDummyTelemetry()
+    if (this.simulator) {
+      this.simulator.stop()
+      this.simulator = null
+    }
     this.listeners = {}
-  }
-
-  // Private methods
-
-  /**
-   * 더미 텔레메트리 데이터 생성 시작
-   */
-  private _startDummyTelemetry(): void {
-    let time = 0
-
-    this.telemetryTimer = window.setInterval(() => {
-      time += 0.5
-
-      // 사인파 패턴으로 더미 위치 생성
-      const telemetry: TelemetryData = {
-        droneId: 'dummy-drone-1',
-        position: {
-          x: Math.sin(time * 0.5) * 5,
-          y: 2 + Math.sin(time * 0.3) * 1,
-          z: Math.cos(time * 0.5) * 5,
-        },
-        altitude: 2 + Math.sin(time * 0.3) * 1,
-        velocity: {
-          vx: Math.cos(time * 0.5) * 2.5,
-          vy: Math.cos(time * 0.3) * 0.3,
-          vz: -Math.sin(time * 0.5) * 2.5,
-        },
-        battery: Math.max(0, 100 - time * 0.5), // 천천히 감소
-        flightMode: 'GUIDED',
-        isArmed: true,
-        timestamp: Date.now(),
-      }
-
-      if (this.listeners.onTelemetry) {
-        this.listeners.onTelemetry(telemetry)
-      }
-    }, 500) // 0.5초마다 업데이트
+    this.messageListener = null
   }
 
   /**
-   * 더미 텔레메트리 중지
+   * Set number of drones for simulation
    */
-  private _stopDummyTelemetry(): void {
-    if (this.telemetryTimer) {
-      clearInterval(this.telemetryTimer)
-      this.telemetryTimer = null
+  setDroneCount(count: number): void {
+    this.droneCount = count
+
+    if (this.simulator) {
+      this.simulator.setDroneCount(count)
     }
   }
 

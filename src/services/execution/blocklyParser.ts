@@ -11,9 +11,15 @@ import type {
   SequenceNode,
   RepeatNode,
   ForLoopNode,
+  WhileLoopNode,
+  UntilLoopNode,
   IfNode,
   IfElseNode,
   WaitNode,
+  VariableSetNode,
+  VariableGetNode,
+  FunctionDefNode,
+  FunctionCallNode,
   NodeType,
 } from '@/types/execution'
 
@@ -114,12 +120,38 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
     return parseForLoopBlock(block)
   }
 
+  if (type === 'controls_while') {
+    return parseWhileLoopBlock(block)
+  }
+
+  if (type === 'controls_repeat_until') {
+    return parseUntilLoopBlock(block)
+  }
+
   if (type === 'controls_if_simple') {
     return parseIfBlock(block)
   }
 
   if (type === 'controls_if_else') {
     return parseIfElseBlock(block)
+  }
+
+  // 변수 블록
+  if (type === 'variables_set') {
+    return parseVariableSetBlock(block)
+  }
+
+  if (type === 'variables_get') {
+    return parseVariableGetBlock(block)
+  }
+
+  // 함수 블록
+  if (type === 'procedures_defnoreturn') {
+    return parseFunctionDefBlock(block)
+  }
+
+  if (type === 'procedures_callnoreturn') {
+    return parseFunctionCallBlock(block)
   }
 
   // 대기 블록
@@ -130,6 +162,12 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
   // 드론 명령 블록
   if (type.startsWith('swarm_')) {
     return parseCommandBlock(block)
+  }
+
+  // 센서 블록과 논리 블록은 값 블록이므로 단독으로 파싱하지 않음
+  if (type.startsWith('sensor_') || type.startsWith('logic_')) {
+    console.warn(`[BlocklyParser] Value block cannot be used as statement: ${type}`)
+    return null
   }
 
   // 알 수 없는 블록 타입
@@ -261,6 +299,121 @@ function parseWaitBlock(block: Blockly.Block): WaitNode {
     id: generateNodeId(),
     type: 'wait' as NodeType.WAIT,
     duration,
+  }
+}
+
+/**
+ * While 루프 블록 파싱 (Phase 6-A)
+ */
+function parseWhileLoopBlock(block: Blockly.Block): WhileLoopNode | null {
+  const condition = block.getFieldValue('CONDITION') as string
+
+  const statementInput = block.getInput('DO')
+  const statementBlock = statementInput?.connection?.targetBlock()
+
+  const body = statementBlock ? parseBlock(statementBlock) : null
+
+  if (!body) {
+    console.warn('[BlocklyParser] While loop has no body')
+    return null
+  }
+
+  return {
+    id: generateNodeId(),
+    type: 'while_loop' as NodeType.WHILE_LOOP,
+    condition,
+    body,
+    maxIterations: 1000, // 무한 루프 방지
+  }
+}
+
+/**
+ * Repeat Until 루프 블록 파싱 (Phase 6-A)
+ */
+function parseUntilLoopBlock(block: Blockly.Block): UntilLoopNode | null {
+  const condition = block.getFieldValue('CONDITION') as string
+
+  const statementInput = block.getInput('DO')
+  const statementBlock = statementInput?.connection?.targetBlock()
+
+  const body = statementBlock ? parseBlock(statementBlock) : null
+
+  if (!body) {
+    console.warn('[BlocklyParser] Repeat Until loop has no body')
+    return null
+  }
+
+  return {
+    id: generateNodeId(),
+    type: 'until_loop' as NodeType.UNTIL_LOOP,
+    condition,
+    body,
+    maxIterations: 1000, // 무한 루프 방지
+  }
+}
+
+/**
+ * 변수 설정 블록 파싱 (Phase 6-A)
+ */
+function parseVariableSetBlock(block: Blockly.Block): VariableSetNode {
+  const variableName = block.getFieldValue('VAR') as string
+  const value = block.getFieldValue('VALUE') as number
+
+  return {
+    id: generateNodeId(),
+    type: 'variable_set' as NodeType.VARIABLE_SET,
+    variableName,
+    value,
+  }
+}
+
+/**
+ * 변수 값 가져오기 블록 파싱 (Phase 6-A)
+ */
+function parseVariableGetBlock(block: Blockly.Block): VariableGetNode {
+  const variableName = block.getFieldValue('VAR') as string
+
+  return {
+    id: generateNodeId(),
+    type: 'variable_get' as NodeType.VARIABLE_GET,
+    variableName,
+  }
+}
+
+/**
+ * 함수 정의 블록 파싱 (Phase 6-A)
+ */
+function parseFunctionDefBlock(block: Blockly.Block): FunctionDefNode | null {
+  const functionName = block.getFieldValue('NAME') as string
+
+  const statementInput = block.getInput('STACK')
+  const statementBlock = statementInput?.connection?.targetBlock()
+
+  const body = statementBlock ? parseBlock(statementBlock) : null
+
+  if (!body) {
+    console.warn('[BlocklyParser] Function definition has no body')
+    return null
+  }
+
+  return {
+    id: generateNodeId(),
+    type: 'function_def' as NodeType.FUNCTION_DEF,
+    functionName,
+    body,
+  }
+}
+
+/**
+ * 함수 호출 블록 파싱 (Phase 6-A)
+ */
+function parseFunctionCallBlock(block: Blockly.Block): FunctionCallNode {
+  const functionName = block.getFieldValue('NAME') as string
+
+  return {
+    id: generateNodeId(),
+    type: 'function_call' as NodeType.FUNCTION_CALL,
+    functionName,
   }
 }
 

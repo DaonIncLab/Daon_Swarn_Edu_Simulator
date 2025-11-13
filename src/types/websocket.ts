@@ -92,8 +92,9 @@ export interface DroneState {
   position: { x: number; y: number; z: number }
   rotation: { x: number; y: number; z: number }
   velocity: { x: number; y: number; z: number }
-  battery?: number
+  battery: number // Required for visualization
   isActive: boolean
+  status: 'idle' | 'flying' | 'landed' | 'hovering' | 'error'
 }
 
 export interface TelemetryMessage extends BaseMessage {

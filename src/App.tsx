@@ -1,58 +1,65 @@
-import { useEffect, useState } from 'react'
-import { ConnectionPanel } from '@/components/connection'
-import { BlocklyWorkspace, ExecutionPanel } from '@/components/blockly'
-import { CommandPreview, ExecutionLog, DroneStatus } from '@/components/visualization'
-import { UnitySimulatorPanel } from '@/components/simulator'
-import { ProjectPanel } from '@/components/project'
-import { useConnectionStore } from '@/stores/useConnectionStore'
-import { useProjectStore } from '@/stores/useProjectStore'
-import { useBlocklyStore } from '@/stores/useBlocklyStore'
-import { ConnectionStatus, ConnectionMode } from '@/constants/connection'
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
-import { initializeProjectStorage } from '@/services/storage'
+import { useEffect, useState } from "react";
+import { ConnectionPanel } from "@/components/connection";
+import { BlocklyWorkspace, ExecutionPanel } from "@/components/blockly";
+import {
+  CommandPreview,
+  ExecutionLog,
+  DroneStatus,
+  TelemetryDashboard,
+} from "@/components/visualization";
+import { DroneStatusButton } from "@/components/visualization/DroneStatusButton";
+import { UnitySimulatorPanel } from "@/components/simulator";
+import { ProjectPanel } from "@/components/project";
+import { useConnectionStore } from "@/stores/useConnectionStore";
+import { useProjectStore } from "@/stores/useProjectStore";
+import { useBlocklyStore } from "@/stores/useBlocklyStore";
+import { ConnectionStatus, ConnectionMode } from "@/constants/connection";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { initializeProjectStorage } from "@/services/storage";
 
 function App() {
-  const { status, mode } = useConnectionStore()
-  const { currentProject, saveCurrentProject } = useProjectStore()
-  const { hasUnsavedChanges } = useBlocklyStore()
-  const [showNewProjectModal, setShowNewProjectModal] = useState(false)
-  const [showOpenProjectModal, setShowOpenProjectModal] = useState(false)
+  const { status, mode } = useConnectionStore();
+  const { currentProject, saveCurrentProject } = useProjectStore();
+  const { hasUnsavedChanges } = useBlocklyStore();
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [showOpenProjectModal, setShowOpenProjectModal] = useState(false);
+  const [showDroneStatusModal, setShowDroneStatusModal] = useState(false);
 
-  const isConnected = status === ConnectionStatus.CONNECTED
-  const isUnityWebGLMode = mode === ConnectionMode.UNITY_WEBGL
+  const isConnected = status === ConnectionStatus.CONNECTED;
+  const isUnityWebGLMode = mode === ConnectionMode.UNITY_WEBGL;
 
   // 프로젝트 저장소 초기화
   useEffect(() => {
-    initializeProjectStorage().catch(err => {
-      console.error('[App] Failed to initialize project storage:', err)
-    })
-  }, [])
+    initializeProjectStorage().catch((err) => {
+      console.error("[App] Failed to initialize project storage:", err);
+    });
+  }, []);
 
   // 키보드 단축키
   useKeyboardShortcuts([
     {
-      key: 'n',
+      key: "n",
       ctrl: true,
       handler: () => setShowNewProjectModal(true),
-      description: '새 프로젝트',
+      description: "새 프로젝트",
     },
     {
-      key: 'o',
+      key: "o",
       ctrl: true,
       handler: () => setShowOpenProjectModal(true),
-      description: '프로젝트 열기',
+      description: "프로젝트 열기",
     },
     {
-      key: 's',
+      key: "s",
       ctrl: true,
       handler: () => {
         if (currentProject && hasUnsavedChanges) {
-          saveCurrentProject()
+          saveCurrentProject();
         }
       },
-      description: '프로젝트 저장',
+      description: "프로젝트 저장",
     },
-  ])
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -77,7 +84,10 @@ function App() {
                       📄 {currentProject.name}
                     </span>
                     {hasUnsavedChanges && (
-                      <span className="text-orange-600 font-bold" title="저장되지 않은 변경사항">
+                      <span
+                        className="text-orange-600 font-bold"
+                        title="저장되지 않은 변경사항"
+                      >
                         ✱
                       </span>
                     )}
@@ -101,9 +111,13 @@ function App() {
 
               {/* Connection Status Badge */}
               <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success animate-pulse' : 'bg-gray-400'}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    isConnected ? "bg-success animate-pulse" : "bg-gray-400"
+                  }`}
+                />
                 <span className="text-sm font-medium text-gray-700">
-                  {isConnected ? 'Unity Connected' : 'Not Connected'}
+                  {isConnected ? "Unity Connected" : "Not Connected"}
                 </span>
               </div>
             </div>
@@ -118,7 +132,9 @@ function App() {
           <div className="xl:col-span-3 space-y-6">
             <ProjectPanel />
             <ConnectionPanel />
-            {isConnected && <DroneStatus />}
+            {isConnected && (
+              <DroneStatusButton onClick={() => setShowDroneStatusModal(true)} />
+            )}
           </div>
 
           {/* Center - Blockly Workspace OR Unity Simulator */}
@@ -137,8 +153,18 @@ function App() {
               ) : (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
                   <div className="text-gray-400 mb-4">
-                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    <svg
+                      className="w-16 h-16 mx-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
                     </svg>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -160,7 +186,9 @@ function App() {
                 📘 Getting Started
               </h4>
               <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                <li>Launch Unity Control Server on your PC (or enable Test Mode)</li>
+                <li>
+                  Launch Unity Control Server on your PC (or enable Test Mode)
+                </li>
                 <li>Note the IP address shown in Unity</li>
                 <li>Enter the IP address in the Connection Panel</li>
                 <li>Click "Connect" to establish connection</li>
@@ -179,10 +207,22 @@ function App() {
             )}
           </div>
         </div>
+
+        {/* Telemetry Dashboard - Full Width */}
+        {isConnected && (
+          <div className="mt-6">
+            <TelemetryDashboard />
+          </div>
+        )}
       </main>
+
+      {/* DroneStatus Modal */}
+      <DroneStatus
+        isOpen={showDroneStatusModal}
+        onClose={() => setShowDroneStatusModal(false)}
+      />
     </div>
-  )
+  );
 }
 
-export default App
-
+export default App;

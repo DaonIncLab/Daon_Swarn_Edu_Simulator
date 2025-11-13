@@ -17,12 +17,24 @@ export enum NodeType {
   REPEAT = 'repeat',
   /** For 루프 */
   FOR_LOOP = 'for_loop',
+  /** While 루프 (조건 기반) */
+  WHILE_LOOP = 'while_loop',
+  /** Repeat Until 루프 (조건이 참이 될 때까지) */
+  UNTIL_LOOP = 'until_loop',
   /** 조건 분기 (if) */
   IF = 'if',
   /** 조건 분기 (if-else) */
   IF_ELSE = 'if_else',
   /** 대기 */
   WAIT = 'wait',
+  /** 변수 설정 */
+  VARIABLE_SET = 'variable_set',
+  /** 변수 값 가져오기 */
+  VARIABLE_GET = 'variable_get',
+  /** 함수 정의 */
+  FUNCTION_DEF = 'function_def',
+  /** 함수 호출 */
+  FUNCTION_CALL = 'function_call',
 }
 
 /**
@@ -98,6 +110,60 @@ export interface WaitNode extends BaseNode {
 }
 
 /**
+ * While 루프 노드
+ */
+export interface WhileLoopNode extends BaseNode {
+  type: NodeType.WHILE_LOOP
+  condition: string
+  body: ExecutableNode
+  maxIterations?: number // 무한 루프 방지 (기본값: 1000)
+}
+
+/**
+ * Repeat Until 루프 노드
+ */
+export interface UntilLoopNode extends BaseNode {
+  type: NodeType.UNTIL_LOOP
+  condition: string
+  body: ExecutableNode
+  maxIterations?: number // 무한 루프 방지 (기본값: 1000)
+}
+
+/**
+ * 변수 설정 노드
+ */
+export interface VariableSetNode extends BaseNode {
+  type: NodeType.VARIABLE_SET
+  variableName: string
+  value: number | VariableGetNode // 직접 값 또는 다른 변수 참조
+}
+
+/**
+ * 변수 값 가져오기 노드
+ */
+export interface VariableGetNode extends BaseNode {
+  type: NodeType.VARIABLE_GET
+  variableName: string
+}
+
+/**
+ * 함수 정의 노드
+ */
+export interface FunctionDefNode extends BaseNode {
+  type: NodeType.FUNCTION_DEF
+  functionName: string
+  body: ExecutableNode
+}
+
+/**
+ * 함수 호출 노드
+ */
+export interface FunctionCallNode extends BaseNode {
+  type: NodeType.FUNCTION_CALL
+  functionName: string
+}
+
+/**
  * 실행 가능한 모든 노드 타입의 유니온
  */
 export type ExecutableNode =
@@ -105,17 +171,26 @@ export type ExecutableNode =
   | SequenceNode
   | RepeatNode
   | ForLoopNode
+  | WhileLoopNode
+  | UntilLoopNode
   | IfNode
   | IfElseNode
   | WaitNode
+  | VariableSetNode
+  | VariableGetNode
+  | FunctionDefNode
+  | FunctionCallNode
 
 /**
- * 실행 컨텍스트 (변수 저장소)
+ * 실행 컨텍스트 (변수 저장소 및 함수 레지스트리)
  */
 export interface ExecutionContext {
-  variables: Map<string, number>
+  variables: Map<string, number> // 전역 변수 저장소
+  functions: Map<string, ExecutableNode> // 함수 정의 저장소
+  callStack: string[] // 함수 호출 스택 (무한 재귀 방지)
   currentRepeatCount?: number // 현재 반복 횟수 (디버깅용)
   currentLoopVariable?: { name: string; value: number } // 현재 루프 변수
+  executionStartTime?: number // 실행 시작 시간 (센서: elapsed_time 조건용)
 }
 
 /**

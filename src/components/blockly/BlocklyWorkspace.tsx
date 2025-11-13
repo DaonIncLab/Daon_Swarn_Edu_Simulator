@@ -3,7 +3,8 @@ import * as Blockly from 'blockly'
 import { toolboxConfig } from './toolbox'
 import { generateCommands } from './generators/swarmGenerator'
 import { useBlocklyStore } from '@/stores/useBlocklyStore'
-import { useExecutionStore } from '@/stores/useExecutionStore'
+import { useExecutionStore, ExecutionStatus } from '@/stores/useExecutionStore'
+import { Button } from '@/components/common/Button'
 import './blocks/swarmBlocks' // 블록 정의 import
 
 // Blockly CSS import
@@ -18,7 +19,16 @@ export function BlocklyWorkspace({ className }: BlocklyWorkspaceProps) {
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null)
 
   const { setWorkspace, setGeneratedCommands, setHasUnsavedChanges } = useBlocklyStore()
-  const { setCommands } = useExecutionStore()
+  const {
+    setCommands,
+    status,
+    commands,
+    executeScript,
+    stopExecution
+  } = useExecutionStore()
+
+  const isRunning = status === ExecutionStatus.RUNNING
+  const hasCommands = commands.length > 0
 
   useEffect(() => {
     if (!blocklyDiv.current) return
@@ -72,16 +82,51 @@ export function BlocklyWorkspace({ className }: BlocklyWorkspaceProps) {
   }, [setWorkspace, setGeneratedCommands, setCommands, setHasUnsavedChanges])
 
   return (
-    <div
-      ref={blocklyDiv}
-      className={className}
-      style={{
-        width: '100%',
-        height: '500px',
-        border: '1px solid #ddd',
-        borderRadius: '8px'
-      }}
-    />
+    <div className={className}>
+      {/* Header with Execution Controls */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Blockly Workspace</h3>
+
+        {/* Execution Control Buttons */}
+        <div className="flex items-center gap-2">
+          {!isRunning ? (
+            <Button
+              variant="success"
+              size="sm"
+              onClick={executeScript}
+              disabled={!hasCommands}
+            >
+              ▶ 실행
+            </Button>
+          ) : (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={stopExecution}
+            >
+              ⏹ 중지
+            </Button>
+          )}
+
+          {hasCommands && (
+            <span className="text-xs text-gray-600 ml-2">
+              {commands.length}개 명령
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Blockly Workspace */}
+      <div
+        ref={blocklyDiv}
+        style={{
+          width: '100%',
+          height: '500px',
+          border: '1px solid #ddd',
+          borderRadius: '8px'
+        }}
+      />
+    </div>
   )
 }
 

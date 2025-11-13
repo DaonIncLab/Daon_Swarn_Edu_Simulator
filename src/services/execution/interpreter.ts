@@ -39,6 +39,8 @@ export class Interpreter {
       error: null,
       context: {
         variables: new Map(),
+        functions: new Map(),
+        callStack: [],
       },
     }
   }
@@ -77,7 +79,12 @@ export class Interpreter {
       currentNodeId: null,
       currentNodePath: [],
       error: null,
-      context: { variables: new Map() },
+      context: {
+        variables: new Map(),
+        functions: new Map(),
+        callStack: [],
+        executionStartTime: Date.now(),
+      },
     })
 
     let executedNodes = 0
@@ -154,6 +161,14 @@ export class Interpreter {
         executedCount = await this.executeForLoop(node, path)
         break
 
+      case 'while_loop':
+        executedCount = await this.executeWhileLoop(node, path)
+        break
+
+      case 'until_loop':
+        executedCount = await this.executeUntilLoop(node, path)
+        break
+
       case 'if':
         executedCount = await this.executeIf(node, path)
         break
@@ -164,6 +179,23 @@ export class Interpreter {
 
       case 'wait':
         await this.executeWait(node)
+        break
+
+      case 'variable_set':
+        await this.executeVariableSet(node)
+        break
+
+      case 'variable_get':
+        // Variable get is a value node, shouldn't be executed as statement
+        console.warn('[Interpreter] Variable get node used as statement')
+        break
+
+      case 'function_def':
+        await this.executeFunctionDef(node)
+        break
+
+      case 'function_call':
+        executedCount = await this.executeFunctionCall(node, path)
         break
 
       default:
@@ -321,6 +353,141 @@ export class Interpreter {
   private async executeWait(node: any): Promise<void> {
     console.log(`[Interpreter] Waiting ${node.duration} seconds`)
     await this.delay(node.duration * 1000)
+  }
+
+  /**
+   * While 루프 노드 실행 (Phase 6-A)
+   */
+  private async executeWhileLoop(node: any, path: number[]): Promise<number> {
+    console.log(`[Interpreter] While loop: ${node.condition} (max ${node.maxIterations} iterations)`)
+
+    let totalExecuted = 0
+    let iteration = 0
+    const maxIterations = node.maxIterations || 1000
+
+    while (iteration < maxIterations) {
+      if (this.shouldStop) break
+
+      // 조건 평가
+      const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
+
+      if (conditionResult.error) {
+        console.warn(`[Interpreter] While condition error: ${conditionResult.error}`)
+        break
+      }
+
+      if (!conditionResult.result) {
+        console.log(`[Interpreter] While condition false, exiting loop`)
+        break
+      }
+
+      console.log(`[Interpreter] While iteration ${iteration + 1}`)
+
+      const childPath = [...path, iteration]
+      const executed = await this.executeNode(node.body, childPath)
+      totalExecuted += executed
+
+      iteration++
+    }
+
+    if (iteration >= maxIterations) {
+      console.warn(`[Interpreter] While loop reached max iterations (${maxIterations})`)
+    }
+
+    return totalExecuted
+  }
+
+  /**
+   * Repeat Until 루프 노드 실행 (Phase 6-A)
+   */
+  private async executeUntilLoop(node: any, path: number[]): Promise<number> {
+    console.log(`[Interpreter] Repeat Until loop: ${node.condition} (max ${node.maxIterations} iterations)`)
+
+    let totalExecuted = 0
+    let iteration = 0
+    const maxIterations = node.maxIterations || 1000
+
+    while (iteration < maxIterations) {
+      if (this.shouldStop) break
+
+      console.log(`[Interpreter] Until iteration ${iteration + 1}`)
+
+      // 먼저 본문 실행
+      const childPath = [...path, iteration]
+      const executed = await this.executeNode(node.body, childPath)
+      totalExecuted += executed
+
+      // 조건 평가 (참이면 종료)
+      const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
+
+      if (conditionResult.error) {
+        console.warn(`[Interpreter] Until condition error: ${conditionResult.error}`)
+        break
+      }
+
+      if (conditionResult.result) {
+        console.log(`[Interpreter] Until condition true, exiting loop`)
+        break
+      }
+
+      iteration++
+    }
+
+    if (iteration >= maxIterations) {
+      console.warn(`[Interpreter] Until loop reached max iterations (${maxIterations})`)
+    }
+
+    return totalExecuted
+  }
+
+  /**
+   * 변수 설정 노드 실행 (Phase 6-A)
+   */
+  private async executeVariableSet(node: any): Promise<void> {
+    console.log(`[Interpreter] Setting variable ${node.variableName} = ${node.value}`)
+    this.state.context.variables.set(node.variableName, node.value)
+  }
+
+  /**
+   * 함수 정의 노드 실행 (Phase 6-A)
+   */
+  private async executeFunctionDef(node: any): Promise<void> {
+    console.log(`[Interpreter] Defining function: ${node.functionName}`)
+    this.state.context.functions.set(node.functionName, node.body)
+  }
+
+  /**
+   * 함수 호출 노드 실행 (Phase 6-A)
+   */
+  private async executeFunctionCall(node: any, path: number[]): Promise<number> {
+    const functionName = node.functionName
+    console.log(`[Interpreter] Calling function: ${functionName}`)
+
+    // 함수 존재 확인
+    const functionBody = this.state.context.functions.get(functionName)
+    if (!functionBody) {
+      throw new Error(`Function '${functionName}' is not defined`)
+    }
+
+    // 재귀 호출 방지 (최대 깊이 10)
+    const MAX_CALL_DEPTH = 10
+    if (this.state.context.callStack.length >= MAX_CALL_DEPTH) {
+      throw new Error(`Maximum function call depth (${MAX_CALL_DEPTH}) exceeded`)
+    }
+
+    // 호출 스택에 추가
+    this.state.context.callStack.push(functionName)
+
+    try {
+      // 함수 본문 실행
+      const childPath = [...path, 0]
+      const executed = await this.executeNode(functionBody, childPath)
+
+      return executed
+    } finally {
+      // 호출 스택에서 제거
+      this.state.context.callStack.pop()
+    }
   }
 
   /**

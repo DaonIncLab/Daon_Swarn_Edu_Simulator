@@ -90,6 +90,20 @@ export const toolboxConfig = {
         },
         {
           kind: 'block',
+          type: 'controls_while',
+          fields: {
+            CONDITION: 'battery > 20'
+          }
+        },
+        {
+          kind: 'block',
+          type: 'controls_repeat_until',
+          fields: {
+            CONDITION: 'altitude > 10'
+          }
+        },
+        {
+          kind: 'block',
           type: 'controls_if_simple',
           fields: {
             CONDITION: 'all_connected'
@@ -118,12 +132,87 @@ export const toolboxConfig = {
         },
         {
           kind: 'block',
+          type: 'variables_get',
+        },
+        {
+          kind: 'block',
           type: 'math_arithmetic',
           fields: {
             A: 0,
             OP: 'ADD',
             B: 0
           }
+        },
+      ]
+    },
+    {
+      kind: 'category',
+      name: '함수',
+      colour: '290',
+      contents: [
+        {
+          kind: 'block',
+          type: 'procedures_defnoreturn',
+          fields: {
+            NAME: 'my_function'
+          }
+        },
+        {
+          kind: 'block',
+          type: 'procedures_callnoreturn',
+          fields: {
+            NAME: 'my_function'
+          }
+        },
+      ]
+    },
+    {
+      kind: 'category',
+      name: '센서',
+      colour: '120',
+      contents: [
+        {
+          kind: 'block',
+          type: 'sensor_battery',
+          fields: {
+            DRONE_ID: 1
+          }
+        },
+        {
+          kind: 'block',
+          type: 'sensor_altitude',
+          fields: {
+            DRONE_ID: 1
+          }
+        },
+        {
+          kind: 'block',
+          type: 'sensor_elapsed_time',
+        },
+      ]
+    },
+    {
+      kind: 'category',
+      name: '논리',
+      colour: '210',
+      contents: [
+        {
+          kind: 'block',
+          type: 'logic_compare',
+          fields: {
+            OP: 'GT'
+          }
+        },
+        {
+          kind: 'block',
+          type: 'logic_operation',
+          fields: {
+            OP: 'AND'
+          }
+        },
+        {
+          kind: 'block',
+          type: 'logic_negate',
         },
       ]
     },

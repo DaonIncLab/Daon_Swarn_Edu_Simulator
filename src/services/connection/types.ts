@@ -47,6 +47,11 @@ export interface ConnectionConfig {
     host?: string
     udpPort?: number
   }
+
+  // Test 모드 설정
+  test?: {
+    droneCount?: number
+  }
 }
 
 /**

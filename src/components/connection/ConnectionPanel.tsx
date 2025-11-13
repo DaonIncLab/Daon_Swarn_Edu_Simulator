@@ -14,9 +14,11 @@ export function ConnectionPanel() {
     ipAddress,
     port,
     error,
+    testModeDroneCount,
     setMode,
     setIpAddress,
     setPort,
+    setTestModeDroneCount,
     connect,
     disconnect,
     clearError,
@@ -96,13 +98,7 @@ export function ConnectionPanel() {
     }
 
     setMode(newMode)
-
-    // 테스트 모드로 전환 시 자동 연결
-    if (newMode === ConnectionMode.TEST) {
-      setTimeout(() => {
-        connect()
-      }, 100)
-    }
+    // 사용자가 설정을 마친 후 수동으로 Connect 버튼을 클릭하도록 함
   }
 
   const handleDisconnect = () => {
@@ -203,16 +199,43 @@ export function ConnectionPanel() {
           <ConnectionStatus status={status} />
         </div>
 
-        {/* Mode-specific Info */}
+        {/* Test Mode Settings */}
         {isTestMode && !isConnected && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              🧪 <strong>Test Mode Enabled</strong>
-            </p>
-            <p className="text-xs text-blue-700 mt-1">
-              You can test the Blockly workspace without Unity. Click "Connect" to start.
-            </p>
-          </div>
+          <>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                🧪 <strong>Test Mode Enabled</strong>
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                You can test the Blockly workspace without Unity. Configure settings below.
+              </p>
+            </div>
+
+            {/* Drone Count Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Drones: <span className="text-blue-600 font-bold">{testModeDroneCount}</span>
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {[2, 4, 6, 8].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => setTestModeDroneCount(count)}
+                    className={`py-2 px-3 rounded-lg border-2 font-medium transition-all ${
+                      testModeDroneCount === count
+                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                Select how many drones to simulate
+              </p>
+            </div>
+          </>
         )}
 
         {isUnityWebGLMode && !isConnected && (

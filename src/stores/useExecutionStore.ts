@@ -4,6 +4,7 @@ import { MessageType } from '@/constants/commands'
 import { wsService } from '@/services/websocket'
 import { useConnectionStore } from './useConnectionStore'
 import { useBlocklyStore } from './useBlocklyStore'
+import { useTelemetryStore } from './useTelemetryStore'
 import { Interpreter } from '@/services/execution'
 import { parseBlocklyWorkspace } from '@/services/execution'
 import { getConnectionManager } from '@/services/connection/ConnectionManager'
@@ -232,6 +233,9 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
           if (interpreter) {
             interpreter.updateDroneStates(newDrones)
           }
+
+          // TelemetryStore에 데이터 자동 기록
+          useTelemetryStore.getState().addTelemetryData(newDrones)
           break
 
         case MessageType.COMMAND_FINISH:

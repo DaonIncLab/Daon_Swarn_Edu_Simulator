@@ -78,6 +78,10 @@ export class WebSocketService {
     this.onMessage = listener
   }
 
+  getMessageListener(): ((message: WSMessage) => void) | null {
+    return this.onMessage
+  }
+
   setErrorListener(listener: (error: string) => void): void {
     this.onError = listener
   }
