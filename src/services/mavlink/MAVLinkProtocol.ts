@@ -326,15 +326,42 @@ export function serializePacket(packet: MAVLinkPacket): Uint8Array {
 }
 
 /**
- * Parse MAVLink packet from buffer
+ * Parse MAVLink packet from buffer with CRC validation
  */
-export function parsePacket(buffer: Uint8Array): MAVLinkPacket | null {
+export function parsePacket(buffer: Uint8Array, validateCrc: boolean = true): MAVLinkPacket | null {
   if (buffer.length < 12) return null // Minimum packet size
 
   if (buffer[0] !== MAVLINK_V2_MAGIC) return null
 
   const len = buffer[1]
   if (buffer.length < 12 + len) return null
+
+  const msgid = buffer[7] | (buffer[8] << 8) | (buffer[9] << 16)
+  const receivedChecksum = buffer[10 + len] | (buffer[10 + len + 1] << 8)
+
+  // Validate CRC if requested
+  if (validateCrc) {
+    const checksumData = new Uint8Array(buffer.length - 11) // header (9 bytes) + payload + crc_extra
+    checksumData.set(buffer.slice(1, 10)) // Skip magic byte, copy header
+    checksumData.set(buffer.slice(10, 10 + len), 9) // Copy payload
+
+    // Add CRC_EXTRA if available
+    const crcExtra = CRC_EXTRA[msgid]
+    if (crcExtra !== undefined) {
+      checksumData[checksumData.length - 1] = crcExtra
+      const calculatedCrc = crcCalculate(checksumData)
+
+      if (calculatedCrc !== receivedChecksum) {
+        console.warn(
+          `[MAVLinkProtocol] CRC mismatch for message ${msgid}: ` +
+          `expected ${receivedChecksum}, got ${calculatedCrc}`
+        )
+        return null
+      }
+    } else {
+      console.warn(`[MAVLinkProtocol] No CRC_EXTRA for message ${msgid}, skipping validation`)
+    }
+  }
 
   const packet: MAVLinkPacket = {
     magic: buffer[0],
@@ -344,9 +371,9 @@ export function parsePacket(buffer: Uint8Array): MAVLinkPacket | null {
     seq: buffer[4],
     sysid: buffer[5],
     compid: buffer[6],
-    msgid: buffer[7] | (buffer[8] << 8) | (buffer[9] << 16),
+    msgid,
     payload: buffer.slice(10, 10 + len),
-    checksum: buffer[10 + len] | (buffer[10 + len + 1] << 8),
+    checksum: receivedChecksum,
   }
 
   return packet
