@@ -11,6 +11,7 @@ import type { CommandLongMessage, GlobalPositionIntMessage } from '@/types/mavli
 import { CommandAction, FormationType, Direction } from '@/constants/commands'
 import { MAV_CMD, createCommandLong, createMissionItem, type CommandLongParams } from './MAVLinkCommands'
 import { createCommandLong as createCmdLongMsg } from './MAVLinkMessages'
+import { coordinateConverter } from './CoordinateConverter'
 
 /**
  * MAVLink Converter Class
@@ -250,11 +251,18 @@ export class MAVLinkConverter {
     }
 
     if (globalPos) {
-      // Convert MAVLink position to local NED coordinates
+      // Convert MAVLink GPS position to local NED coordinates
+      const localPos = coordinateConverter.mavlinkGlobalToLocal(
+        globalPos.lat,
+        globalPos.lon,
+        globalPos.alt,
+        globalPos.relative_alt
+      )
+
       state.position = {
-        x: globalPos.lat / 1e7, // For now, treating as local coordinates
-        y: globalPos.lon / 1e7,
-        z: globalPos.relative_alt / 1000, // mm to meters
+        x: localPos.x,
+        y: localPos.y,
+        z: localPos.z,
       }
 
       state.velocity = {
@@ -285,12 +293,19 @@ export class MAVLinkConverter {
    * Convert DroneState to MAVLink GLOBAL_POSITION_INT parameters
    */
   static telemetryToMAVLink(drone: DroneState) {
+    // Convert local NED coordinates to GPS
+    const gpsPos = coordinateConverter.localToMavlinkGlobal(
+      drone.position.x,
+      drone.position.y,
+      drone.position.z
+    )
+
     return {
       timeBootMs: Date.now(),
-      lat: drone.position.x, // Treating as local for now
-      lon: drone.position.y,
-      alt: drone.position.z,
-      relativeAlt: drone.position.z,
+      lat: gpsPos.lat,
+      lon: gpsPos.lon,
+      alt: gpsPos.alt,
+      relativeAlt: gpsPos.relativeAlt,
       vx: drone.velocity?.x || 0,
       vy: drone.velocity?.y || 0,
       vz: drone.velocity?.z || 0,
