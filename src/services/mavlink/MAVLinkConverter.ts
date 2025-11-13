@@ -8,7 +8,7 @@
 import type { Command } from '@/types/websocket'
 import type { DroneState } from '@/types/websocket'
 import type { CommandLongMessage, GlobalPositionIntMessage } from '@/types/mavlink'
-import { MAV_STATE } from '@/types/mavlink'
+import { MAV_STATE } from '@/types/mavlink' // Runtime value, not type-only
 import { CommandAction, FormationType, Direction } from '@/constants/commands'
 import { MAV_CMD, createCommandLong, createMissionItem, type CommandLongParams } from './MAVLinkCommands'
 import { createCommandLong as createCmdLongMsg } from './MAVLinkMessages'
