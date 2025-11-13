@@ -367,6 +367,17 @@ export function packUint16(value: number): Uint8Array {
 }
 
 /**
+ * Helper: Pack int16 (little-endian, signed)
+ */
+export function packInt16(value: number): Uint8Array {
+  // Clamp to int16 range [-32768, 32767]
+  const int16 = Math.max(-32768, Math.min(32767, Math.round(value)))
+  // Convert to unsigned (two's complement for negative values)
+  const unsigned = int16 < 0 ? 0x10000 + int16 : int16
+  return new Uint8Array([unsigned & 0xFF, (unsigned >> 8) & 0xFF])
+}
+
+/**
  * Helper: Pack uint32 (little-endian)
  */
 export function packUint32(value: number): Uint8Array {
@@ -407,6 +418,15 @@ export function unpackUint8(buffer: Uint8Array, offset: number): number {
  */
 export function unpackUint16(buffer: Uint8Array, offset: number): number {
   return buffer[offset] | (buffer[offset + 1] << 8)
+}
+
+/**
+ * Helper: Unpack int16 (little-endian, signed)
+ */
+export function unpackInt16(buffer: Uint8Array, offset: number): number {
+  const unsigned = buffer[offset] | (buffer[offset + 1] << 8)
+  // Convert from unsigned to signed (two's complement)
+  return unsigned > 0x7FFF ? unsigned - 0x10000 : unsigned
 }
 
 /**

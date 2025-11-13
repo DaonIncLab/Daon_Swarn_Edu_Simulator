@@ -23,11 +23,13 @@ import {
   MAV_MSG_ID,
   packUint8,
   packUint16,
+  packInt16,
   packUint32,
   packInt32,
   packFloat,
   unpackUint8,
   unpackUint16,
+  unpackInt16,
   unpackUint32,
   unpackInt32,
   unpackFloat,
@@ -167,16 +169,16 @@ export function createGlobalPositionInt(
   payload.set(packInt32(Math.round(relativeAlt * 1000)), offset)
   offset += 4
 
-  // vx (int16) - Ground X speed in cm/s
-  payload.set(packUint16(Math.round(vx * 100)), offset)
+  // vx (int16) - Ground X speed in cm/s (SIGNED for negative velocities)
+  payload.set(packInt16(Math.round(vx * 100)), offset)
   offset += 2
 
-  // vy (int16) - Ground Y speed in cm/s
-  payload.set(packUint16(Math.round(vy * 100)), offset)
+  // vy (int16) - Ground Y speed in cm/s (SIGNED for negative velocities)
+  payload.set(packInt16(Math.round(vy * 100)), offset)
   offset += 2
 
-  // vz (int16) - Ground Z speed in cm/s
-  payload.set(packUint16(Math.round(vz * 100)), offset)
+  // vz (int16) - Ground Z speed in cm/s (SIGNED for negative velocities)
+  payload.set(packInt16(Math.round(vz * 100)), offset)
   offset += 2
 
   // hdg (uint16) - Heading in cdeg (0-36000)
@@ -326,9 +328,9 @@ export function parseGlobalPositionInt(payload: Uint8Array): GlobalPositionIntMe
     lon: unpackInt32(payload, 8),
     alt: unpackInt32(payload, 12),
     relative_alt: unpackInt32(payload, 16),
-    vx: unpackUint16(payload, 20),
-    vy: unpackUint16(payload, 22),
-    vz: unpackUint16(payload, 24),
+    vx: unpackInt16(payload, 20), // SIGNED
+    vy: unpackInt16(payload, 22), // SIGNED
+    vz: unpackInt16(payload, 24), // SIGNED
     hdg: unpackUint16(payload, 26),
   }
 }
