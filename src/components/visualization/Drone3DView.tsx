@@ -2,14 +2,18 @@
  * Drone 3D View Component
  *
  * Real-time 3D visualization of drone positions using Three.js
+ * Supports playback mode with flight path visualization
  */
 
 import { useRef, useEffect } from "react";
-import { Canvas,} from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { useExecutionStore } from "@/stores/useExecutionStore";
+import { useFlightRecordingStore, PlaybackStatus } from "@/stores/useFlightRecordingStore";
+import { FlightPathWithMarker } from "./FlightPathLine";
 import type { DroneState } from "@/types/websocket";
+import type { DroneHistory } from "@/types/telemetry";
 
 /**
  * Individual Drone 3D Model
@@ -126,7 +130,13 @@ function Drone3DModel({ drone }: { drone: DroneState }) {
 /**
  * 3D Scene Content
  */
-function Scene() {
+interface SceneProps {
+  playbackMode?: boolean
+  droneHistories?: Map<number, DroneHistory>
+  currentTime?: number
+}
+
+function Scene({ playbackMode = false, droneHistories, currentTime }: SceneProps) {
   const { drones } = useExecutionStore();
 
   return (
@@ -155,8 +165,24 @@ function Scene() {
         followCamera={false}
       />
 
-      {/* Drones */}
-      {drones.map((drone) => (
+      {/* Playback Mode: Show flight paths */}
+      {playbackMode && droneHistories && currentTime !== undefined && (
+        <>
+          {Array.from(droneHistories.values()).map((droneHistory) => (
+            <FlightPathWithMarker
+              key={droneHistory.droneId}
+              droneHistory={droneHistory}
+              currentTime={currentTime}
+              showFullPath={true}
+              showTrail={true}
+              trailLength={5}
+            />
+          ))}
+        </>
+      )}
+
+      {/* Live Mode: Show real-time drones */}
+      {!playbackMode && drones.map((drone) => (
         <Drone3DModel key={drone.id} drone={drone} />
       ))}
 
@@ -176,12 +202,30 @@ function Scene() {
 /**
  * Main Drone 3D View Component
  */
-export function Drone3DView() {
+interface Drone3DViewProps {
+  playbackMode?: boolean
+  className?: string
+}
+
+export function Drone3DView({ playbackMode = false, className = "" }: Drone3DViewProps) {
   const { drones } = useExecutionStore();
+  const { playback } = useFlightRecordingStore();
+
+  // Determine what to display
+  const isPlaybackActive = playbackMode && playback.recording && playback.status !== PlaybackStatus.IDLE;
+  const droneHistories = isPlaybackActive ? playback.recording?.droneHistories : undefined;
+  const currentTime = isPlaybackActive ? playback.currentTime : undefined;
+
+  // For stats
+  const droneCount = playbackMode && droneHistories
+    ? droneHistories.size
+    : drones.length;
+
+  const showEmpty = !playbackMode && drones.length === 0;
 
   return (
-    <div className="relative w-full h-[600px] bg-gray-900 rounded-lg overflow-hidden">
-      {drones.length === 0 ? (
+    <div className={`relative w-full h-[600px] bg-gray-900 rounded-lg overflow-hidden ${className}`}>
+      {showEmpty ? (
         <div className="flex items-center justify-center h-full text-gray-400">
           <div className="text-center">
             <div className="text-6xl mb-4">🚁</div>
@@ -198,7 +242,11 @@ export function Drone3DView() {
           gl={{ antialias: true }}
           style={{ width: "100%", height: "100%" }}
         >
-          <Scene />
+          <Scene
+            playbackMode={playbackMode}
+            droneHistories={droneHistories}
+            currentTime={currentTime}
+          />
         </Canvas>
       )}
 
@@ -211,15 +259,29 @@ export function Drone3DView() {
 
       {/* Stats */}
       <div className="absolute top-4 right-4 bg-black/50 text-white text-sm px-4 py-2 rounded backdrop-blur-sm">
-        <div className="font-semibold">
-          {drones.length} Drone{drones.length !== 1 ? "s" : ""}
-        </div>
-        <div className="text-xs text-gray-300 mt-1">
-          Flying: {drones.filter((d) => d.status === "flying").length}
-        </div>
-        <div className="text-xs text-gray-300">
-          Hovering: {drones.filter((d) => d.status === "hovering").length}
-        </div>
+        {playbackMode ? (
+          <>
+            <div className="font-semibold flex items-center gap-2">
+              <span className="text-purple-400">▶</span>
+              Playback Mode
+            </div>
+            <div className="text-xs text-gray-300 mt-1">
+              {droneCount} Drone{droneCount !== 1 ? "s" : ""}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="font-semibold">
+              {droneCount} Drone{droneCount !== 1 ? "s" : ""}
+            </div>
+            <div className="text-xs text-gray-300 mt-1">
+              Flying: {drones.filter((d) => d.status === "flying").length}
+            </div>
+            <div className="text-xs text-gray-300">
+              Hovering: {drones.filter((d) => d.status === "hovering").length}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

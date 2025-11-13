@@ -5,12 +5,17 @@
  * - Unity WebGL simulator (when in Unity WebGL mode)
  * - 3D Preview using Three.js (when in Test mode)
  * - Connection info (when in WebSocket mode)
+ * - Playback mode for recorded flights
  */
 
+import { useState } from 'react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { ConnectionMode } from '@/constants/connection'
 import { UnitySimulatorPanel } from '@/components/simulator/UnitySimulatorPanel'
 import { Drone3DView } from '@/components/visualization/Drone3DView'
+import { PlaybackControls } from '@/components/visualization/PlaybackControls'
+import { RecordingPanel } from '@/components/visualization/RecordingPanel'
+import { useFlightRecordingStore, PlaybackStatus } from '@/stores/useFlightRecordingStore'
 
 interface SimulatorPanelProps {
   className?: string
@@ -18,31 +23,76 @@ interface SimulatorPanelProps {
 
 export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
   const { mode } = useConnectionStore()
+  const { playback } = useFlightRecordingStore()
+  const [showRecordingPanel, setShowRecordingPanel] = useState(false)
+
+  // Check if playback is active
+  const isPlaybackActive = playback.recording && playback.status !== PlaybackStatus.IDLE
 
   return (
     <div className={`flex flex-col bg-gray-900 ${className}`}>
-      {/* Conditional Rendering based on Connection Mode */}
-      {mode === ConnectionMode.UNITY_WEBGL ? (
+      {/* Header with View Toggle */}
+      <div className="px-6 py-3 bg-gray-800 text-white border-b border-gray-700 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isPlaybackActive ? (
+              <>
+                <h3 className="text-lg font-semibold">경로 재생</h3>
+                <span className="px-2 py-1 bg-purple-600 text-xs font-medium rounded">
+                  Playback
+                </span>
+              </>
+            ) : mode === ConnectionMode.UNITY_WEBGL ? (
+              <>
+                <h3 className="text-lg font-semibold">Unity 시뮬레이터</h3>
+                <span className="px-2 py-1 bg-blue-600 text-xs font-medium rounded">
+                  WebGL
+                </span>
+              </>
+            ) : mode === ConnectionMode.TEST ? (
+              <>
+                <h3 className="text-lg font-semibold">3D 미리보기</h3>
+                <span className="px-2 py-1 bg-purple-600 text-xs font-medium rounded">
+                  Test Mode
+                </span>
+              </>
+            ) : (
+              <h3 className="text-lg font-semibold">시뮬레이터</h3>
+            )}
+          </div>
+
+          {/* Recording Panel Toggle */}
+          <button
+            onClick={() => setShowRecordingPanel(!showRecordingPanel)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              showRecordingPanel
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+            }`}
+          >
+            {showRecordingPanel ? '📹 녹화 관리 닫기' : '📹 녹화 관리'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      {showRecordingPanel ? (
+        // Recording Management Panel
+        <RecordingPanel />
+      ) : isPlaybackActive ? (
+        // Playback Mode
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1">
+            <Drone3DView playbackMode={true} />
+          </div>
+          <PlaybackControls />
+        </div>
+      ) : mode === ConnectionMode.UNITY_WEBGL ? (
         // Unity WebGL Embedded Simulator
         <UnitySimulatorPanel />
       ) : mode === ConnectionMode.TEST ? (
         // 3D Preview for Test Mode
         <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="px-6 py-3 bg-gray-800 text-white border-b border-gray-700 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold">3D 미리보기</h3>
-                <span className="px-2 py-1 bg-purple-600 text-xs font-medium rounded">
-                  Test Mode
-                </span>
-              </div>
-              <p className="text-sm text-gray-400">
-                실시간 드론 위치 시각화
-              </p>
-            </div>
-          </div>
-
           {/* 3D View */}
           <div className="flex-1">
             <Drone3DView />
