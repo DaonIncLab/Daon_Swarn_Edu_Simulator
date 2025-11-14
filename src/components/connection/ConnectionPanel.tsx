@@ -15,10 +15,12 @@ export function ConnectionPanel() {
     port,
     error,
     testModeDroneCount,
+    mavlinkDroneCount,
     setMode,
     setIpAddress,
     setPort,
     setTestModeDroneCount,
+    setMavlinkDroneCount,
     connect,
     disconnect,
     clearError,
@@ -27,6 +29,7 @@ export function ConnectionPanel() {
   const isTestMode = mode === ConnectionMode.TEST
   const isSimMode = mode === ConnectionMode.SIMULATION
   const isUnityWebGLMode = mode === ConnectionMode.UNITY_WEBGL
+  const isMAVLinkMode = mode === ConnectionMode.MAVLINK_SIMULATION
 
   const [localIp, setLocalIp] = useState(ipAddress)
   const [localPort, setLocalPort] = useState(port.toString())
@@ -70,8 +73,8 @@ export function ConnectionPanel() {
   const handleConnect = () => {
     clearError()
 
-    // 테스트 모드 또는 Unity WebGL 모드면 바로 연결
-    if (isTestMode || isUnityWebGLMode) {
+    // 테스트 모드, Unity WebGL, MAVLink 모드면 바로 연결
+    if (isTestMode || isUnityWebGLMode || isMAVLinkMode) {
       connect()
       return
     }
@@ -168,6 +171,29 @@ export function ConnectionPanel() {
               </div>
             </button>
 
+            {/* MAVLink Simulation Mode */}
+            <button
+              onClick={() => handleModeChange(ConnectionMode.MAVLINK_SIMULATION)}
+              disabled={isConnected || isConnecting}
+              className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                isMAVLinkMode
+                  ? 'border-primary-600 bg-primary-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  isMAVLinkMode ? 'border-primary-600' : 'border-gray-300'
+                }`}>
+                  {isMAVLinkMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900">🚁 MAVLink Simulation</div>
+                  <div className="text-xs text-gray-600">MAVLink protocol simulator</div>
+                </div>
+              </div>
+            </button>
+
             {/* Test Mode */}
             <button
               onClick={() => handleModeChange(ConnectionMode.TEST)}
@@ -198,6 +224,56 @@ export function ConnectionPanel() {
           <span className="text-sm font-medium text-gray-700">Status:</span>
           <ConnectionStatus status={status} />
         </div>
+
+        {/* MAVLink Simulation Mode Settings */}
+        {isMAVLinkMode && !isConnected && (
+          <>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-sm text-green-800">
+                🚁 <strong>MAVLink Simulation Mode</strong>
+              </p>
+              <p className="text-xs text-green-700 mt-1">
+                Test with real MAVLink protocol. Full telemetry, GPS conversion, and formation commands.
+              </p>
+            </div>
+
+            {/* Drone Count Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Drones: <span className="text-green-600 font-bold">{mavlinkDroneCount}</span>
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {[2, 4, 6, 8].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => setMavlinkDroneCount(count)}
+                    className={`py-2 px-3 rounded-lg border-2 font-medium transition-all ${
+                      mavlinkDroneCount === count
+                        ? 'border-green-600 bg-green-50 text-green-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                MAVLink protocol with GPS coordinates and formation flight
+              </p>
+            </div>
+
+            {/* Connect Button for MAVLink Mode */}
+            <div className="pt-4">
+              <button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isConnecting ? 'Connecting...' : 'Connect (MAVLink)'}
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Test Mode Settings */}
         {isTestMode && !isConnected && (
@@ -308,7 +384,9 @@ export function ConnectionPanel() {
         {isConnected && (
           <div className="bg-success/10 border border-success rounded-lg p-3">
             <p className="text-sm text-success-dark">
-              {isTestMode ? (
+              {isMAVLinkMode ? (
+                <>🚁 <strong>MAVLink Simulation Active</strong> - {mavlinkDroneCount} drones ready</>
+              ) : isTestMode ? (
                 <>🧪 <strong>Test Mode Active</strong> - Blockly workspace ready</>
               ) : isUnityWebGLMode ? (
                 <>🎮 <strong>Unity WebGL Ready</strong> - Simulator loaded</>
@@ -319,8 +397,8 @@ export function ConnectionPanel() {
           </div>
         )}
 
-        {/* Connect/Disconnect Button - Not for Test Mode (has its own button above) */}
-        {!isTestMode && (
+        {/* Connect/Disconnect Button - Not for Test or MAVLink Mode (have their own buttons) */}
+        {!isTestMode && !isMAVLinkMode && (
           <div className="flex gap-2">
             {!isConnected ? (
               <Button
@@ -340,6 +418,19 @@ export function ConnectionPanel() {
                 Disconnect
             </Button>
             )}
+          </div>
+        )}
+
+        {/* Disconnect Button for MAVLink Mode */}
+        {isMAVLinkMode && isConnected && (
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={handleDisconnect}
+            >
+              Disconnect
+            </Button>
           </div>
         )}
 

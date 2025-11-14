@@ -24,12 +24,14 @@ interface ConnectionStore {
   error: string | null
   latestTelemetry: TelemetryData | null
   testModeDroneCount: number
+  mavlinkDroneCount: number // MAVLink 시뮬레이션 드론 수
 
   // Actions
   setMode: (mode: ConnectionMode) => void
   setIpAddress: (ip: string) => void
   setPort: (port: number) => void
   setTestModeDroneCount: (count: number) => void
+  setMavlinkDroneCount: (count: number) => void
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   setStatus: (status: ConnectionStatus) => void
@@ -51,6 +53,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
     error: null,
     latestTelemetry: null,
     testModeDroneCount: 4,
+    mavlinkDroneCount: 4, // MAVLink 기본 드론 수
 
     // Actions
     setMode: (mode) => set({ mode }),
@@ -61,8 +64,10 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
 
     setTestModeDroneCount: (count) => set({ testModeDroneCount: count }),
 
+    setMavlinkDroneCount: (count) => set({ mavlinkDroneCount: count }),
+
     connect: async () => {
-      const { mode, ipAddress, port, testModeDroneCount } = get()
+      const { mode, ipAddress, port, testModeDroneCount, mavlinkDroneCount } = get()
 
       set({ error: null })
 
@@ -97,8 +102,16 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
             config.websocket = { ipAddress, port }
             break
 
+          case ConnectionMode.MAVLINK_SIMULATION:
+            // MAVLink 시뮬레이션 모드
+            config.mavlink = {
+              connectionType: 'simulation',
+              droneCount: mavlinkDroneCount,
+            }
+            break
+
           case ConnectionMode.REAL_DRONE:
-            // MAVLink 설정 (2차 목표)
+            // MAVLink 실제 드론 (2차 목표)
             config.mavlink = {
               connectionType: 'udp',
               udpPort: 14550,
