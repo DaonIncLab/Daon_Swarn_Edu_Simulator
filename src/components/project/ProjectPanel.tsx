@@ -47,7 +47,7 @@ export function ProjectPanel() {
                     {currentProject.name}
                   </h4>
                   {hasUnsavedChanges && (
-                    <span className="text-orange-600 font-bold" title="저장되지 않은 변경사항">
+                    <span className="text-[var(--unsaved-indicator)] font-bold" title="저장되지 않은 변경사항">
                       ✱
                     </span>
                   )}

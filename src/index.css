@@ -45,6 +45,81 @@
   /* Component colors */
   --header-gradient-from: rgb(75 85 99);
   --header-gradient-to: rgb(55 65 81);
+
+  /* Status colors */
+  --status-online: rgb(34 197 94);
+  --status-offline: rgb(156 163 175);
+  --status-active: rgb(34 197 94);
+  --status-idle: rgb(107 114 128);
+  --status-armed: rgb(59 130 246);
+  --status-error: rgb(239 68 68);
+  --status-warning: rgb(234 179 8);
+  --status-ok: rgb(34 197 94);
+  --status-unknown: rgb(156 163 175);
+
+  /* Battery colors */
+  --battery-good: rgb(21 128 61);
+  --battery-medium: rgb(202 138 4);
+  --battery-low: rgb(185 28 28);
+
+  /* Info/Alert colors */
+  --info-bg: rgb(239 246 255);
+  --info-border: rgb(191 219 254);
+  --info-text: rgb(30 64 175);
+  --info-text-secondary: rgb(30 58 138);
+
+  --warning-bg: rgb(254 252 232);
+  --warning-border: rgb(254 240 138);
+  --warning-text: rgb(133 77 14);
+
+  --error-bg: rgb(254 242 242);
+  --error-border: rgb(254 202 202);
+  --error-text: rgb(153 27 27);
+  --error-text-secondary: rgb(185 28 28);
+
+  /* Badge colors */
+  --badge-blue-bg: rgb(219 234 254);
+  --badge-blue-text: rgb(29 78 216);
+
+  /* Navigation */
+  --nav-active-bg: rgb(219 234 254);
+  --nav-active-text: rgb(30 58 138);
+  --nav-active-border: rgb(37 99 235);
+
+  /* Tab */
+  --tab-active-bg: rgb(239 246 255);
+  --tab-active-text: rgb(37 99 235);
+  --tab-active-border: rgb(37 99 235);
+
+  /* Toggles */
+  --toggle-active-bg: rgb(37 99 235);
+  --toggle-active-text: rgb(255 255 255);
+
+  /* Connection */
+  --connection-active-bg: rgb(240 253 244);
+  --connection-active-border: rgb(22 163 74);
+  --connection-active-text: rgb(21 128 61);
+  --connection-disconnected-bg: rgb(156 163 175);
+  --connection-disconnected-text: rgb(75 85 99);
+
+  /* Simulator (Dark Theme) */
+  --simulator-bg: rgb(17 24 39);
+  --simulator-header-bg: rgb(31 41 55);
+  --simulator-border: rgb(55 65 81);
+  --simulator-text-muted: rgb(156 163 175);
+
+  /* Overlays */
+  --hover-overlay: rgba(255 255 255 / 0.2);
+  --modal-overlay: rgba(0 0 0 / 0.5);
+
+  /* Misc */
+  --unsaved-indicator: rgb(234 88 12);
+  --progress-bg: rgb(229 231 235);
+  --input-disabled-bg: rgb(243 244 246);
+  --recording-indicator: rgb(220 38 38);
+  --project-badge-bg: rgb(239 246 255);
+  --project-badge-border: rgb(191 219 254);
+  --project-badge-text: rgb(30 58 138);
 }
 
 /* Dark Theme */
@@ -70,6 +145,81 @@
   /* Component colors */
   --header-gradient-from: rgb(31 41 55);
   --header-gradient-to: rgb(17 24 39);
+
+  /* Status colors - Dark */
+  --status-online: rgb(74 222 128);
+  --status-offline: rgb(107 114 128);
+  --status-active: rgb(74 222 128);
+  --status-idle: rgb(156 163 175);
+  --status-armed: rgb(96 165 250);
+  --status-error: rgb(248 113 113);
+  --status-warning: rgb(250 204 21);
+  --status-ok: rgb(74 222 128);
+  --status-unknown: rgb(107 114 128);
+
+  /* Battery colors - Dark */
+  --battery-good: rgb(34 197 94);
+  --battery-medium: rgb(234 179 8);
+  --battery-low: rgb(239 68 68);
+
+  /* Info/Alert colors - Dark */
+  --info-bg: rgb(30 58 138);
+  --info-border: rgb(59 130 246);
+  --info-text: rgb(191 219 254);
+  --info-text-secondary: rgb(147 197 253);
+
+  --warning-bg: rgb(133 77 14);
+  --warning-border: rgb(202 138 4);
+  --warning-text: rgb(254 240 138);
+
+  --error-bg: rgb(127 29 29);
+  --error-border: rgb(185 28 28);
+  --error-text: rgb(254 202 202);
+  --error-text-secondary: rgb(248 113 113);
+
+  /* Badge colors - Dark */
+  --badge-blue-bg: rgb(30 58 138);
+  --badge-blue-text: rgb(191 219 254);
+
+  /* Navigation - Dark */
+  --nav-active-bg: rgb(30 58 138);
+  --nav-active-text: rgb(191 219 254);
+  --nav-active-border: rgb(59 130 246);
+
+  /* Tab - Dark */
+  --tab-active-bg: rgb(55 65 81);
+  --tab-active-text: rgb(147 197 253);
+  --tab-active-border: rgb(59 130 246);
+
+  /* Toggles - Dark */
+  --toggle-active-bg: rgb(59 130 246);
+  --toggle-active-text: rgb(255 255 255);
+
+  /* Connection - Dark */
+  --connection-active-bg: rgb(20 83 45);
+  --connection-active-border: rgb(34 197 94);
+  --connection-active-text: rgb(134 239 172);
+  --connection-disconnected-bg: rgb(75 85 99);
+  --connection-disconnected-text: rgb(156 163 175);
+
+  /* Simulator remains same */
+  --simulator-bg: rgb(17 24 39);
+  --simulator-header-bg: rgb(31 41 55);
+  --simulator-border: rgb(75 85 99);
+  --simulator-text-muted: rgb(209 213 219);
+
+  /* Overlays - Dark */
+  --hover-overlay: rgba(255 255 255 / 0.1);
+  --modal-overlay: rgba(0 0 0 / 0.7);
+
+  /* Misc - Dark */
+  --unsaved-indicator: rgb(251 146 60);
+  --progress-bg: rgb(55 65 81);
+  --input-disabled-bg: rgb(55 65 81);
+  --recording-indicator: rgb(248 113 113);
+  --project-badge-bg: rgb(30 58 138);
+  --project-badge-border: rgb(59 130 246);
+  --project-badge-text: rgb(191 219 254);
 }
 
 /* Global Styles with Theme Support */

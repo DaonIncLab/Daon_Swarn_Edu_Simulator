@@ -61,7 +61,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen flex flex-col bg-gray-50">
+      <div className="h-screen flex flex-col bg-[var(--bg-primary)]">
         {/* Header */}
         <ErrorBoundary
           fallback={(error, errorInfo, retry) => (
@@ -111,7 +111,7 @@ function App() {
             {/* Center: Blockly Workspace (40%) */}
             <ErrorBoundary
               fallback={(error, errorInfo, retry) => (
-                <div className="w-[40%] flex flex-col bg-white border-r border-gray-200 p-6">
+                <div className="w-[40%] flex flex-col bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] p-6">
                   <ErrorFallback
                     error={error}
                     errorInfo={errorInfo}
@@ -122,7 +122,7 @@ function App() {
                 </div>
               )}
             >
-              <div className="w-[40%] flex flex-col bg-white border-r border-gray-200">
+              <div className="w-[40%] flex flex-col bg-[var(--bg-secondary)] border-r border-[var(--border-primary)]">
                 <BlocklyWorkspace selectedCategory={selectedCategory} />
               </div>
             </ErrorBoundary>
@@ -150,7 +150,7 @@ function App() {
         // Not Connected State
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md px-6">
-            <div className="text-gray-400 mb-6">
+            <div className="text-[var(--text-tertiary)] mb-6">
               <svg
                 className="w-24 h-24 mx-auto"
                 fill="none"
@@ -165,25 +165,25 @@ function App() {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-3">
               시작하려면 연결이 필요합니다
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-[var(--text-secondary)] mb-6">
               Unity 시뮬레이터에 연결하거나 테스트 모드를 활성화하세요
             </p>
             <button
               onClick={() => setShowSettings(true)}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
             >
               ⚙️ 연결 설정 열기
             </button>
 
             {/* Instructions */}
-            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-              <h4 className="text-sm font-semibold text-blue-900 mb-2">
+            <div className="mt-8 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg p-4 text-left">
+              <h4 className="text-sm font-semibold text-[var(--info-text-secondary)] mb-2">
                 📘 시작 가이드
               </h4>
-              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+              <ol className="text-sm text-[var(--info-text)] space-y-1 list-decimal list-inside">
                 <li>Unity Control Server 실행 (또는 Test Mode 활성화)</li>
                 <li>Unity에 표시된 IP 주소 확인</li>
                 <li>연결 설정에서 IP 주소 입력</li>

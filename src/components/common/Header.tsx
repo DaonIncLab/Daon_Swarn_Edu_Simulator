@@ -32,13 +32,13 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
           </div>
 
           {currentProject && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-              <span className="text-sm font-medium text-blue-900">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--project-badge-bg)] border border-[var(--project-badge-border)] rounded-lg">
+              <span className="text-sm font-medium text-[var(--project-badge-text)]">
                 📄 {currentProject.name}
               </span>
               {hasUnsavedChanges && (
                 <span
-                  className="text-orange-600 font-bold"
+                  className="text-[var(--unsaved-indicator)] font-bold"
                   title="저장되지 않은 변경사항"
                 >
                   ✱
@@ -65,7 +65,7 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
           <div className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-tertiary)] rounded-lg">
             <div
               className={`w-2 h-2 rounded-full ${
-                isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                isConnected ? 'bg-[var(--status-online)] animate-pulse' : 'bg-[var(--status-offline)]'
               }`}
             />
             <span className="text-sm font-medium text-[var(--text-primary)]">
