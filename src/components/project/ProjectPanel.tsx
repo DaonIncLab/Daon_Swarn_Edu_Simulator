@@ -73,10 +73,8 @@ export function ProjectPanel() {
             fullWidth
             onClick={() => setShowNewModal(true)}
             disabled={isLoading}
-            className="text-sm sm:text-base whitespace-nowrap"
           >
-            <span className="mr-1">📄</span>
-            <span>새 프로젝트</span>
+            📄 새 프로젝트
           </Button>
 
           <Button
@@ -84,10 +82,8 @@ export function ProjectPanel() {
             fullWidth
             onClick={() => setShowListModal(true)}
             disabled={isLoading}
-            className="text-sm sm:text-base whitespace-nowrap"
           >
-            <span className="mr-1">📂</span>
-            <span>프로젝트 열기</span>
+            📂 프로젝트 열기
           </Button>
 
           {currentProject && (
@@ -97,10 +93,8 @@ export function ProjectPanel() {
                 fullWidth
                 onClick={handleSave}
                 disabled={isLoading || !hasUnsavedChanges}
-                className="text-sm sm:text-base whitespace-nowrap"
               >
-                <span className="mr-1">💾</span>
-                <span>저장 {hasUnsavedChanges && '✱'}</span>
+                💾 저장 {hasUnsavedChanges && '✱'}
               </Button>
 
               <Button
@@ -108,10 +102,8 @@ export function ProjectPanel() {
                 fullWidth
                 onClick={handleExport}
                 disabled={isLoading}
-                className="text-sm sm:text-base whitespace-nowrap"
               >
-                <span className="mr-1">📤</span>
-                <span>내보내기</span>
+                📤 내보내기
               </Button>
             </>
           )}
