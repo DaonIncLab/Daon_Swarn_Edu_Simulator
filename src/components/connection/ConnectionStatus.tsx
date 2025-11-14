@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ConnectionStatus as Status } from '@/constants/connection'
 import { cn } from '@/utils/cn'
 
@@ -7,12 +8,14 @@ interface ConnectionStatusProps {
 }
 
 export function ConnectionStatus({ status, className }: ConnectionStatusProps) {
+  const { t } = useTranslation()
+
   const getStatusConfig = () => {
     switch (status) {
       case Status.CONNECTED:
         return {
           color: 'bg-success',
-          text: 'Connected',
+          text: t('connection.status.connected'),
           textColor: 'text-success-dark',
           icon: '●',
           animate: false,
@@ -20,7 +23,7 @@ export function ConnectionStatus({ status, className }: ConnectionStatusProps) {
       case Status.CONNECTING:
         return {
           color: 'bg-warning',
-          text: 'Connecting...',
+          text: t('connection.status.connecting'),
           textColor: 'text-warning-dark',
           icon: '●',
           animate: true,
@@ -28,7 +31,7 @@ export function ConnectionStatus({ status, className }: ConnectionStatusProps) {
       case Status.ERROR:
         return {
           color: 'bg-danger',
-          text: 'Connection Error',
+          text: t('connection.status.error'),
           textColor: 'text-danger-dark',
           icon: '●',
           animate: false,
@@ -37,7 +40,7 @@ export function ConnectionStatus({ status, className }: ConnectionStatusProps) {
       default:
         return {
           color: 'bg-[var(--status-offline)]',
-          text: 'Disconnected',
+          text: t('connection.status.disconnected'),
           textColor: 'text-[var(--text-secondary)]',
           icon: '●',
           animate: false,

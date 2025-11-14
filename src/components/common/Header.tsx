@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useBlocklyStore } from '@/stores/useBlocklyStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
@@ -10,12 +11,18 @@ interface HeaderProps {
 }
 
 export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
+  const { t, i18n } = useTranslation()
   const { currentProject, saveCurrentProject } = useProjectStore()
   const { hasUnsavedChanges } = useBlocklyStore()
   const { status } = useConnectionStore()
   const { isDark, toggle } = useThemeContext()
 
   const isConnected = status === ConnectionStatus.CONNECTED
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'ko' ? 'en' : 'ko'
+    i18n.changeLanguage(newLang)
+  }
 
   return (
     <header className="bg-[var(--bg-secondary)] shadow-sm border-b border-[var(--border-primary)] flex-shrink-0 transition-colors">
@@ -24,7 +31,7 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
         <div className="flex items-center gap-4">
           <div>
             <h1 className="text-xl font-bold text-[var(--text-primary)]">
-              Drone Swarm Simulator
+              {t('header.title')}
             </h1>
             <p className="text-xs text-[var(--text-secondary)]">
               Blockly ↔ Unity Integration
@@ -39,7 +46,7 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
               {hasUnsavedChanges && (
                 <span
                   className="text-[var(--unsaved-indicator)] font-bold"
-                  title="저장되지 않은 변경사항"
+                  title={t('project.unsaved')}
                 >
                   ✱
                 </span>
@@ -55,9 +62,9 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
             <button
               onClick={() => saveCurrentProject()}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-              title="저장 (Ctrl+S)"
+              title={`${t('common.save')} (Ctrl+S)`}
             >
-              💾 저장
+              💾 {t('common.save')}
             </button>
           )}
 
@@ -69,7 +76,7 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
               }`}
             />
             <span className="text-sm font-medium text-[var(--text-primary)]">
-              {isConnected ? 'Connected' : 'Not Connected'}
+              {isConnected ? t('connection.status.connected') : t('connection.status.disconnected')}
             </span>
           </div>
 
@@ -80,15 +87,24 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
             >
               <span>📊</span>
-              <span>모니터링</span>
+              <span>{t('header.monitoring')}</span>
             </button>
           )}
+
+          {/* Language Toggle Button */}
+          <button
+            onClick={toggleLanguage}
+            className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
+            title={i18n.language === 'ko' ? 'Switch to English' : '한국어로 전환'}
+          >
+            <span className="text-xl">{i18n.language === 'ko' ? '🇬🇧' : '🇰🇷'}</span>
+          </button>
 
           {/* Theme Toggle Button */}
           <button
             onClick={toggle}
             className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
-            title={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
+            title={isDark ? t('settings.lightMode') : t('settings.darkMode')}
           >
             <span className="text-xl">{isDark ? '☀️' : '🌙'}</span>
           </button>
@@ -97,7 +113,7 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
           <button
             onClick={onOpenSettings}
             className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
-            title="설정"
+            title={t('header.settings')}
           >
             <span className="text-xl">⚙️</span>
           </button>

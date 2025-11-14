@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BlocklyWorkspace } from "@/components/blockly";
 import { Header } from "@/components/common/Header";
 import { NavigationPanel } from "@/components/layout/NavigationPanel";
@@ -14,6 +15,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { initializeProjectStorage } from "@/services/storage";
 
 function App() {
+  const { t } = useTranslation();
   const { status } = useConnectionStore();
   const { currentProject, saveCurrentProject } = useProjectStore();
   const [showMonitoring, setShowMonitoring] = useState(false);
@@ -22,14 +24,14 @@ function App() {
 
   const isConnected = status === ConnectionStatus.CONNECTED;
 
-  // 프로젝트 저장소 초기화
+  // Initialize project storage
   useEffect(() => {
     initializeProjectStorage().catch((err) => {
       console.error("[App] Failed to initialize project storage:", err);
     });
   }, []);
 
-  // 키보드 단축키
+  // Keyboard shortcuts
   useKeyboardShortcuts([
     {
       key: "s",
@@ -39,7 +41,7 @@ function App() {
           saveCurrentProject();
         }
       },
-      description: "프로젝트 저장",
+      description: t("common.saveProject"),
     },
     {
       key: "m",
@@ -49,15 +51,17 @@ function App() {
           setShowMonitoring(true);
         }
       },
-      description: "모니터링 열기",
+      description: t("common.openMonitoring"),
     },
     {
       key: ",",
       ctrl: true,
       handler: () => setShowSettings(true),
-      description: "설정 열기",
+      description: t("common.openSettings"),
     },
   ]);
+
+  const guideSteps = t("common.guideSteps", { returnObjects: true }) as string[];
 
   return (
     <ErrorBoundary>
@@ -166,29 +170,27 @@ function App() {
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-3">
-              시작하려면 연결이 필요합니다
+              {t("common.connectionRequired")}
             </h2>
             <p className="text-[var(--text-secondary)] mb-6">
-              Unity 시뮬레이터에 연결하거나 테스트 모드를 활성화하세요
+              {t("common.connectionInstructions")}
             </p>
             <button
               onClick={() => setShowSettings(true)}
               className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
             >
-              ⚙️ 연결 설정 열기
+              ⚙️ {t("common.openConnectionSettings")}
             </button>
 
             {/* Instructions */}
             <div className="mt-8 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg p-4 text-left">
               <h4 className="text-sm font-semibold text-[var(--info-text-secondary)] mb-2">
-                📘 시작 가이드
+                📘 {t("common.startGuide")}
               </h4>
               <ol className="text-sm text-[var(--info-text)] space-y-1 list-decimal list-inside">
-                <li>Unity Control Server 실행 (또는 Test Mode 활성화)</li>
-                <li>Unity에 표시된 IP 주소 확인</li>
-                <li>연결 설정에서 IP 주소 입력</li>
-                <li>"Connect" 버튼 클릭</li>
-                <li>Blockly로 코딩 시작!</li>
+                {guideSteps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
               </ol>
             </div>
           </div>

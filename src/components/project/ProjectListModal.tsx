@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { Button } from '@/components/common/Button'
 import type { ProjectMetadata } from '@/types/project'
@@ -9,6 +10,7 @@ interface ProjectListModalProps {
 }
 
 export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
+  const { t } = useTranslation()
   const { projects, loadProject, deleteProject, renameProject, refreshProjectList, isLoading } = useProjectStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -33,17 +35,17 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
       onClose()
     } catch (error) {
       console.error('Failed to load project:', error)
-      alert('프로젝트 로드 실패')
+      alert(t('project.list.loadError'))
     }
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`"${name}" 프로젝트를 삭제하시겠습니까?`)) {
+    if (confirm(t('project.list.deleteConfirm', { name }))) {
       try {
         await deleteProject(id)
       } catch (error) {
         console.error('Failed to delete project:', error)
-        alert('프로젝트 삭제 실패')
+        alert(t('project.list.deleteError'))
       }
     }
   }
@@ -55,7 +57,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
 
   const handleRename = async (id: string) => {
     if (!editingName.trim()) {
-      alert('프로젝트 이름을 입력해주세요')
+      alert(t('project.list.renameEmpty'))
       return
     }
 
@@ -65,7 +67,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
       setEditingName('')
     } catch (error) {
       console.error('Failed to rename project:', error)
-      alert('이름 변경 실패')
+      alert(t('project.list.renameError'))
     }
   }
 
@@ -77,10 +79,10 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return '방금 전'
-    if (diffMins < 60) return `${diffMins}분 전`
-    if (diffHours < 24) return `${diffHours}시간 전`
-    if (diffDays < 7) return `${diffDays}일 전`
+    if (diffMins < 1) return t('common.timeAgo.justNow')
+    if (diffMins < 60) return t('common.timeAgo.minutesAgo', { count: diffMins })
+    if (diffHours < 24) return t('common.timeAgo.hoursAgo', { count: diffHours })
+    if (diffDays < 7) return t('common.timeAgo.daysAgo', { count: diffDays })
 
     return date.toLocaleDateString('ko-KR')
   }
@@ -90,7 +92,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
       <div className="bg-[var(--bg-secondary)] rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[var(--border-primary)]">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">프로젝트 열기</h2>
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">{t('project.list.title')}</h2>
           <button
             onClick={onClose}
             className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
@@ -106,7 +108,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
           <div className="relative">
             <input
               type="text"
-              placeholder="프로젝트 검색..."
+              placeholder={t('project.list.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent bg-[var(--bg-secondary)] text-[var(--text-primary)]"
@@ -126,7 +128,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
             <div className="text-center py-12 text-[var(--text-tertiary)]">
-              프로젝트 목록을 불러오는 중...
+              {t('common.loading')}
             </div>
           ) : filteredProjects.length === 0 ? (
             <div className="text-center py-12">
@@ -136,10 +138,10 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-                {searchQuery ? '검색 결과가 없습니다' : '저장된 프로젝트가 없습니다'}
+                {searchQuery ? t('project.list.noResults') : t('project.list.noProjects')}
               </h3>
               <p className="text-[var(--text-secondary)]">
-                {searchQuery ? '다른 검색어를 시도해보세요' : '새 프로젝트를 만들어보세요'}
+                {searchQuery ? t('project.list.noResultsDesc') : t('project.list.noProjectsDesc')}
               </p>
             </div>
           ) : (
@@ -157,6 +159,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
                   onRename={() => handleRename(project.id)}
                   onCancelRename={() => setEditingId(null)}
                   formatDate={formatDate}
+                  t={t}
                 />
               ))}
             </div>
@@ -166,10 +169,10 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-[var(--border-primary)]">
           <div className="text-sm text-[var(--text-secondary)]">
-            {filteredProjects.length}개의 프로젝트
+            {t('project.list.projectCount', { count: filteredProjects.length })}
           </div>
           <Button variant="secondary" onClick={onClose}>
-            닫기
+            {t('common.close')}
           </Button>
         </div>
       </div>
@@ -188,6 +191,7 @@ interface ProjectCardProps {
   onRename: () => void
   onCancelRename: () => void
   formatDate: (date: string) => string
+  t: (key: string, options?: any) => string
 }
 
 function ProjectCard({
@@ -201,6 +205,7 @@ function ProjectCard({
   onRename,
   onCancelRename,
   formatDate,
+  t,
 }: ProjectCardProps) {
   return (
     <div className="border border-[var(--border-primary)] rounded-lg p-4 hover:shadow-md transition-shadow bg-[var(--bg-secondary)]">
@@ -230,7 +235,7 @@ function ProjectCard({
       <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-3">
         <span>{formatDate(project.updatedAt)}</span>
         {project.blockCount !== undefined && (
-          <span>{project.blockCount}개 블록</span>
+          <span>{t('project.list.blockCount', { count: project.blockCount })}</span>
         )}
       </div>
 
@@ -240,13 +245,13 @@ function ProjectCard({
             onClick={onRename}
             className="flex-1 px-3 py-1.5 bg-primary-600 text-white text-sm rounded hover:bg-primary-700 transition-colors"
           >
-            저장
+            {t('common.save')}
           </button>
           <button
             onClick={onCancelRename}
             className="flex-1 px-3 py-1.5 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm rounded hover:bg-[var(--bg-hover)] transition-colors"
           >
-            취소
+            {t('common.cancel')}
           </button>
         </div>
       ) : (
@@ -255,12 +260,12 @@ function ProjectCard({
             onClick={onLoad}
             className="flex-1 px-3 py-1.5 bg-primary-600 text-white text-sm rounded hover:bg-primary-700 transition-colors"
           >
-            열기
+            {t('project.list.open')}
           </button>
           <button
             onClick={onStartRename}
             className="px-3 py-1.5 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm rounded hover:bg-[var(--bg-hover)] transition-colors"
-            title="이름 변경"
+            title={t('project.list.rename')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -269,7 +274,7 @@ function ProjectCard({
           <button
             onClick={onDelete}
             className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200 transition-colors"
-            title="삭제"
+            title={t('project.list.delete')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

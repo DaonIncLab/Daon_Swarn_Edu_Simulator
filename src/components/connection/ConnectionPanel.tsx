@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { ConnectionStatus as Status } from '@/constants/connection'
 import { ConnectionMode } from '@/services/connection'
@@ -8,6 +9,7 @@ import { Input } from '@/components/common/Input'
 import { ConnectionStatus } from './ConnectionStatus'
 
 export function ConnectionPanel() {
+  const { t } = useTranslation()
   const {
     status,
     mode,
@@ -115,14 +117,14 @@ export function ConnectionPanel() {
 
   return (
     <Card
-      title="Unity Connection"
+      title={t('connection.title')}
       description="Select connection mode and configure settings"
     >
       <div className="space-y-4">
         {/* Mode Selector */}
         <div className="pb-4 border-b border-[var(--border-primary)]">
           <label className="block text-sm font-medium text-[var(--text-secondary)] mb-3">
-            Connection Mode
+            {t('connection.mode')}
           </label>
           <div className="grid grid-cols-1 gap-2">
             {/* WebSocket Mode */}
@@ -407,7 +409,7 @@ export function ConnectionPanel() {
                 onClick={handleConnect}
                 disabled={isConnecting}
               >
-                {isConnecting ? 'Connecting...' : 'Connect'}
+                {isConnecting ? `${t('connection.connect')}...` : t('connection.connect')}
               </Button>
             ) : (
               <Button
@@ -415,7 +417,7 @@ export function ConnectionPanel() {
                 fullWidth
                 onClick={handleDisconnect}
               >
-                Disconnect
+                {t('connection.disconnect')}
             </Button>
             )}
           </div>
@@ -429,7 +431,7 @@ export function ConnectionPanel() {
               fullWidth
               onClick={handleDisconnect}
             >
-              Disconnect
+              {t('connection.disconnect')}
             </Button>
           </div>
         )}
@@ -442,7 +444,7 @@ export function ConnectionPanel() {
               fullWidth
               onClick={handleDisconnect}
             >
-              Disconnect
+              {t('connection.disconnect')}
             </Button>
           </div>
         )}

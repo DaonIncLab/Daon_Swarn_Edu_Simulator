@@ -1,0 +1,195 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "open": "Open",
+    "new": "New",
+    "edit": "Edit",
+    "rename": "Rename",
+    "search": "Search",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "saveProject": "Save Project",
+    "openMonitoring": "Open Monitoring",
+    "openSettings": "Open Settings",
+    "connectionRequired": "Connection Required to Start",
+    "connectionInstructions": "Connect to Unity simulator or enable test mode",
+    "openConnectionSettings": "Open Connection Settings",
+    "startGuide": "Getting Started",
+    "guideSteps": [
+      "Run Unity Control Server (or enable Test Mode)",
+      "Check the IP address displayed in Unity",
+      "Enter the IP address in Connection Settings",
+      "Click the \"Connect\" button",
+      "Start coding with Blockly!"
+    ]
+  },
+  "header": {
+    "title": "Drone Swarm Control System",
+    "newProject": "New Project",
+    "openProject": "Open Project",
+    "monitoring": "Monitoring",
+    "settings": "Settings"
+  },
+  "navigation": {
+    "connection": "Connection",
+    "project": "Project",
+    "blockly": "Block Coding",
+    "visualization": "Visualization",
+    "simulator": "Simulator"
+  },
+  "connection": {
+    "title": "Connection Settings",
+    "mode": "Connection Mode",
+    "realMode": "Real Connection",
+    "realModeDesc": "Connect to Unity server for real drone control",
+    "testMode": "Test Mode",
+    "testModeDesc": "Simulate commands without Unity connection",
+    "serverUrl": "Server URL",
+    "serverUrlPlaceholder": "ws://localhost:8080",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "status": {
+      "connected": "Connected",
+      "connecting": "Connecting...",
+      "disconnected": "Disconnected",
+      "error": "Connection Error"
+    }
+  },
+  "execution": {
+    "title": "Execution Control",
+    "status": {
+      "idle": "Idle",
+      "running": "Running",
+      "completed": "Completed",
+      "error": "Error"
+    },
+    "commandCount": "Commands",
+    "commands": "",
+    "currentNode": "Current Node",
+    "executionPath": "Execution Path",
+    "progress": "Progress",
+    "execute": "Execute Script",
+    "stop": "Stop Execution",
+    "reset": "Reset",
+    "testMode": "Test Mode",
+    "help": {
+      "notConnected": "Please connect first",
+      "noCommands": "Drag blocks from the left to create commands",
+      "testModeInfo": "Test Mode: Clicking execute will simulate commands (not sent to Unity server)",
+      "controlFlowTitle": "Control Flow Blocks Available",
+      "controlFlowLoop": "Use loop blocks to repeat commands",
+      "controlFlowIf": "Use If conditions for conditional execution",
+      "controlFlowFor": "Use For loops for variable-based iteration"
+    }
+  },
+  "project": {
+    "title": "Project Info",
+    "name": "Project Name",
+    "description": "Description",
+    "unsaved": "Unsaved",
+    "blockCount": "{{count}} blocks",
+    "blockCount_one": "{{count}} block",
+    "save": "Save Project",
+    "saveAs": "Save As",
+    "export": "Export",
+    "list": {
+      "title": "Open Project",
+      "searchPlaceholder": "Search projects...",
+      "noProjects": "No saved projects",
+      "noProjectsDesc": "Create a new project to get started",
+      "noResults": "No results found",
+      "noResultsDesc": "Try a different search term",
+      "projectCount": "{{count}} projects",
+      "projectCount_one": "{{count}} project",
+      "open": "Open",
+      "rename": "Rename",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete \"{{name}}\"?",
+      "loadError": "Failed to load project",
+      "deleteError": "Failed to delete project",
+      "renameError": "Failed to rename project",
+      "enterName": "Please enter a project name",
+      "timeAgo": {
+        "justNow": "Just now",
+        "minutesAgo": "{{count}} minutes ago",
+        "minutesAgo_one": "{{count}} minute ago",
+        "hoursAgo": "{{count}} hours ago",
+        "hoursAgo_one": "{{count}} hour ago",
+        "daysAgo": "{{count}} days ago",
+        "daysAgo_one": "{{count}} day ago"
+      }
+    },
+    "new": {
+      "title": "New Project",
+      "namePlaceholder": "Enter project name",
+      "descriptionPlaceholder": "Project description (optional)",
+      "template": "Select Template (optional)",
+      "emptyWorkspace": "Empty Workspace",
+      "create": "Create",
+      "cancel": "Cancel",
+      "enterName": "Please enter a project name",
+      "createError": "Failed to create project"
+    }
+  },
+  "blockly": {
+    "workspace": "Block Workspace",
+    "clear": "Clear All",
+    "undo": "Undo",
+    "redo": "Redo",
+    "confirmClear": "Are you sure you want to delete all blocks?",
+    "templates": {
+      "basic": "Basic Flight",
+      "formation": "Formation Flight",
+      "pattern": "Pattern Flight",
+      "advanced": "Advanced Control"
+    }
+  },
+  "drone": {
+    "status": "Drone Status",
+    "connected": "{{count}} connected",
+    "connected_one": "{{count}} drone connected",
+    "waiting": "Waiting for connection",
+    "states": {
+      "idle": "Idle",
+      "flying": "Flying",
+      "error": "Error",
+      "warning": "Warning"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "connection": "Connection",
+    "appearance": "Appearance",
+    "advanced": "Advanced",
+    "language": "Language",
+    "theme": "Theme",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode"
+  },
+  "visualization": {
+    "title": "3D Visualization",
+    "camera": "Camera",
+    "grid": "Grid",
+    "axes": "Axes"
+  },
+  "simulator": {
+    "title": "Simulator",
+    "start": "Start Simulation",
+    "stop": "Stop Simulation",
+    "reset": "Reset"
+  },
+  "monitoring": {
+    "title": "Monitoring",
+    "telemetry": "Telemetry",
+    "logs": "Logs",
+    "diagnostics": "Diagnostics"
+  }
+}

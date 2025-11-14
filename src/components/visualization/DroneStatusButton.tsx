@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { useExecutionStore } from '@/stores/useExecutionStore'
 
 interface DroneStatusButtonProps {
@@ -6,6 +7,7 @@ interface DroneStatusButtonProps {
 }
 
 export const DroneStatusButton: React.FC<DroneStatusButtonProps> = ({ onClick }) => {
+  const { t } = useTranslation()
   const { drones } = useExecutionStore()
 
   // Calculate status summary
@@ -45,10 +47,10 @@ export const DroneStatusButton: React.FC<DroneStatusButtonProps> = ({ onClick })
       <span className="text-xl">🚁</span>
       <div className="flex flex-col items-start text-left">
         <span className="text-sm font-semibold">
-          드론 상태 {getStatusIcon()}
+          {t('drone.status')} {getStatusIcon()}
         </span>
         <span className="text-xs opacity-90">
-          {droneCount > 0 ? `${droneCount}대 연결됨` : '연결 대기 중'}
+          {droneCount > 0 ? t('drone.connected', { count: droneCount }) : t('drone.waiting')}
         </span>
       </div>
     </button>
