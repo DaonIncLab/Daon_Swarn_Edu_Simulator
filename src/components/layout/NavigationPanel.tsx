@@ -47,17 +47,17 @@ export function NavigationPanel({
   isConnected,
 }: NavigationPanelProps) {
   return (
-    <div className={`flex flex-col bg-gray-50 border-r border-gray-200 ${className}`}>
+    <div className={`flex flex-col bg-[var(--bg-tertiary)] border-r border-[var(--border-primary)] ${className}`}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0">
-        <h2 className="text-sm font-semibold text-gray-900">메뉴</h2>
+      <div className="px-4 py-3 border-b border-[var(--border-primary)] flex-shrink-0">
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">메뉴</h2>
       </div>
 
       {/* Quick Actions */}
-      <div className="px-2 py-3 border-b border-gray-200 space-y-1 flex-shrink-0">
+      <div className="px-2 py-3 border-b border-[var(--border-primary)] space-y-1 flex-shrink-0">
         <button
           onClick={onOpenProject}
-          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
           title="프로젝트"
         >
           <span className="text-lg">📦</span>
@@ -66,7 +66,7 @@ export function NavigationPanel({
 
         <button
           onClick={onOpenSettings}
-          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
           title="설정"
         >
           <span className="text-lg">⚙️</span>
@@ -76,7 +76,7 @@ export function NavigationPanel({
         {isConnected && (
           <button
             onClick={onOpenMonitoring}
-            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
             title="모니터링"
           >
             <span className="text-lg">📊</span>
@@ -88,7 +88,7 @@ export function NavigationPanel({
       {/* Block Categories */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-2 py-3">
-          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          <h3 className="px-3 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">
             블록 카테고리
           </h3>
           <div className="space-y-1">
@@ -98,8 +98,8 @@ export function NavigationPanel({
                 onClick={() => onCategorySelect(category.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all ${
                   selectedCategory === category.id
-                    ? 'bg-blue-100 text-blue-900 font-semibold border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-[var(--nav-active-bg)] text-[var(--nav-active-text)] font-semibold border-l-4 border-[var(--nav-active-border)]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                 }`}
                 title={category.name}
               >
@@ -112,16 +112,16 @@ export function NavigationPanel({
       </div>
 
       {/* Footer Info */}
-      <div className="px-4 py-3 border-t border-gray-200 flex-shrink-0">
-        <p className="text-xs text-gray-500 text-center">
+      <div className="px-4 py-3 border-t border-[var(--border-primary)] flex-shrink-0">
+        <p className="text-xs text-[var(--text-tertiary)] text-center">
           {isConnected ? (
             <span className="flex items-center justify-center gap-1.5">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span className="w-2 h-2 bg-[var(--status-online)] rounded-full animate-pulse"></span>
               <span>연결됨</span>
             </span>
           ) : (
             <span className="flex items-center justify-center gap-1.5">
-              <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+              <span className="w-2 h-2 bg-[var(--status-offline)] rounded-full"></span>
               <span>연결 안 됨</span>
             </span>
           )}
