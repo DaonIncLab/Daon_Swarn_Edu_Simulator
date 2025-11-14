@@ -96,8 +96,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-gray-50">
-        <div className="h-full overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto">
+        <div className="h-full overflow-y-auto p-4 sm:p-6">
+          <div className="max-w-full sm:max-w-2xl lg:max-w-4xl mx-auto">
             {activeTab === 'project' && <ProjectPanel />}
             {activeTab === 'connection' && <ConnectionPanel />}
           </div>

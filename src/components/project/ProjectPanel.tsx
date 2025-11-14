@@ -34,7 +34,7 @@ export function ProjectPanel() {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4 text-gray-900">프로젝트</h3>
 
         {/* Current Project Info */}
@@ -67,14 +67,16 @@ export function ProjectPanel() {
         )}
 
         {/* Actions */}
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Button
             variant="primary"
             fullWidth
             onClick={() => setShowNewModal(true)}
             disabled={isLoading}
+            className="text-sm sm:text-base whitespace-nowrap"
           >
-            📄 새 프로젝트
+            <span className="mr-1">📄</span>
+            <span>새 프로젝트</span>
           </Button>
 
           <Button
@@ -82,8 +84,10 @@ export function ProjectPanel() {
             fullWidth
             onClick={() => setShowListModal(true)}
             disabled={isLoading}
+            className="text-sm sm:text-base whitespace-nowrap"
           >
-            📂 프로젝트 열기
+            <span className="mr-1">📂</span>
+            <span>프로젝트 열기</span>
           </Button>
 
           {currentProject && (
@@ -93,8 +97,10 @@ export function ProjectPanel() {
                 fullWidth
                 onClick={handleSave}
                 disabled={isLoading || !hasUnsavedChanges}
+                className="text-sm sm:text-base whitespace-nowrap"
               >
-                💾 저장 {hasUnsavedChanges && '✱'}
+                <span className="mr-1">💾</span>
+                <span>저장 {hasUnsavedChanges && '✱'}</span>
               </Button>
 
               <Button
@@ -102,8 +108,10 @@ export function ProjectPanel() {
                 fullWidth
                 onClick={handleExport}
                 disabled={isLoading}
+                className="text-sm sm:text-base whitespace-nowrap"
               >
-                📤 내보내기
+                <span className="mr-1">📤</span>
+                <span>내보내기</span>
               </Button>
             </>
           )}
