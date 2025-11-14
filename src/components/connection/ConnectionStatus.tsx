@@ -36,9 +36,9 @@ export function ConnectionStatus({ status, className }: ConnectionStatusProps) {
       case Status.DISCONNECTED:
       default:
         return {
-          color: 'bg-gray-400',
+          color: 'bg-[var(--status-offline)]',
           text: 'Disconnected',
-          textColor: 'text-gray-600',
+          textColor: 'text-[var(--text-secondary)]',
           icon: '●',
           animate: false,
         }
