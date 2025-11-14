@@ -100,14 +100,14 @@ export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
   ]
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-[var(--modal-overlay)] flex items-center justify-center z-50">
+      <div className="bg-[var(--bg-secondary)] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">새 프로젝트 만들기</h2>
+        <div className="flex items-center justify-between p-6 border-b border-[var(--border-primary)]">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">새 프로젝트 만들기</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             disabled={isLoading}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
