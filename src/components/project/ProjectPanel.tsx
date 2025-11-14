@@ -108,31 +108,6 @@ export function ProjectPanel() {
             </>
           )}
         </div>
-
-        {/* Keyboard Shortcuts Hint */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-600 font-medium mb-2">단축키:</p>
-          <div className="space-y-1 text-xs text-gray-500">
-            <div className="flex justify-between">
-              <span>새 프로젝트</span>
-              <kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
-                Ctrl+N
-              </kbd>
-            </div>
-            <div className="flex justify-between">
-              <span>프로젝트 열기</span>
-              <kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
-                Ctrl+O
-              </kbd>
-            </div>
-            <div className="flex justify-between">
-              <span>저장</span>
-              <kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
-                Ctrl+S
-              </kbd>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Modals */}
