@@ -3,8 +3,8 @@
  * IndexedDB 우선, LocalStorage 폴백
  */
 
-import type { Project, ProjectMetadata, ExportedProject } from '@/types/project'
-import { StorageType } from '@/types/project'
+import type { Project, ProjectMetadata, ExportedProject, StorageType as StorageTypeType } from '@/types/project'
+import { StorageType } from '@/constants/project'
 import { IndexedDBAdapter, getIndexedDBAdapter } from './indexedDBAdapter'
 import { LocalStorageAdapter, getLocalStorageAdapter } from './localStorageAdapter'
 
@@ -13,7 +13,7 @@ import { LocalStorageAdapter, getLocalStorageAdapter } from './localStorageAdapt
  */
 export class ProjectStorage {
   private adapter: IndexedDBAdapter | LocalStorageAdapter
-  private storageType: StorageType
+  private storageType: StorageTypeType
 
   constructor() {
     // IndexedDB 지원 여부 확인
@@ -42,7 +42,7 @@ export class ProjectStorage {
   /**
    * 사용 중인 저장소 타입 반환
    */
-  getStorageType(): StorageType {
+  getStorageType(): StorageTypeType {
     return this.storageType
   }
 

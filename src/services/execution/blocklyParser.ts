@@ -65,7 +65,7 @@ export function parseBlocklyWorkspace(workspace: Blockly.Workspace): ExecutableN
   // 여러 최상위 블록이 있으면 시퀀스로 묶음
   return {
     id: generateNodeId(),
-    type: 'sequence' as NodeType.SEQUENCE,
+    type: 'sequence',
     children,
   }
 }
@@ -100,7 +100,7 @@ function parseBlock(block: Blockly.Block): ExecutableNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'sequence' as NodeType.SEQUENCE,
+    type: 'sequence',
     children: sequence,
   }
 }
@@ -195,7 +195,7 @@ function parseRepeatBlock(block: Blockly.Block): RepeatNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'repeat' as NodeType.REPEAT,
+    type: 'repeat',
     times,
     body,
   }
@@ -222,7 +222,7 @@ function parseForLoopBlock(block: Blockly.Block): ForLoopNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'for_loop' as NodeType.FOR_LOOP,
+    type: 'for_loop',
     variable,
     from,
     to,
@@ -249,7 +249,7 @@ function parseIfBlock(block: Blockly.Block): IfNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'if' as NodeType.IF,
+    type: 'if',
     condition,
     thenBranch,
   }
@@ -282,7 +282,7 @@ function parseIfElseBlock(block: Blockly.Block): IfElseNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'if_else' as NodeType.IF_ELSE,
+    type: 'if_else',
     condition,
     thenBranch,
     elseBranch,
@@ -297,7 +297,7 @@ function parseWaitBlock(block: Blockly.Block): WaitNode {
 
   return {
     id: generateNodeId(),
-    type: 'wait' as NodeType.WAIT,
+    type: 'wait',
     duration,
   }
 }
@@ -320,7 +320,7 @@ function parseWhileLoopBlock(block: Blockly.Block): WhileLoopNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'while_loop' as NodeType.WHILE_LOOP,
+    type: 'while_loop',
     condition,
     body,
     maxIterations: 1000, // 무한 루프 방지
@@ -345,7 +345,7 @@ function parseUntilLoopBlock(block: Blockly.Block): UntilLoopNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'until_loop' as NodeType.UNTIL_LOOP,
+    type: 'until_loop',
     condition,
     body,
     maxIterations: 1000, // 무한 루프 방지
@@ -361,7 +361,7 @@ function parseVariableSetBlock(block: Blockly.Block): VariableSetNode {
 
   return {
     id: generateNodeId(),
-    type: 'variable_set' as NodeType.VARIABLE_SET,
+    type: 'variable_set',
     variableName,
     value,
   }
@@ -375,7 +375,7 @@ function parseVariableGetBlock(block: Blockly.Block): VariableGetNode {
 
   return {
     id: generateNodeId(),
-    type: 'variable_get' as NodeType.VARIABLE_GET,
+    type: 'variable_get',
     variableName,
   }
 }
@@ -398,7 +398,7 @@ function parseFunctionDefBlock(block: Blockly.Block): FunctionDefNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'function_def' as NodeType.FUNCTION_DEF,
+    type: 'function_def',
     functionName,
     body,
   }
@@ -412,7 +412,7 @@ function parseFunctionCallBlock(block: Blockly.Block): FunctionCallNode {
 
   return {
     id: generateNodeId(),
-    type: 'function_call' as NodeType.FUNCTION_CALL,
+    type: 'function_call',
     functionName,
   }
 }
@@ -429,7 +429,7 @@ function parseCommandBlock(block: Blockly.Block): CommandNode | null {
 
   return {
     id: generateNodeId(),
-    type: 'command' as NodeType.COMMAND,
+    type: 'command',
     command,
   }
 }

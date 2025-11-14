@@ -50,15 +50,15 @@ export class ConditionEvaluator {
 
     // 1. 드론 연결 상태 조건
     if (trimmed === 'all_connected') {
-      return this.droneStates.length > 0 && this.droneStates.every(d => d.connected)
+      return this.droneStates.length > 0 && this.droneStates.every(d => d.isActive)
     }
 
     if (trimmed === 'any_connected') {
-      return this.droneStates.some(d => d.connected)
+      return this.droneStates.some(d => d.isActive)
     }
 
     if (trimmed === 'none_connected') {
-      return this.droneStates.every(d => !d.connected)
+      return this.droneStates.every(d => !d.isActive)
     }
 
     // 2. 배터리 조건 (battery > 20, battery < 50, battery >= 30)

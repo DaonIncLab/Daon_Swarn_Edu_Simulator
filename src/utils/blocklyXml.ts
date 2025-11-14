@@ -258,6 +258,230 @@ export function getTemplateXml(template: string): string {
   </block>
 </xml>`
 
+    case 'multi_formation':
+      return `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="swarm_takeoff_all" x="50" y="50">
+    <field name="ALTITUDE">3</field>
+    <next>
+      <block type="swarm_set_formation">
+        <field name="FORMATION_TYPE">line</field>
+        <field name="ROWS">1</field>
+        <field name="COLS">4</field>
+        <field name="SPACING">2</field>
+        <next>
+          <block type="swarm_move_formation">
+            <field name="DIRECTION">forward</field>
+            <field name="DISTANCE">5</field>
+            <next>
+              <block type="swarm_wait">
+                <field name="DURATION">2</field>
+                <next>
+                  <block type="swarm_set_formation">
+                    <field name="FORMATION_TYPE">circle</field>
+                    <field name="ROWS">4</field>
+                    <field name="COLS">1</field>
+                    <field name="SPACING">3</field>
+                    <next>
+                      <block type="swarm_wait">
+                        <field name="DURATION">2</field>
+                        <next>
+                          <block type="swarm_set_formation">
+                            <field name="FORMATION_TYPE">v_shape</field>
+                            <field name="ROWS">2</field>
+                            <field name="COLS">2</field>
+                            <field name="SPACING">2.5</field>
+                            <next>
+                              <block type="swarm_move_formation">
+                                <field name="DIRECTION">forward</field>
+                                <field name="DISTANCE">5</field>
+                                <next>
+                                  <block type="swarm_land_all"></block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>`
+
+    case 'circle_patrol':
+      return `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="swarm_takeoff_all" x="50" y="50">
+    <field name="ALTITUDE">2.5</field>
+    <next>
+      <block type="swarm_set_formation">
+        <field name="FORMATION_TYPE">circle</field>
+        <field name="ROWS">4</field>
+        <field name="COLS">1</field>
+        <field name="SPACING">4</field>
+        <next>
+          <block type="controls_repeat">
+            <field name="TIMES">4</field>
+            <statement name="DO">
+              <block type="swarm_move_formation">
+                <field name="DIRECTION">forward</field>
+                <field name="DISTANCE">3</field>
+                <next>
+                  <block type="swarm_wait">
+                    <field name="DURATION">1</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="swarm_land_all"></block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>`
+
+    case 'search_rescue':
+      return `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="swarm_takeoff_all" x="50" y="50">
+    <field name="ALTITUDE">3</field>
+    <next>
+      <block type="swarm_set_formation">
+        <field name="FORMATION_TYPE">grid</field>
+        <field name="ROWS">2</field>
+        <field name="COLS">2</field>
+        <field name="SPACING">5</field>
+        <next>
+          <block type="controls_repeat">
+            <field name="TIMES">3</field>
+            <statement name="DO">
+              <block type="swarm_move_formation">
+                <field name="DIRECTION">forward</field>
+                <field name="DISTANCE">4</field>
+                <next>
+                  <block type="swarm_wait">
+                    <field name="DURATION">2</field>
+                    <next>
+                      <block type="swarm_move_formation">
+                        <field name="DIRECTION">right</field>
+                        <field name="DISTANCE">3</field>
+                        <next>
+                          <block type="swarm_wait">
+                            <field name="DURATION">2</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="swarm_set_formation">
+                <field name="FORMATION_TYPE">circle</field>
+                <field name="ROWS">4</field>
+                <field name="COLS">1</field>
+                <field name="SPACING">2</field>
+                <next>
+                  <block type="swarm_wait">
+                    <field name="DURATION">3</field>
+                    <next>
+                      <block type="swarm_land_all"></block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>`
+
+    case 'choreography':
+      return `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="swarm_takeoff_all" x="50" y="50">
+    <field name="ALTITUDE">2</field>
+    <next>
+      <block type="controls_repeat">
+        <field name="TIMES">2</field>
+        <statement name="DO">
+          <block type="swarm_set_formation">
+            <field name="FORMATION_TYPE">line</field>
+            <field name="ROWS">1</field>
+            <field name="COLS">4</field>
+            <field name="SPACING">2</field>
+            <next>
+              <block type="swarm_move_formation">
+                <field name="DIRECTION">forward</field>
+                <field name="DISTANCE">3</field>
+                <next>
+                  <block type="swarm_set_formation">
+                    <field name="FORMATION_TYPE">grid</field>
+                    <field name="ROWS">2</field>
+                    <field name="COLS">2</field>
+                    <field name="SPACING">2</field>
+                    <next>
+                      <block type="swarm_move_formation">
+                        <field name="DIRECTION">up</field>
+                        <field name="DISTANCE">1</field>
+                        <next>
+                          <block type="swarm_set_formation">
+                            <field name="FORMATION_TYPE">circle</field>
+                            <field name="ROWS">4</field>
+                            <field name="COLS">1</field>
+                            <field name="SPACING">2</field>
+                            <next>
+                              <block type="swarm_move_formation">
+                                <field name="DIRECTION">down</field>
+                                <field name="DISTANCE">1</field>
+                                <next>
+                                  <block type="swarm_wait">
+                                    <field name="DURATION">1</field>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <next>
+          <block type="swarm_set_formation">
+            <field name="FORMATION_TYPE">v_shape</field>
+            <field name="ROWS">2</field>
+            <field name="COLS">2</field>
+            <field name="SPACING">3</field>
+            <next>
+              <block type="swarm_move_formation">
+                <field name="DIRECTION">forward</field>
+                <field name="DISTANCE">5</field>
+                <next>
+                  <block type="swarm_land_all"></block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>`
+
     default:
       return createEmptyWorkspaceXml()
   }

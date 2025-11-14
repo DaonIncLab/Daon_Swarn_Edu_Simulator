@@ -42,12 +42,6 @@ export interface ChartConfig {
 }
 
 /**
- * Telemetry dashboard tab
+ * Re-export type from constants
  */
-export const TelemetryTab = {
-  VIEW_3D: '3d',
-  CHARTS: 'charts',
-  DRONE_LIST: 'list',
-} as const
-
-export type TelemetryTab = typeof TelemetryTab[keyof typeof TelemetryTab]
+export type { TelemetryTab } from '@/constants/telemetry'

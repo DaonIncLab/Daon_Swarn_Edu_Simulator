@@ -4,7 +4,6 @@ import { toolboxConfig, getCategoryBlocks } from './toolbox'
 import { generateCommands } from './generators/swarmGenerator'
 import { useBlocklyStore } from '@/stores/useBlocklyStore'
 import { useExecutionStore, ExecutionStatus } from '@/stores/useExecutionStore'
-import { Button } from '@/components/common/Button'
 import './blocks/swarmBlocks' // 블록 정의 import
 
 // Blockly CSS import
@@ -110,24 +109,28 @@ export function BlocklyWorkspace({ className, selectedCategory = 'basic' }: Bloc
         </div>
 
         {/* Execution Control Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ">
           {!isRunning ? (
-            <Button
-              variant="success"
-              size="sm"
+            <button
               onClick={executeScript}
               disabled={!hasCommands}
+              className="flex items-center justify-center w-10 h-10 rounded-lg bg-success hover:bg-success-dark text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-2"
+              title="실행"
             >
-              ▶ 실행
-            </Button>
+              <svg className="w-5 h-5" color='grey' fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
           ) : (
-            <Button
-              variant="danger"
-              size="sm"
+            <button
               onClick={stopExecution}
+              className="flex items-center justify-center w-10 h-10 rounded-lg bg-danger hover:bg-danger-dark text-white transition-all focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2"
+              title="중지"
             >
-              ⏹ 중지
-            </Button>
+              <svg className="w-5 h-5" color='grey' fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" />
+              </svg>
+            </button>
           )}
         </div>
       </div>

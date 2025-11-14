@@ -16,6 +16,14 @@ export const ProjectTemplate = {
   CONDITIONAL_EXAMPLE: 'conditional_example',
   /** Formation flight example */
   FORMATION_EXAMPLE: 'formation_example',
+  /** Multiple formations showcase */
+  MULTI_FORMATION: 'multi_formation',
+  /** Circle patrol pattern */
+  CIRCLE_PATROL: 'circle_patrol',
+  /** Search and rescue mission */
+  SEARCH_RESCUE: 'search_rescue',
+  /** Synchronized choreography */
+  CHOREOGRAPHY: 'choreography',
 } as const
 
 export type ProjectTemplate = typeof ProjectTemplate[keyof typeof ProjectTemplate]

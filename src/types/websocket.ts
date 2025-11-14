@@ -66,6 +66,13 @@ export interface Command {
   params: CommandParams
 }
 
+// 명령 응답 인터페이스
+export interface CommandResponse {
+  success: boolean
+  error?: string
+  timestamp: number
+}
+
 // 클라이언트 -> Unity: 스크립트 실행
 export interface ExecuteScriptMessage extends BaseMessage {
   type: 'execute_script'

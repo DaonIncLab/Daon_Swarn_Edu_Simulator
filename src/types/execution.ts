@@ -51,7 +51,7 @@ export interface BaseNode {
  * 단일 명령 노드
  */
 export interface CommandNode extends BaseNode {
-  type: NodeType.COMMAND
+  type: 'command'
   command: Command
 }
 
@@ -59,7 +59,7 @@ export interface CommandNode extends BaseNode {
  * 순차 실행 노드
  */
 export interface SequenceNode extends BaseNode {
-  type: NodeType.SEQUENCE
+  type: 'sequence'
   children: ExecutableNode[]
 }
 
@@ -67,7 +67,7 @@ export interface SequenceNode extends BaseNode {
  * 반복 노드
  */
 export interface RepeatNode extends BaseNode {
-  type: NodeType.REPEAT
+  type: 'repeat'
   times: number
   body: ExecutableNode
 }
@@ -76,7 +76,7 @@ export interface RepeatNode extends BaseNode {
  * For 루프 노드
  */
 export interface ForLoopNode extends BaseNode {
-  type: NodeType.FOR_LOOP
+  type: 'for_loop'
   variable: string
   from: number
   to: number
@@ -88,7 +88,7 @@ export interface ForLoopNode extends BaseNode {
  * 조건 분기 노드 (if)
  */
 export interface IfNode extends BaseNode {
-  type: NodeType.IF
+  type: 'if'
   condition: string
   thenBranch: ExecutableNode
 }
@@ -97,7 +97,7 @@ export interface IfNode extends BaseNode {
  * 조건 분기 노드 (if-else)
  */
 export interface IfElseNode extends BaseNode {
-  type: NodeType.IF_ELSE
+  type: 'if_else'
   condition: string
   thenBranch: ExecutableNode
   elseBranch: ExecutableNode
@@ -107,7 +107,7 @@ export interface IfElseNode extends BaseNode {
  * 대기 노드
  */
 export interface WaitNode extends BaseNode {
-  type: NodeType.WAIT
+  type: 'wait'
   duration: number // 초 단위
 }
 
@@ -115,7 +115,7 @@ export interface WaitNode extends BaseNode {
  * While 루프 노드
  */
 export interface WhileLoopNode extends BaseNode {
-  type: NodeType.WHILE_LOOP
+  type: 'while_loop'
   condition: string
   body: ExecutableNode
   maxIterations?: number // 무한 루프 방지 (기본값: 1000)
@@ -125,7 +125,7 @@ export interface WhileLoopNode extends BaseNode {
  * Repeat Until 루프 노드
  */
 export interface UntilLoopNode extends BaseNode {
-  type: NodeType.UNTIL_LOOP
+  type: 'until_loop'
   condition: string
   body: ExecutableNode
   maxIterations?: number // 무한 루프 방지 (기본값: 1000)
@@ -135,7 +135,7 @@ export interface UntilLoopNode extends BaseNode {
  * 변수 설정 노드
  */
 export interface VariableSetNode extends BaseNode {
-  type: NodeType.VARIABLE_SET
+  type: 'variable_set'
   variableName: string
   value: number | VariableGetNode // 직접 값 또는 다른 변수 참조
 }
@@ -144,7 +144,7 @@ export interface VariableSetNode extends BaseNode {
  * 변수 값 가져오기 노드
  */
 export interface VariableGetNode extends BaseNode {
-  type: NodeType.VARIABLE_GET
+  type: 'variable_get'
   variableName: string
 }
 
@@ -152,7 +152,7 @@ export interface VariableGetNode extends BaseNode {
  * 함수 정의 노드
  */
 export interface FunctionDefNode extends BaseNode {
-  type: NodeType.FUNCTION_DEF
+  type: 'function_def'
   functionName: string
   body: ExecutableNode
 }
@@ -161,7 +161,7 @@ export interface FunctionDefNode extends BaseNode {
  * 함수 호출 노드
  */
 export interface FunctionCallNode extends BaseNode {
-  type: NodeType.FUNCTION_CALL
+  type: 'function_call'
   functionName: string
 }
 

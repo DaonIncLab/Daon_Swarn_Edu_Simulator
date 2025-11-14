@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand'
-import type { Project, ProjectMetadata, CreateProjectOptions, ProjectTemplate } from '@/types/project'
+import type { Project, ProjectMetadata, CreateProjectOptions } from '@/types/project'
 import { getProjectStorage } from '@/services/storage'
 import { workspaceToXml, xmlToWorkspace, createEmptyWorkspaceXml, getTemplateXml } from '@/utils/blocklyXml'
 import { useBlocklyStore } from './useBlocklyStore'

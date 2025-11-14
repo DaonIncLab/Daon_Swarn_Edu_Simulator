@@ -4,6 +4,9 @@
 
 import type { Command } from './websocket'
 
+// Re-export Command type for use in other modules
+export type { Command }
+
 // Blockly 블록 정의
 export interface BlockDefinition {
   type: string

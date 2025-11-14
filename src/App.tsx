@@ -9,7 +9,7 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ErrorFallback } from "@/components/common/ErrorFallback";
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useProjectStore } from "@/stores/useProjectStore";
-import { ConnectionStatus, ConnectionMode } from "@/constants/connection";
+import { ConnectionStatus } from "@/constants/connection";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { initializeProjectStorage } from "@/services/storage";
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ProjectTemplate } from '@/types/project'
+import { ProjectTemplate } from '@/constants/project'
+import type { ProjectTemplate as ProjectTemplateType } from '@/types/project'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
@@ -12,7 +13,7 @@ interface NewProjectModalProps {
 export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplate>(ProjectTemplate.BLANK)
+  const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplateType>(ProjectTemplate.BLANK)
   const { createProject, isLoading } = useProjectStore()
 
   if (!isOpen) return null
@@ -71,6 +72,30 @@ export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
       label: '대형 비행',
       description: '편대 대형 설정 예제',
       icon: '📐',
+    },
+    {
+      value: ProjectTemplate.MULTI_FORMATION,
+      label: '다중 대형',
+      description: 'Line → Circle → V-Shape 변환',
+      icon: '✨',
+    },
+    {
+      value: ProjectTemplate.CIRCLE_PATROL,
+      label: '순찰 비행',
+      description: '원형 대형으로 순찰',
+      icon: '🔄',
+    },
+    {
+      value: ProjectTemplate.SEARCH_RESCUE,
+      label: '수색 구조',
+      description: '그리드 탐색 → 집결',
+      icon: '🔍',
+    },
+    {
+      value: ProjectTemplate.CHOREOGRAPHY,
+      label: '안무 비행',
+      description: '복합 대형 변환 쇼케이스',
+      icon: '💃',
     },
   ]
 
