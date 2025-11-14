@@ -34,16 +34,16 @@ export function ProjectPanel() {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-        <h3 className="text-lg font-semibold mb-4 text-gray-900">프로젝트</h3>
+      <div className="bg-[var(--bg-secondary)] rounded-lg shadow-md p-4 sm:p-6 transition-colors">
+        <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">프로젝트</h3>
 
         {/* Current Project Info */}
         {currentProject ? (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+          <div className="mb-4 p-3 bg-[var(--bg-tertiary)] rounded-lg">
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-medium text-gray-900 truncate">
+                  <h4 className="font-medium text-[var(--text-primary)] truncate">
                     {currentProject.name}
                   </h4>
                   {hasUnsavedChanges && (
@@ -53,7 +53,7 @@ export function ProjectPanel() {
                   )}
                 </div>
                 {currentProject.description && (
-                  <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
                     {currentProject.description}
                   </p>
                 )}
@@ -61,7 +61,7 @@ export function ProjectPanel() {
             </div>
           </div>
         ) : (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg text-center text-sm text-gray-600">
+          <div className="mb-4 p-3 bg-[var(--bg-tertiary)] rounded-lg text-center text-sm text-[var(--text-secondary)]">
             열린 프로젝트가 없습니다
           </div>
         )}

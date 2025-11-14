@@ -1,6 +1,7 @@
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useBlocklyStore } from '@/stores/useBlocklyStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
+import { useThemeContext } from '@/contexts/ThemeContext'
 import { ConnectionStatus } from '@/constants/connection'
 
 interface HeaderProps {
@@ -12,19 +13,20 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
   const { currentProject, saveCurrentProject } = useProjectStore()
   const { hasUnsavedChanges } = useBlocklyStore()
   const { status } = useConnectionStore()
+  const { isDark, toggle } = useThemeContext()
 
   const isConnected = status === ConnectionStatus.CONNECTED
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
+    <header className="bg-[var(--bg-secondary)] shadow-sm border-b border-[var(--border-primary)] flex-shrink-0 transition-colors">
       <div className="px-6 py-3 flex items-center justify-between">
         {/* Left: Project Info */}
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-[var(--text-primary)]">
               Drone Swarm Simulator
             </h1>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--text-secondary)]">
               Blockly ↔ Unity Integration
             </p>
           </div>
@@ -60,13 +62,13 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
           )}
 
           {/* Connection Status */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-tertiary)] rounded-lg">
             <div
               className={`w-2 h-2 rounded-full ${
                 isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
               }`}
             />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-[var(--text-primary)]">
               {isConnected ? 'Connected' : 'Not Connected'}
             </span>
           </div>
@@ -82,10 +84,19 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
             </button>
           )}
 
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggle}
+            className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
+            title={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
+          >
+            <span className="text-xl">{isDark ? '☀️' : '🌙'}</span>
+          </button>
+
           {/* Settings Button */}
           <button
             onClick={onOpenSettings}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
             title="설정"
           >
             <span className="text-xl">⚙️</span>

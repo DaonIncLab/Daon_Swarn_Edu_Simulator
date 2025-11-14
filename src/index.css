@@ -22,13 +22,64 @@
   --color-danger-dark: #dc2626;
 }
 
-/* Global Light Mode Styles (하드코딩) */
+/* Theme Variables */
+:root {
+  /* Background colors */
+  --bg-primary: rgb(249 250 251);
+  --bg-secondary: rgb(255 255 255);
+  --bg-tertiary: rgb(243 244 246);
+  --bg-hover: rgb(243 244 246);
+  --bg-active: rgb(229 231 235);
+
+  /* Text colors */
+  --text-primary: rgb(17 24 39);
+  --text-secondary: rgb(75 85 99);
+  --text-tertiary: rgb(156 163 175);
+  --text-inverted: rgb(255 255 255);
+
+  /* Border colors */
+  --border-primary: rgb(229 231 235);
+  --border-secondary: rgb(209 213 219);
+  --border-focus: rgb(147 197 253);
+
+  /* Component colors */
+  --header-gradient-from: rgb(75 85 99);
+  --header-gradient-to: rgb(55 65 81);
+}
+
+/* Dark Theme */
+.dark {
+  /* Background colors */
+  --bg-primary: rgb(17 24 39);
+  --bg-secondary: rgb(31 41 55);
+  --bg-tertiary: rgb(55 65 81);
+  --bg-hover: rgb(55 65 81);
+  --bg-active: rgb(75 85 99);
+
+  /* Text colors */
+  --text-primary: rgb(243 244 246);
+  --text-secondary: rgb(209 213 219);
+  --text-tertiary: rgb(156 163 175);
+  --text-inverted: rgb(17 24 39);
+
+  /* Border colors */
+  --border-primary: rgb(55 65 81);
+  --border-secondary: rgb(75 85 99);
+  --border-focus: rgb(96 165 250);
+
+  /* Component colors */
+  --header-gradient-from: rgb(31 41 55);
+  --header-gradient-to: rgb(17 24 39);
+}
+
+/* Global Styles with Theme Support */
 html,
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: rgb(249 250 251); /* gray-50 */
-  color: rgb(17 24 39); /* gray-900 */
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

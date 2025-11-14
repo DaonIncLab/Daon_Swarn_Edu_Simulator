@@ -49,9 +49,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[100] bg-white flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-[var(--bg-secondary)] flex flex-col transition-colors">
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-700 to-gray-800 text-white p-4 flex-shrink-0">
+      <div className="bg-gradient-to-r from-[var(--header-gradient-from)] to-[var(--header-gradient-to)] text-white p-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -75,7 +75,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 flex-shrink-0">
+      <div className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] flex-shrink-0">
         <div className="flex gap-1 px-4">
           {tabs.map((tab) => (
             <button
@@ -83,8 +83,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               onClick={() => setActiveTab(tab.id)}
               className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 ${
                 activeTab === tab.id
-                  ? 'border-gray-700 text-gray-700 bg-gray-50'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'border-[var(--text-primary)] text-[var(--text-primary)] bg-[var(--bg-tertiary)]'
+                  : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
               }`}
             >
               <span className="mr-2">{tab.icon}</span>
@@ -95,7 +95,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden bg-gray-50">
+      <div className="flex-1 overflow-hidden bg-[var(--bg-primary)]">
         <div className="h-full overflow-y-auto p-4 sm:p-6">
           <div className="max-w-full sm:max-w-2xl lg:max-w-4xl mx-auto">
             {activeTab === 'project' && <ProjectPanel />}
