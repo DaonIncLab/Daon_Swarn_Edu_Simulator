@@ -46,12 +46,12 @@ export interface ConnectionConfig {
   // MAVLink 설정 (실제 드론 모드 또는 시뮬레이션)
   mavlink?: {
     connectionType: 'simulation' | 'serial' | 'udp' | 'tcp'
+    transportType?: 'udp' | 'serial' | 'tcp' // For real connections
     droneCount?: number // For simulation mode
-    port?: string // COM3, /dev/ttyUSB0 등 (for serial)
-    baudRate?: number // For serial
-    host?: string // For UDP/TCP
-    udpPort?: number // For UDP
-    tcpPort?: number // For TCP
+    device?: string // For serial: COM3, /dev/ttyUSB0 등
+    baudRate?: number // For serial (default: 57600)
+    host?: string // For UDP/TCP (default: localhost)
+    port?: number // For UDP/TCP (default UDP: 14550, TCP: 5760)
   }
 
   // Test 모드 설정
