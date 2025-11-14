@@ -13,7 +13,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
             {label}
           </label>
         )}
@@ -21,13 +21,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           className={cn(
             'w-full px-4 py-2 border rounded-lg',
-            'bg-white text-gray-900',
+            'bg-[var(--bg-secondary)] text-[var(--text-primary)]',
             'focus:outline-none focus:ring-2',
             error
               ? 'border-danger focus:ring-danger focus:border-danger'
-              : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500',
-            'disabled:bg-gray-100 disabled:cursor-not-allowed',
-            'placeholder:text-gray-400',
+              : 'border-[var(--border-primary)] focus:ring-primary-500 focus:border-primary-500',
+            'disabled:bg-[var(--input-disabled-bg)] disabled:cursor-not-allowed',
+            'placeholder:text-[var(--text-tertiary)]',
             className
           )}
           {...props}
@@ -36,7 +36,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <p className="mt-1 text-sm text-danger">{error}</p>
         )}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">{helperText}</p>
         )}
       </div>
     )

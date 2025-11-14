@@ -13,18 +13,18 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'bg-white rounded-lg shadow-md overflow-hidden',
+          'bg-[var(--bg-secondary)] rounded-lg shadow-md overflow-hidden',
           className
         )}
         {...props}
       >
         {(title || description) && (
-          <div className="border-b border-gray-200 px-6 py-4">
+          <div className="border-b border-[var(--border-primary)] px-6 py-4">
             {title && (
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h3>
             )}
             {description && (
-              <p className="mt-1 text-sm text-gray-600">{description}</p>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">{description}</p>
             )}
           </div>
         )}

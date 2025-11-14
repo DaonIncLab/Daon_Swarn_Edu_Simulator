@@ -98,11 +98,11 @@ export function BlocklyWorkspace({ className, selectedCategory = 'basic' }: Bloc
   return (
     <div className={`h-full flex flex-col ${className || ''}`}>
       {/* Toolbar with Execution Controls */}
-      <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+      <div className="flex items-center justify-between px-6 py-3 bg-[var(--bg-tertiary)] border-b border-[var(--border-primary)] flex-shrink-0">
         <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-gray-900">블록 코딩</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">블록 코딩</h3>
           {hasCommands && (
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+            <span className="px-2 py-1 bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)] text-xs font-medium rounded">
               {commands.length}개 명령
             </span>
           )}
