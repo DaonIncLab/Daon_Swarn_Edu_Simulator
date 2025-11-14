@@ -685,6 +685,169 @@ useProjectStore.getState().disableAutoSave()
 
 ---
 
+## ThemeContext
+
+Context API for global theme state management.
+
+**Location**: `src/contexts/ThemeContext.tsx`
+
+### Context Value
+
+```typescript
+interface ThemeContextValue {
+  theme: Theme              // Current theme ('light' | 'dark')
+  setTheme: (theme: Theme) => void  // Set theme explicitly
+  toggle: () => void        // Toggle between themes
+  isDark: boolean           // True if dark mode active
+}
+```
+
+### Provider
+
+```typescript
+import { ThemeProvider } from '@/contexts/ThemeContext'
+
+function App() {
+  return (
+    <ThemeProvider>
+      {/* App content */}
+    </ThemeProvider>
+  )
+}
+```
+
+### Consumer Hook
+
+#### `useThemeContext()`
+
+Hook for accessing theme context. Must be used within `ThemeProvider`.
+
+```typescript
+import { useThemeContext } from '@/contexts/ThemeContext'
+
+function Header() {
+  const { theme, toggle, isDark } = useThemeContext()
+
+  return (
+    <button onClick={toggle}>
+      {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
+    </button>
+  )
+}
+```
+
+**Returns**: `ThemeContextValue`
+
+**Throws**: Error if used outside `ThemeProvider`
+
+### useTheme Hook
+
+Low-level hook for theme management (used internally by ThemeProvider).
+
+**Location**: `src/hooks/useTheme.ts`
+
+```typescript
+import { useTheme } from '@/hooks/useTheme'
+
+function MyComponent() {
+  const { theme, setTheme, toggle, isDark } = useTheme()
+
+  // theme: 'light' | 'dark'
+  // setTheme: (theme: Theme) => void
+  // toggle: () => void
+  // isDark: boolean
+}
+```
+
+**Features**:
+- Reads initial theme from localStorage or system preference
+- Applies theme by toggling `dark` class on `document.documentElement`
+- Saves theme to localStorage on change
+- Triggers re-render on theme change
+
+### Theme Utilities
+
+**Location**: `src/utils/theme.ts`
+
+#### `getInitialTheme(): Theme`
+
+Gets initial theme from localStorage or system preference.
+
+```typescript
+import { getInitialTheme } from '@/utils/theme'
+
+const theme = getInitialTheme()
+// Returns 'light' | 'dark'
+```
+
+**Priority**:
+1. localStorage value (`'app-theme'`)
+2. System preference (`prefers-color-scheme`)
+3. Default to `'light'`
+
+#### `applyTheme(theme: Theme): void`
+
+Applies theme by toggling CSS class and saving to localStorage.
+
+```typescript
+import { applyTheme } from '@/utils/theme'
+
+applyTheme('dark')
+// Adds 'dark' class to document.documentElement
+// Saves 'dark' to localStorage
+```
+
+#### `toggleTheme(currentTheme: Theme): Theme`
+
+Toggles between light and dark themes.
+
+```typescript
+import { toggleTheme } from '@/utils/theme'
+
+const newTheme = toggleTheme('light')
+// Returns 'dark'
+// Applies theme and saves to localStorage
+```
+
+### CSS Variables
+
+Theme colors are defined as CSS variables in `src/index.css`.
+
+**Usage in Components**:
+```typescript
+// TailwindCSS arbitrary values
+<div className="bg-[var(--bg-primary)] text-[var(--text-primary)]">
+  Content
+</div>
+```
+
+**Available Variables** (70+ total):
+
+**Backgrounds**:
+- `--bg-primary`, `--bg-secondary`, `--bg-tertiary`
+- `--bg-hover`, `--bg-active`
+
+**Text**:
+- `--text-primary`, `--text-secondary`, `--text-tertiary`
+- `--text-inverted`
+
+**Borders**:
+- `--border-primary`, `--border-secondary`, `--border-focus`
+
+**Status**:
+- `--status-online`, `--status-offline`, `--status-active`, `--status-idle`
+- `--status-armed`, `--status-error`, `--status-warning`, `--status-ok`
+
+**Component-Specific** (50+ more):
+- Badge colors, navigation, tabs, toggles
+- Connection states, simulator colors
+- Info/warning/error panels
+- Battery indicators, modal overlays
+
+**See**: [ARCHITECTURE.md#13-theme-system](../ARCHITECTURE.md#13-theme-system) for complete variable list
+
+---
+
 ## Services
 
 ### ConnectionManager

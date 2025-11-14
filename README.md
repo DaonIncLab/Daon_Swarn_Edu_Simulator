@@ -27,6 +27,7 @@ Drone Swarm GCS is a web-based application that allows users to:
 - 🎥 **Flight Recording**: Record, save, and replay flights with smooth interpolation
 - 💾 **Project Management**: Save, load, export, and import mission projects
 - 🎨 **Modern UI**: Responsive design with TailwindCSS 4.x
+- 🌓 **Theme System**: Light/dark mode with 70+ semantic CSS variables and smooth transitions
 - 🚀 **High Performance**: Caching, memory management, and smooth 60 FPS playback
 
 ---
@@ -306,6 +307,47 @@ useFlightRecordingStore.getState().playPlayback()
 - **Repeat Example**: Loop demonstration
 - **Conditional Example**: If/else demonstration
 - **Formation Example**: Multi-drone formation
+
+---
+
+## 🌓 Theme System
+
+The application supports light and dark modes with a comprehensive theme system.
+
+### Features
+
+- **🌙 Light/Dark Mode**: Seamlessly switch between themes
+- **🎨 70+ CSS Variables**: Semantic color tokens for consistency
+- **💾 Persistent Selection**: Theme choice saved to localStorage
+- **⚡ Smooth Transitions**: 0.2s ease animations between themes
+- **♿ Accessible Colors**: WCAG-compliant contrast ratios
+- **🔧 Automatic Detection**: Respects system theme preference on first load
+
+### Usage
+
+Click the theme toggle button (🌙/☀️) in the header to switch between light and dark modes. Your preference is automatically saved and persisted across sessions.
+
+### Theme Architecture
+
+The theme system uses:
+- **React Context API** for global theme state management
+- **Custom Hook** (`useTheme`) for localStorage persistence
+- **CSS Variables** for consistent styling across all components
+- **TailwindCSS 4.x** arbitrary values for dynamic theming
+
+```typescript
+// Example: Using theme in components
+import { useThemeContext } from '@/contexts/ThemeContext'
+
+function MyComponent() {
+  const { theme, toggle, isDark } = useThemeContext()
+  // theme === 'light' | 'dark'
+  // isDark === boolean
+  // toggle() switches theme
+}
+```
+
+For theme customization details, see [ARCHITECTURE.md](ARCHITECTURE.md#12-theme-system).
 
 ---
 

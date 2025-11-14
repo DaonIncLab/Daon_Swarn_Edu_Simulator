@@ -325,6 +325,185 @@ fi
 
 ---
 
+## 🎨 Rule 8: Theme System Guidelines
+
+### Use CSS Variables, NOT Hardcoded Colors
+
+**❌ BAD**:
+```typescript
+<div className="bg-gray-100 text-gray-900 border-gray-200">
+  Content
+</div>
+```
+
+**✅ GOOD**:
+```typescript
+<div className="bg-[var(--bg-secondary)] text-[var(--text-primary)] border-[var(--border-primary)]">
+  Content
+</div>
+```
+
+### Semantic Variable Names
+
+Always use semantic variable names that describe purpose, not color.
+
+**❌ BAD**:
+```css
+--color-light-blue: rgb(219 234 254);
+```
+
+**✅ GOOD**:
+```css
+--nav-active-bg: rgb(219 234 254);
+```
+
+### Component-Level Theme Usage
+
+Use `useThemeContext` for components that need theme awareness.
+
+```typescript
+import { useThemeContext } from '@/contexts/ThemeContext'
+
+function MyComponent() {
+  const { isDark, toggle } = useThemeContext()
+
+  return (
+    <button onClick={toggle}>
+      {isDark ? '☀️' : '🌙'}
+    </button>
+  )
+}
+```
+
+### Dark Mode Testing Checklist
+
+Before committing component changes:
+
+- [ ] Test component in light mode
+- [ ] Test component in dark mode
+- [ ] Verify text contrast (WCAG AA minimum 4.5:1)
+- [ ] Check hover/focus states in both themes
+- [ ] Verify disabled states in both themes
+- [ ] Test theme toggle transition
+
+### CSS Variable Categories
+
+Use appropriate variable category for each use case:
+
+**Backgrounds**:
+```typescript
+// Primary: Main app background
+className="bg-[var(--bg-primary)]"
+
+// Secondary: Cards, panels, modals
+className="bg-[var(--bg-secondary)]"
+
+// Tertiary: Nested elements, inputs
+className="bg-[var(--bg-tertiary)]"
+
+// Interactive states
+className="hover:bg-[var(--bg-hover)] active:bg-[var(--bg-active)]"
+```
+
+**Text**:
+```typescript
+// Primary: Headlines, important text
+className="text-[var(--text-primary)]"
+
+// Secondary: Body text, labels
+className="text-[var(--text-secondary)]"
+
+// Tertiary: Placeholders, muted text
+className="text-[var(--text-tertiary)]"
+```
+
+**Borders**:
+```typescript
+// Standard borders
+className="border-[var(--border-primary)]"
+
+// Emphasized borders
+className="border-[var(--border-secondary)]"
+
+// Focus rings
+className="focus:ring-[var(--border-focus)]"
+```
+
+**Status Indicators**:
+```typescript
+// Connection status
+className="bg-[var(--status-online)]"  // or --status-offline
+
+// Drone status
+className="text-[var(--status-active)]"  // idle, armed, error, warning
+
+// Battery levels
+className="bg-[var(--battery-good)]"  // medium, low
+```
+
+**Alerts**:
+```typescript
+// Info panels
+className="bg-[var(--info-bg)] border-[var(--info-border)] text-[var(--info-text)]"
+
+// Warning panels
+className="bg-[var(--warning-bg)] border-[var(--warning-border)] text-[var(--warning-text)]"
+
+// Error panels
+className="bg-[var(--error-bg)] border-[var(--error-border)] text-[var(--error-text)]"
+```
+
+### Adding New Theme Variables
+
+When adding new CSS variables:
+
+1. **Define in both `:root` and `.dark`**:
+```css
+:root {
+  --new-variable: rgb(255 255 255);
+}
+
+.dark {
+  --new-variable: rgb(17 24 39);
+}
+```
+
+2. **Use semantic names**:
+```css
+/* ✅ GOOD */
+--sidebar-active-bg: rgb(219 234 254);
+
+/* ❌ BAD */
+--blue-100: rgb(219 234 254);
+```
+
+3. **Document in ARCHITECTURE.md**: Add to CSS Variable Structure section
+
+4. **Test in both themes**: Verify contrast and readability
+
+### Exception: Branded Colors
+
+Use hardcoded colors ONLY for branding (primary/success/danger):
+
+```typescript
+// ✅ ALLOWED for branding
+<button className="bg-primary-600 hover:bg-primary-700">
+  Primary Action
+</button>
+
+<button className="bg-success hover:bg-success-dark">
+  Save
+</button>
+
+<button className="bg-danger hover:bg-danger-dark">
+  Delete
+</button>
+```
+
+All other colors MUST use CSS variables.
+
+---
+
 ## 📚 References
 
 - [TailwindCSS 4.x Migration Guide](https://tailwindcss.com/docs/v4-beta)
@@ -334,5 +513,5 @@ fi
 
 ---
 
-**Last Updated**: 2025-11-12
-**Version**: 1.0.0
+**Last Updated**: 2025-01-14
+**Version**: 1.1.0

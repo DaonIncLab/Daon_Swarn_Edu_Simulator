@@ -634,6 +634,55 @@ flowchart TD
 
 ---
 
+## 10. Theme System Data Flow
+
+Shows how theme state flows from user interaction through Context to CSS variables.
+
+```mermaid
+graph TD
+    User[User Clicks Toggle Button] --> Header[Header Component]
+    Header --> useThemeContext[useThemeContext Hook]
+    useThemeContext --> ThemeContext[ThemeContext]
+    ThemeContext --> useTheme[useTheme Hook]
+
+    useTheme --> toggleTheme[toggleTheme Function]
+    toggleTheme --> applyTheme[applyTheme Function]
+
+    applyTheme --> DOM[document.documentElement]
+    applyTheme --> localStorage[localStorage.setItem]
+
+    DOM --> CSSClass[Toggle 'dark' class]
+    CSSClass --> CSSVariables[CSS Variables Update]
+
+    CSSVariables --> Components[All Components Re-render]
+    localStorage --> Persistence[Theme Persisted]
+
+    FirstLoad[First Page Load] --> getInitialTheme[getInitialTheme Function]
+    getInitialTheme --> CheckStorage{Check localStorage}
+    CheckStorage -->|Found| LoadStored[Load Stored Theme]
+    CheckStorage -->|Not Found| CheckSystem{Check System Preference}
+    CheckSystem -->|Dark Mode| LoadDark[Load Dark Theme]
+    CheckSystem -->|Light Mode| LoadLight[Load Light Theme]
+
+    LoadStored --> useTheme
+    LoadDark --> useTheme
+    LoadLight --> useTheme
+
+    style User fill:#3b82f6,color:#fff
+    style ThemeContext fill:#8b5cf6,color:#fff
+    style CSSVariables fill:#10b981,color:#fff
+    style Components fill:#f59e0b,color:#fff
+    style Persistence fill:#06b6d4,color:#fff
+```
+
+**Key Points**:
+- Theme toggle triggers re-render only in components using `useThemeContext`
+- CSS variables handle all visual updates (no component re-renders for colors)
+- localStorage ensures theme persists across sessions
+- System preference detected on first load if no saved preference
+
+---
+
 ## Notes
 
 - All diagrams are rendered using Mermaid syntax
