@@ -120,8 +120,8 @@ export function ConnectionPanel() {
     >
       <div className="space-y-4">
         {/* Mode Selector */}
-        <div className="pb-4 border-b border-gray-200">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+        <div className="pb-4 border-b border-[var(--border-primary)]">
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-3">
             Connection Mode
           </label>
           <div className="grid grid-cols-1 gap-2">
@@ -132,18 +132,18 @@ export function ConnectionPanel() {
               className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                 isSimMode
                   ? 'border-primary-600 bg-primary-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
               }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isSimMode ? 'border-primary-600' : 'border-gray-300'
+                  isSimMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
                 }`}>
                   {isSimMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">WebSocket Server</div>
-                  <div className="text-xs text-gray-600">Connect to separate Unity server</div>
+                  <div className="font-medium text-[var(--text-primary)]">WebSocket Server</div>
+                  <div className="text-xs text-[var(--text-secondary)]">Connect to separate Unity server</div>
                 </div>
               </div>
             </button>
@@ -155,18 +155,18 @@ export function ConnectionPanel() {
               className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                 isUnityWebGLMode
                   ? 'border-primary-600 bg-primary-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
               }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isUnityWebGLMode ? 'border-primary-600' : 'border-gray-300'
+                  isUnityWebGLMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
                 }`}>
                   {isUnityWebGLMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">Unity WebGL Embed</div>
-                  <div className="text-xs text-gray-600">Built-in Unity simulator</div>
+                  <div className="font-medium text-[var(--text-primary)]">Unity WebGL Embed</div>
+                  <div className="text-xs text-[var(--text-secondary)]">Built-in Unity simulator</div>
                 </div>
               </div>
             </button>
@@ -178,18 +178,18 @@ export function ConnectionPanel() {
               className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                 isMAVLinkMode
                   ? 'border-primary-600 bg-primary-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
               }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isMAVLinkMode ? 'border-primary-600' : 'border-gray-300'
+                  isMAVLinkMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
                 }`}>
                   {isMAVLinkMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">🚁 MAVLink Simulation</div>
-                  <div className="text-xs text-gray-600">MAVLink protocol simulator</div>
+                  <div className="font-medium text-[var(--text-primary)]">🚁 MAVLink Simulation</div>
+                  <div className="text-xs text-[var(--text-secondary)]">MAVLink protocol simulator</div>
                 </div>
               </div>
             </button>
@@ -201,18 +201,18 @@ export function ConnectionPanel() {
               className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                 isTestMode
                   ? 'border-primary-600 bg-primary-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
               }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isTestMode ? 'border-primary-600' : 'border-gray-300'
+                  isTestMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
                 }`}>
                   {isTestMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">🧪 Test Mode</div>
-                  <div className="text-xs text-gray-600">Dummy mode (no Unity)</div>
+                  <div className="font-medium text-[var(--text-primary)]">🧪 Test Mode</div>
+                  <div className="text-xs text-[var(--text-secondary)]">Dummy mode (no Unity)</div>
                 </div>
               </div>
             </button>
@@ -220,8 +220,8 @@ export function ConnectionPanel() {
         </div>
 
         {/* Connection Status */}
-        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-          <span className="text-sm font-medium text-gray-700">Status:</span>
+        <div className="flex items-center justify-between pb-4 border-b border-[var(--border-primary)]">
+          <span className="text-sm font-medium text-[var(--text-secondary)]">Status:</span>
           <ConnectionStatus status={status} />
         </div>
 
@@ -239,7 +239,7 @@ export function ConnectionPanel() {
 
             {/* Drone Count Selector */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Number of Drones: <span className="text-green-600 font-bold">{mavlinkDroneCount}</span>
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -250,14 +250,14 @@ export function ConnectionPanel() {
                     className={`py-2 px-3 rounded-lg border-2 font-medium transition-all ${
                       mavlinkDroneCount === count
                         ? 'border-green-600 bg-green-50 text-green-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)]'
                     }`}
                   >
                     {count}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-gray-600 mt-2">
+              <p className="text-xs text-[var(--text-secondary)] mt-2">
                 MAVLink protocol with GPS coordinates and formation flight
               </p>
             </div>
@@ -289,7 +289,7 @@ export function ConnectionPanel() {
 
             {/* Drone Count Selector */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Number of Drones: <span className="text-blue-600 font-bold">{testModeDroneCount}</span>
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -300,14 +300,14 @@ export function ConnectionPanel() {
                     className={`py-2 px-3 rounded-lg border-2 font-medium transition-all ${
                       testModeDroneCount === count
                         ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)]'
                     }`}
                   >
                     {count}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-gray-600 mt-2">
+              <p className="text-xs text-[var(--text-secondary)] mt-2">
                 Select how many drones to simulate
               </p>
             </div>
@@ -449,8 +449,8 @@ export function ConnectionPanel() {
 
         {/* Quick Connect Buttons - Only in WebSocket Mode */}
         {isSimMode && !isConnected && !isConnecting && (
-          <div className="pt-4 border-t border-gray-200">
-            <p className="text-xs text-gray-600 mb-2">Quick Connect:</p>
+          <div className="pt-4 border-t border-[var(--border-primary)]">
+            <p className="text-xs text-[var(--text-secondary)] mb-2">Quick Connect:</p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="secondary"

@@ -86,14 +86,14 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-[var(--modal-overlay)] flex items-center justify-center z-50">
+      <div className="bg-[var(--bg-secondary)] rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">프로젝트 열기</h2>
+        <div className="flex items-center justify-between p-6 border-b border-[var(--border-primary)]">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">프로젝트 열기</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -102,17 +102,17 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
         </div>
 
         {/* Search */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-[var(--border-primary)]">
           <div className="relative">
             <input
               type="text"
               placeholder="프로젝트 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-[var(--border-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent bg-[var(--bg-secondary)] text-[var(--text-primary)]"
             />
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -125,20 +125,20 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
         {/* Project List */}
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-[var(--text-tertiary)]">
               프로젝트 목록을 불러오는 중...
             </div>
           ) : filteredProjects.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
+              <div className="text-[var(--text-tertiary)] mb-4">
                 <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
                 {searchQuery ? '검색 결과가 없습니다' : '저장된 프로젝트가 없습니다'}
               </h3>
-              <p className="text-gray-600">
+              <p className="text-[var(--text-secondary)]">
                 {searchQuery ? '다른 검색어를 시도해보세요' : '새 프로젝트를 만들어보세요'}
               </p>
             </div>
@@ -164,8 +164,8 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200">
-          <div className="text-sm text-gray-600">
+        <div className="flex items-center justify-between p-6 border-t border-[var(--border-primary)]">
+          <div className="text-sm text-[var(--text-secondary)]">
             {filteredProjects.length}개의 프로젝트
           </div>
           <Button variant="secondary" onClick={onClose}>
@@ -203,7 +203,7 @@ function ProjectCard({
   formatDate,
 }: ProjectCardProps) {
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+    <div className="border border-[var(--border-primary)] rounded-lg p-4 hover:shadow-md transition-shadow bg-[var(--bg-secondary)]">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           {isEditing ? (
@@ -215,19 +215,19 @@ function ProjectCard({
                 if (e.key === 'Enter') onRename()
                 if (e.key === 'Escape') onCancelRename()
               }}
-              className="w-full px-2 py-1 border border-primary-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-600"
+              className="w-full px-2 py-1 border border-primary-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-600 bg-[var(--bg-secondary)] text-[var(--text-primary)]"
               autoFocus
             />
           ) : (
-            <h3 className="font-semibold text-gray-900 truncate">{project.name}</h3>
+            <h3 className="font-semibold text-[var(--text-primary)] truncate">{project.name}</h3>
           )}
           {project.description && !isEditing && (
-            <p className="text-sm text-gray-600 mt-1 line-clamp-2">{project.description}</p>
+            <p className="text-sm text-[var(--text-secondary)] mt-1 line-clamp-2">{project.description}</p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+      <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-3">
         <span>{formatDate(project.updatedAt)}</span>
         {project.blockCount !== undefined && (
           <span>{project.blockCount}개 블록</span>
@@ -244,7 +244,7 @@ function ProjectCard({
           </button>
           <button
             onClick={onCancelRename}
-            className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors"
+            className="flex-1 px-3 py-1.5 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm rounded hover:bg-[var(--bg-hover)] transition-colors"
           >
             취소
           </button>
@@ -259,7 +259,7 @@ function ProjectCard({
           </button>
           <button
             onClick={onStartRename}
-            className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors"
+            className="px-3 py-1.5 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm rounded hover:bg-[var(--bg-hover)] transition-colors"
             title="이름 변경"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
