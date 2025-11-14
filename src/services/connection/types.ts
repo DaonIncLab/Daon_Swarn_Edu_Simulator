@@ -15,6 +15,8 @@ export const ConnectionMode = {
   UNITY_WEBGL: 'unity_webgl',
   /** 실제 드론 MAVLink 연동 (2차 목표) */
   REAL_DRONE: 'real_drone',
+  /** MAVLink 시뮬레이션 모드 */
+  MAVLINK_SIMULATION: 'mavlink_simulation',
   /** 테스트/더미 모드 */
   TEST: 'test',
 } as const
@@ -41,13 +43,15 @@ export interface ConnectionConfig {
     codeUrl: string
   }
 
-  // MAVLink 설정 (실제 드론 모드)
+  // MAVLink 설정 (실제 드론 모드 또는 시뮬레이션)
   mavlink?: {
-    connectionType: 'serial' | 'udp' | 'tcp'
-    port?: string // COM3, /dev/ttyUSB0 등
-    baudRate?: number
-    host?: string
-    udpPort?: number
+    connectionType: 'simulation' | 'serial' | 'udp' | 'tcp'
+    droneCount?: number // For simulation mode
+    port?: string // COM3, /dev/ttyUSB0 등 (for serial)
+    baudRate?: number // For serial
+    host?: string // For UDP/TCP
+    udpPort?: number // For UDP
+    tcpPort?: number // For TCP
   }
 
   // Test 모드 설정

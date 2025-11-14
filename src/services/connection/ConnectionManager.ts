@@ -222,14 +222,25 @@ export class ConnectionManager {
         console.log('[ConnectionManager] Creating Unity WebGL service')
         return new UnityWebGLConnectionService()
 
-      case 'real_drone':
-        console.log('[ConnectionManager] Creating MAVLink service')
-        return new MAVLinkConnectionService()
+      case 'mavlink_simulation': {
+        const mavlinkDroneCount = config?.mavlink?.droneCount || 4
+        console.log(
+          '[ConnectionManager] Creating MAVLink Simulation service with',
+          mavlinkDroneCount,
+          'drones'
+        )
+        return new MAVLinkConnectionService(mavlinkDroneCount)
+      }
 
-      case 'test':
+      case 'real_drone':
+        console.log('[ConnectionManager] Creating MAVLink Real Drone service')
+        return new MAVLinkConnectionService(1)
+
+      case 'test': {
         const droneCount = config?.test?.droneCount || 4
         console.log('[ConnectionManager] Creating Test service with', droneCount, 'drones')
         return new TestConnectionService(droneCount)
+      }
 
       default:
         throw new Error(`Unsupported connection mode: ${mode}`)
