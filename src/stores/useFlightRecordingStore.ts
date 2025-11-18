@@ -6,6 +6,7 @@
 
 import { create } from 'zustand'
 import type { DroneHistory } from '@/types/telemetry'
+import { log } from '@/utils/logger'
 
 /**
  * Saved flight recording
@@ -85,7 +86,7 @@ function estimateStorageSize(recordings: FlightRecording[]): number {
     // Rough estimate: 2 bytes per character in UTF-16
     return jsonString.length * 2
   } catch (error) {
-    console.error('[FlightRecordingStore] Failed to estimate size:', error)
+    log.error('FlightRecordingStore', 'Failed to estimate size:', error)
     return 0
   }
 }
@@ -104,7 +105,7 @@ function loadRecordingsFromStorage(): FlightRecording[] {
       droneHistories: new Map(Object.entries(rec.droneHistories)),
     }))
   } catch (error) {
-    console.error('[FlightRecordingStore] Failed to load recordings:', error)
+    log.error('FlightRecordingStore', 'Failed to load recordings:', error)
     return []
   }
 }
@@ -120,7 +121,7 @@ function saveRecordingsToStorage(recordings: FlightRecording[]) {
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable))
   } catch (error) {
-    console.error('[FlightRecordingStore] Failed to save recordings:', error)
+    log.error('FlightRecordingStore', 'Failed to save recordings:', error)
   }
 }
 
@@ -138,7 +139,7 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
     // Save a new recording
     saveRecording: (name, droneHistories) => {
       if (droneHistories.size === 0) {
-        console.warn('[FlightRecordingStore] Cannot save empty recording')
+        log.warn('FlightRecordingStore', 'Cannot save empty recording')
         return
       }
 
@@ -175,8 +176,9 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
       let estimatedSize = estimateStorageSize(newRecordings)
 
       while (estimatedSize > MAX_STORAGE_SIZE && newRecordings.length > 1) {
-        console.warn(
-          `[FlightRecordingStore] Storage size (${(estimatedSize / 1024 / 1024).toFixed(2)}MB) exceeds limit. Removing oldest recording.`
+        log.warn(
+          'FlightRecordingStore',
+          `Storage size (${(estimatedSize / 1024 / 1024).toFixed(2)}MB) exceeds limit. Removing oldest recording.`
         )
 
         // Remove oldest recording (but keep the one we're adding)
@@ -185,8 +187,9 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
       }
 
       if (estimatedSize > MAX_STORAGE_SIZE) {
-        console.error(
-          `[FlightRecordingStore] Cannot save recording: would exceed storage limit (${(estimatedSize / 1024 / 1024).toFixed(2)}MB > ${(MAX_STORAGE_SIZE / 1024 / 1024).toFixed(2)}MB)`
+        log.error(
+          'FlightRecordingStore',
+          `Cannot save recording: would exceed storage limit (${(estimatedSize / 1024 / 1024).toFixed(2)}MB > ${(MAX_STORAGE_SIZE / 1024 / 1024).toFixed(2)}MB)`
         )
         return
       }
@@ -194,8 +197,9 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
       set({ recordings: newRecordings })
       saveRecordingsToStorage(newRecordings)
 
-      console.log(
-        `[FlightRecordingStore] Saved recording: ${name} (${duration}ms, ${droneHistories.size} drones, storage: ${(estimatedSize / 1024).toFixed(1)}KB)`
+      log.info(
+        'FlightRecordingStore',
+        `Saved recording: ${name} (${duration}ms, ${droneHistories.size} drones, storage: ${(estimatedSize / 1024).toFixed(1)}KB)`
       )
     },
 
@@ -237,7 +241,7 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
         }
         return JSON.stringify(serializable, null, 2)
       } catch (error) {
-        console.error('[FlightRecordingStore] Export failed:', error)
+        log.error('FlightRecordingStore', 'Export failed:', error)
         return null
       }
     },
@@ -249,7 +253,7 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
 
         // Validate structure
         if (!parsed.id || !parsed.name || !parsed.droneHistories) {
-          console.error('[FlightRecordingStore] Invalid recording format')
+          log.error('FlightRecordingStore', 'Invalid recording format')
           return false
         }
 
@@ -270,10 +274,10 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
         set({ recordings: newRecordings })
         saveRecordingsToStorage(newRecordings)
 
-        console.log(`[FlightRecordingStore] Imported recording: ${recording.name}`)
+        log.info('FlightRecordingStore', `Imported recording: ${recording.name}`)
         return true
       } catch (error) {
-        console.error('[FlightRecordingStore] Import failed:', error)
+        log.error('FlightRecordingStore', 'Import failed:', error)
         return false
       }
     },
@@ -288,7 +292,7 @@ export const useFlightRecordingStore = create<FlightRecordingStore>(
           recording,
         },
       })
-      console.log(`[FlightRecordingStore] Started playback: ${recording.name}`)
+      log.info('FlightRecordingStore', `Started playback: ${recording.name}`)
     },
 
     // Pause playback

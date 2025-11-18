@@ -44,6 +44,8 @@ Unity 프로젝트에 다음과 같은 GameManager 스크립트를 추가해야 
 \`\`\`csharp
 using UnityEngine;
 using System.Runtime.InteropServices;
+using System.Collections;
+using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
 {
@@ -51,35 +53,241 @@ public class GameManager : MonoBehaviour
     [DllImport("__Internal")]
     private static extern void OnMessageToReact(string message);
 
+    private List<DroneController> drones = new List<DroneController>();
+    private bool isInitialized = false;
+
+    void Start()
+    {
+        // 드론 초기화 (예: 4대의 드론)
+        InitializeDrones(4);
+
+        // 텔레메트리 루프 시작 (10Hz)
+        StartCoroutine(TelemetryLoop());
+    }
+
+    void InitializeDrones(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            // 드론 생성 및 초기 위치 설정
+            GameObject droneObj = new GameObject($"Drone_{i + 1}");
+            DroneController drone = droneObj.AddComponent<DroneController>();
+            drone.droneId = i + 1;
+            drone.transform.position = new Vector3(i * 2f, 0f, 0f); // 초기 위치
+            drones.Add(drone);
+        }
+
+        Debug.Log($"Initialized {count} drones");
+    }
+
     // React로부터 메시지 수신
     public void ReceiveMessage(string messageJson)
     {
         Debug.Log($"Received from React: {messageJson}");
 
-        // JSON 파싱 및 명령 처리
-        // TODO: JSON 파싱 로직 구현
+        // JSON 파싱
+        var message = JsonUtility.FromJson<ReactMessage>(messageJson);
+
+        switch (message.type)
+        {
+            case "request_init":
+                SendInitMessage();
+                break;
+            case "execute_script":
+                ExecuteCommands(message.data);
+                break;
+            case "emergency_stop":
+                EmergencyStop();
+                break;
+            case "config":
+                ApplyConfig(message.data);
+                break;
+        }
     }
 
-    // Unity에서 React로 텔레메트리 전송 예시
-    void SendTelemetryToReact()
+    // 초기화 메시지 전송
+    void SendInitMessage()
     {
-        var telemetry = new
+        var positions = new List<Position>();
+        foreach (var drone in drones)
+        {
+            positions.Add(new Position
+            {
+                x = drone.transform.position.x,
+                y = drone.transform.position.y,
+                z = drone.transform.position.z
+            });
+        }
+
+        var init = new InitMessage
+        {
+            type = "init",
+            data = new InitData
+            {
+                droneCount = drones.Count,
+                positions = positions.ToArray()
+            },
+            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+
+        string json = JsonUtility.ToJson(init);
+        OnMessageToReact(json);
+        isInitialized = true;
+        Debug.Log($"Sent init message with {drones.Count} drones");
+    }
+
+    // 텔레메트리 루프 (10Hz)
+    IEnumerator TelemetryLoop()
+    {
+        while (true)
+        {
+            if (isInitialized)
+            {
+                SendTelemetry();
+            }
+            yield return new WaitForSeconds(0.1f); // 10Hz
+        }
+    }
+
+    // 텔레메트리 전송
+    void SendTelemetry()
+    {
+        var droneDataList = new List<DroneData>();
+
+        foreach (var drone in drones)
+        {
+            droneDataList.Add(new DroneData
+            {
+                droneId = drone.droneId,
+                position = new Position
+                {
+                    x = drone.transform.position.x,
+                    y = drone.transform.position.y,
+                    z = drone.transform.position.z
+                },
+                altitude = drone.transform.position.z,
+                velocity = new Velocity
+                {
+                    x = drone.velocity.x,
+                    y = drone.velocity.y,
+                    z = drone.velocity.z
+                },
+                battery = drone.battery,
+                flightMode = drone.flightMode,
+                isArmed = drone.isArmed
+            });
+        }
+
+        var telemetry = new TelemetryMessage
         {
             type = "telemetry",
-            data = new
-            {
-                droneId = "drone-1",
-                position = new { x = 0f, y = 5f, z = 0f },
-                altitude = 5f,
-                battery = 85,
-                flightMode = "GUIDED",
-                isArmed = true
-            },
-            timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            data = droneDataList.ToArray(),
+            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
 
         string json = JsonUtility.ToJson(telemetry);
         OnMessageToReact(json);
+    }
+
+    // 명령 실행
+    void ExecuteCommands(object commandData)
+    {
+        // 명령 파싱 및 드론에 적용
+        Debug.Log("Executing commands...");
+        // TODO: 명령 실행 로직 구현
+    }
+
+    // 비상 정지
+    void EmergencyStop()
+    {
+        Debug.Log("EMERGENCY STOP");
+        foreach (var drone in drones)
+        {
+            drone.Stop();
+        }
+    }
+
+    // 설정 적용
+    void ApplyConfig(object configData)
+    {
+        Debug.Log("Applying config...");
+        // TODO: 설정 적용 로직
+    }
+}
+
+// 메시지 데이터 구조체들
+[System.Serializable]
+public class ReactMessage
+{
+    public string type;
+    public object data;
+    public long timestamp;
+}
+
+[System.Serializable]
+public class InitMessage
+{
+    public string type;
+    public InitData data;
+    public long timestamp;
+}
+
+[System.Serializable]
+public class InitData
+{
+    public int droneCount;
+    public Position[] positions;
+}
+
+[System.Serializable]
+public class TelemetryMessage
+{
+    public string type;
+    public DroneData[] data;
+    public long timestamp;
+}
+
+[System.Serializable]
+public class DroneData
+{
+    public int droneId;
+    public Position position;
+    public float altitude;
+    public Velocity velocity;
+    public int battery;
+    public string flightMode;
+    public bool isArmed;
+}
+
+[System.Serializable]
+public class Position
+{
+    public float x;
+    public float y;
+    public float z;
+}
+
+[System.Serializable]
+public class Velocity
+{
+    public float x;
+    public float y;
+    public float z;
+}
+
+// 드론 컨트롤러 (간단한 예시)
+public class DroneController : MonoBehaviour
+{
+    public int droneId;
+    public Vector3 velocity = Vector3.zero;
+    public int battery = 100;
+    public string flightMode = "STABILIZE";
+    public bool isArmed = false;
+
+    public void Stop()
+    {
+        velocity = Vector3.zero;
+        isArmed = false;
     }
 }
 \`\`\`

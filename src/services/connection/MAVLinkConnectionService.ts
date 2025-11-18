@@ -18,11 +18,18 @@ import type {
 import { MAVLinkSimulator, type MAVLinkTelemetry } from './MAVLinkSimulator'
 import { MAVLinkConverter } from '@/services/mavlink/MAVLinkConverter'
 import { coordinateConverter } from '@/services/mavlink/CoordinateConverter'
-import { MAVLinkTransport } from '@/services/mavlink/MAVLinkTransport'
+import type { MAVLinkTransport } from '@/services/mavlink/MAVLinkTransport'
 import { UDPTransport } from '@/services/mavlink/UDPTransport'
 import { SerialTransport } from '@/services/mavlink/SerialTransport'
-import { MAVLinkProtocol } from '@/services/mavlink/MAVLinkProtocol'
-import { MAVLinkMessages } from '@/services/mavlink/MAVLinkMessages'
+import {
+  createHeartbeat,
+  createCommandLong,
+} from '@/services/mavlink/MAVLinkMessages'
+import {
+  serializePacket,
+  parsePacket,
+} from '@/services/mavlink/MAVLinkProtocol'
+import { log } from '@/utils/logger'
 
 /**
  * MAVLink Connection Service
@@ -46,7 +53,7 @@ export class MAVLinkConnectionService implements IConnectionService {
   }
 
   async connect(config: ConnectionConfig): Promise<void> {
-    console.log('[MAVLink] Connecting...', config)
+    log.info('Connecting...', { config })
 
     if (!config.mavlink) {
       throw new Error('MAVLink configuration is required')
@@ -82,7 +89,7 @@ export class MAVLinkConnectionService implements IConnectionService {
    * Initialize MAVLink simulation
    */
   private async _initializeSimulation(config: ConnectionConfig): Promise<void> {
-    console.log('[MAVLink] Initializing simulator...')
+    log.info('Initializing simulator...')
 
     // Override drone count from config if provided
     if (config.mavlink?.droneCount) {
@@ -100,14 +107,14 @@ export class MAVLinkConnectionService implements IConnectionService {
     // Simulate connection delay
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    console.log('[MAVLink] Simulator ready')
+    log.info('Simulator ready')
   }
 
   /**
    * Initialize real MAVLink hardware connection
    */
   private async _initializeRealConnection(config: ConnectionConfig): Promise<void> {
-    console.log('[MAVLink] Initializing real connection...')
+    log.info('Initializing real connection...')
 
     if (!config.mavlink) {
       throw new Error('MAVLink configuration is required')
@@ -133,7 +140,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     // Set up error handler
     this.transport.onError((error: Error) => {
-      console.error('[MAVLink] Transport error:', error)
+      log.error('Transport error', { error })
       if (this.listeners.onLog) {
         this.listeners.onLog(`[MAVLink] Error: ${error.message}`)
       }
@@ -141,7 +148,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     // Set up disconnect handler
     this.transport.onDisconnect(() => {
-      console.log('[MAVLink] Transport disconnected')
+      log.info('Transport disconnected')
       this._stopHeartbeat()
       this._updateStatus(ConnectionStatus.DISCONNECTED)
     })
@@ -158,7 +165,7 @@ export class MAVLinkConnectionService implements IConnectionService {
     // Start heartbeat (1Hz as per MAVLink spec)
     this._startHeartbeat()
 
-    console.log('[MAVLink] Real connection established')
+    log.info('Real connection established')
   }
 
   /**
@@ -167,14 +174,14 @@ export class MAVLinkConnectionService implements IConnectionService {
   private _handleIncomingPacket(packet: Uint8Array): void {
     try {
       // Parse MAVLink packet
-      const parsed = MAVLinkProtocol.parsePacket(packet)
+      const parsed = parsePacket(packet)
 
       if (!parsed) {
-        console.warn('[MAVLink] Failed to parse packet')
+        log.warn('Failed to parse packet')
         return
       }
 
-      const systemId = parsed.systemId
+      const systemId = parsed.sysid
       const droneId = systemId - 1 // Convert to 0-based
 
       // Initialize telemetry entry if needed
@@ -193,7 +200,7 @@ export class MAVLinkConnectionService implements IConnectionService {
       const state = this.lastTelemetry.get(droneId)!
 
       // Process message based on type
-      switch (parsed.messageId) {
+      switch (parsed.msgid) {
         case 33: // GLOBAL_POSITION_INT
           this._processGlobalPosition(state, parsed.payload)
           break
@@ -218,7 +225,7 @@ export class MAVLinkConnectionService implements IConnectionService {
       // Emit telemetry updates
       this._emitTelemetryUpdates()
     } catch (error) {
-      console.error('[MAVLink] Packet processing error:', error)
+      log.error('Packet processing error', { error })
     }
   }
 
@@ -242,7 +249,7 @@ export class MAVLinkConnectionService implements IConnectionService {
       state.position = { x: localPos.x, y: localPos.y, z: localPos.z }
       state.velocity = { x: vx, y: vy, z: vz }
     } catch (error) {
-      console.warn('[MAVLink] Coordinate conversion error:', error)
+      log.warn('Coordinate conversion error', { error })
     }
   }
 
@@ -315,24 +322,22 @@ export class MAVLinkConnectionService implements IConnectionService {
       }
 
       // Create HEARTBEAT message
-      const heartbeat = MAVLinkMessages.heartbeat({
-        type: 6, // MAV_TYPE_GCS
-        autopilot: 0, // MAV_AUTOPILOT_GENERIC
-        base_mode: 0,
-        custom_mode: 0,
-        system_status: 4, // MAV_STATE_ACTIVE
-      })
-
-      // Create packet
-      const packet = MAVLinkProtocol.createPacket(
-        this.systemId,
-        this.componentId,
-        0, // HEARTBEAT message ID
-        heartbeat
+      const heartbeatPacket = createHeartbeat(
+        6, // MAV_TYPE_GCS
+        0, // MAV_AUTOPILOT_GENERIC
+        0, // base_mode
+        0, // custom_mode
+        4  // MAV_STATE_ACTIVE
       )
 
-      this.transport.sendPacket(packet).catch((err) => {
-        console.error('[MAVLink] Failed to send heartbeat:', err)
+      const packet = {
+        ...heartbeatPacket,
+        sysid: this.systemId,
+        compid: this.componentId,
+      }
+
+      this.transport.sendPacket(serializePacket(packet)).catch((err) => {
+        log.error('Failed to send heartbeat', { error: err })
       })
     }
 
@@ -341,7 +346,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     // Send heartbeat every second
     this.heartbeatInterval = window.setInterval(sendHeartbeat, 1000)
-    console.log('[MAVLink] Heartbeat started (1Hz)')
+    log.info('Heartbeat started (1Hz)')
   }
 
   /**
@@ -351,7 +356,7 @@ export class MAVLinkConnectionService implements IConnectionService {
     if (this.heartbeatInterval !== null) {
       clearInterval(this.heartbeatInterval)
       this.heartbeatInterval = null
-      console.log('[MAVLink] Heartbeat stopped')
+      log.info('Heartbeat stopped')
     }
   }
 
@@ -403,7 +408,7 @@ export class MAVLinkConnectionService implements IConnectionService {
             }
           } catch (error) {
             // If coordinate conversion fails, use simulation defaults
-            console.warn('[MAVLink] Coordinate conversion error:', error)
+            log.warn('Coordinate conversion error', { error })
           }
           break
 
@@ -441,14 +446,13 @@ export class MAVLinkConnectionService implements IConnectionService {
         droneId: String(droneId),
         position: state.position,
         battery: state.battery,
-        status: state.status,
         timestamp: Date.now(),
       })
     }
   }
 
   async disconnect(): Promise<void> {
-    console.log('[MAVLink] Disconnecting...')
+    log.info('Disconnecting...')
 
     // Stop heartbeat
     this._stopHeartbeat()
@@ -470,7 +474,7 @@ export class MAVLinkConnectionService implements IConnectionService {
   }
 
   async sendCommand(command: Command): Promise<CommandResponse> {
-    console.log('[MAVLink] Sending command:', command.action)
+    log.debug('Sending command', { action: command.action })
 
     // Check connection
     if (this.isSimulation && !this.mavlinkSimulator) {
@@ -531,7 +535,7 @@ export class MAVLinkConnectionService implements IConnectionService {
         timestamp: Date.now(),
       }
     } catch (error) {
-      console.error('[MAVLink] Command execution error:', error)
+      log.error('Command execution error', { error })
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -549,30 +553,28 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
 
     // Create COMMAND_LONG message
-    const commandLong = MAVLinkMessages.commandLong({
-      target_system: params.target_system || 1,
-      target_component: params.target_component || 1,
-      command: params.command,
-      confirmation: 0,
-      param1: params.param1 || 0,
-      param2: params.param2 || 0,
-      param3: params.param3 || 0,
-      param4: params.param4 || 0,
-      param5: params.param5 || 0,
-      param6: params.param6 || 0,
-      param7: params.param7 || 0,
-    })
-
-    // Create packet
-    const packet = MAVLinkProtocol.createPacket(
-      this.systemId,
-      this.componentId,
-      76, // COMMAND_LONG message ID
-      commandLong
+    const commandLongPacket = createCommandLong(
+      params.command,
+      params.param1 || 0,
+      params.param2 || 0,
+      params.param3 || 0,
+      params.param4 || 0,
+      params.param5 || 0,
+      params.param6 || 0,
+      params.param7 || 0,
+      params.target_system || 1,
+      params.target_component || 1,
+      0 // confirmation
     )
 
+    const packet = {
+      ...commandLongPacket,
+      sysid: this.systemId,
+      compid: this.componentId,
+    }
+
     // Send packet
-    await this.transport.sendPacket(packet)
+    await this.transport.sendPacket(serializePacket(packet))
   }
 
   /**
@@ -630,7 +632,7 @@ export class MAVLinkConnectionService implements IConnectionService {
         timestamp: Date.now(),
       }
     } catch (error) {
-      console.error('[MAVLink] Formation command error:', error)
+      log.error('Formation command error', { error })
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -640,7 +642,7 @@ export class MAVLinkConnectionService implements IConnectionService {
   }
 
   async sendCommands(commands: Command[]): Promise<CommandResponse> {
-    console.log('[MAVLink] Sending command sequence:', commands.length)
+    log.info('Sending command sequence', { count: commands.length })
 
     // Check connection
     if (this.isSimulation && !this.mavlinkSimulator) {
@@ -692,7 +694,7 @@ export class MAVLinkConnectionService implements IConnectionService {
         timestamp: Date.now(),
       }
     } catch (error) {
-      console.error('[MAVLink] Command sequence error:', error)
+      log.error('Command sequence error', { error })
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -748,7 +750,7 @@ export class MAVLinkConnectionService implements IConnectionService {
   }
 
   async emergencyStop(): Promise<CommandResponse> {
-    console.warn('[MAVLink] EMERGENCY STOP!')
+    log.warn('EMERGENCY STOP!')
 
     if (this.mavlinkSimulator) {
       this.mavlinkSimulator.emergencyStop()
@@ -777,7 +779,7 @@ export class MAVLinkConnectionService implements IConnectionService {
   }
 
   cleanup(): void {
-    console.log('[MAVLink] Cleanup')
+    log.info('Cleanup')
 
     if (this.mavlinkSimulator) {
       this.mavlinkSimulator.stop()

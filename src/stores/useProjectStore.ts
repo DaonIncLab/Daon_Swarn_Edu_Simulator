@@ -7,6 +7,7 @@ import type { Project, ProjectMetadata, CreateProjectOptions } from '@/types/pro
 import { getProjectStorage } from '@/services/storage'
 import { workspaceToXml, xmlToWorkspace, createEmptyWorkspaceXml, getTemplateXml } from '@/utils/blocklyXml'
 import { useBlocklyStore } from './useBlocklyStore'
+import { log } from '@/utils/logger'
 
 /**
  * 프로젝트 스토어 상태
@@ -77,10 +78,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       // 프로젝트 목록 새로고침
       await get().refreshProjectList()
 
-      console.log(`[ProjectStore] Project created: ${project.name}`)
+      log.info('ProjectStore', `Project created: ${project.name}`)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to create project'
-      console.error('[ProjectStore] Create project failed:', error)
+      log.error('ProjectStore', 'Create project failed:', error)
       set({ error: errorMsg })
     } finally {
       set({ isLoading: false })
@@ -131,10 +132,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       // 프로젝트 목록 새로고침
       await get().refreshProjectList()
 
-      console.log(`[ProjectStore] Project saved: ${updatedProject.name}`)
+      log.info('ProjectStore', `Project saved: ${updatedProject.name}`)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to save project'
-      console.error('[ProjectStore] Save project failed:', error)
+      log.error('ProjectStore', 'Save project failed:', error)
       set({ error: errorMsg })
     } finally {
       set({ isLoading: false })
@@ -172,10 +173,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       // 저장 플래그 리셋
       useBlocklyStore.getState().setHasUnsavedChanges(false)
 
-      console.log(`[ProjectStore] Project loaded: ${project.name}`)
+      log.info('ProjectStore', `Project loaded: ${project.name}`)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to load project'
-      console.error('[ProjectStore] Load project failed:', error)
+      log.error('ProjectStore', 'Load project failed:', error)
       set({ error: errorMsg })
     } finally {
       set({ isLoading: false })
@@ -209,10 +210,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       // 프로젝트 목록 새로고침
       await get().refreshProjectList()
 
-      console.log(`[ProjectStore] Project deleted: ${id}`)
+      log.info('ProjectStore', `Project deleted: ${id}`)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to delete project'
-      console.error('[ProjectStore] Delete project failed:', error)
+      log.error('ProjectStore', 'Delete project failed:', error)
       set({ error: errorMsg })
     } finally {
       set({ isLoading: false })
@@ -254,10 +255,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       // 프로젝트 목록 새로고침
       await get().refreshProjectList()
 
-      console.log(`[ProjectStore] Project renamed: ${newName}`)
+      log.info('ProjectStore', `Project renamed: ${newName}`)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to rename project'
-      console.error('[ProjectStore] Rename project failed:', error)
+      log.error('ProjectStore', 'Rename project failed:', error)
       set({ error: errorMsg })
     } finally {
       set({ isLoading: false })
@@ -274,10 +275,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const storage = getProjectStorage()
       await storage.exportProjectToFile(id)
 
-      console.log(`[ProjectStore] Project exported: ${id}`)
+      log.info('ProjectStore', `Project exported: ${id}`)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to export project'
-      console.error('[ProjectStore] Export project failed:', error)
+      log.error('ProjectStore', 'Export project failed:', error)
       set({ error: errorMsg })
     } finally {
       set({ isLoading: false })
@@ -299,10 +300,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       // 프로젝트 목록 새로고침
       await get().refreshProjectList()
 
-      console.log(`[ProjectStore] Project imported: ${project.name}`)
+      log.info('ProjectStore', `Project imported: ${project.name}`)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to import project'
-      console.error('[ProjectStore] Import project failed:', error)
+      log.error('ProjectStore', 'Import project failed:', error)
       set({ error: errorMsg })
     } finally {
       set({ isLoading: false })
@@ -324,7 +325,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
       set({ projects })
     } catch (error) {
-      console.error('[ProjectStore] Refresh project list failed:', error)
+      log.error('ProjectStore', 'Refresh project list failed:', error)
       set({ error: 'Failed to load project list' })
     }
   },

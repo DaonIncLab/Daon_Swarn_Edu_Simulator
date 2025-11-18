@@ -11,6 +11,7 @@ import {
   type TelemetryData,
 } from '@/services/connection'
 import { wsService } from '@/services/websocket'
+import { log } from '@/utils/logger'
 
 /**
  * 연결 상태 관리 스토어
@@ -26,12 +27,24 @@ interface ConnectionStore {
   testModeDroneCount: number
   mavlinkDroneCount: number // MAVLink 시뮬레이션 드론 수
 
+  // Real MAVLink connection settings
+  mavlinkTransportType: 'udp' | 'serial'
+  mavlinkHost: string
+  mavlinkPort: number
+  mavlinkSerialDevice: string
+  mavlinkBaudRate: number
+
   // Actions
   setMode: (mode: ConnectionMode) => void
   setIpAddress: (ip: string) => void
   setPort: (port: number) => void
   setTestModeDroneCount: (count: number) => void
   setMavlinkDroneCount: (count: number) => void
+  setMavlinkTransportType: (type: 'udp' | 'serial') => void
+  setMavlinkHost: (host: string) => void
+  setMavlinkPort: (port: number) => void
+  setMavlinkSerialDevice: (device: string) => void
+  setMavlinkBaudRate: (baudRate: number) => void
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   setStatus: (status: ConnectionStatus) => void
@@ -55,6 +68,13 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
     testModeDroneCount: 4,
     mavlinkDroneCount: 4, // MAVLink 기본 드론 수
 
+    // Real MAVLink connection initial state
+    mavlinkTransportType: 'udp',
+    mavlinkHost: 'localhost',
+    mavlinkPort: 14550,
+    mavlinkSerialDevice: 'COM3',
+    mavlinkBaudRate: 57600,
+
     // Actions
     setMode: (mode) => set({ mode }),
 
@@ -66,8 +86,29 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
 
     setMavlinkDroneCount: (count) => set({ mavlinkDroneCount: count }),
 
+    setMavlinkTransportType: (type) => set({ mavlinkTransportType: type }),
+
+    setMavlinkHost: (host) => set({ mavlinkHost: host }),
+
+    setMavlinkPort: (port) => set({ mavlinkPort: port }),
+
+    setMavlinkSerialDevice: (device) => set({ mavlinkSerialDevice: device }),
+
+    setMavlinkBaudRate: (baudRate) => set({ mavlinkBaudRate: baudRate }),
+
     connect: async () => {
-      const { mode, ipAddress, port, testModeDroneCount, mavlinkDroneCount } = get()
+      const {
+        mode,
+        ipAddress,
+        port,
+        testModeDroneCount,
+        mavlinkDroneCount,
+        mavlinkTransportType,
+        mavlinkHost,
+        mavlinkPort,
+        mavlinkSerialDevice,
+        mavlinkBaudRate,
+      } = get()
 
       set({ error: null })
 
@@ -75,18 +116,18 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
         // 이벤트 리스너 등록 (연결 전에)
         manager.setEventListeners({
           onStatusChange: (status) => {
-            console.log('[Store] Status changed to:', status)
+            log.debug('ConnectionStore', 'Status changed to:', status)
             set({ status })
           },
           onError: (error) => {
-            console.log('[Store] Error:', error)
+            log.error('ConnectionStore', 'Error:', error)
             set({ error, status: ConnectionStatus.ERROR })
           },
           onTelemetry: (data) => {
             set({ latestTelemetry: data })
           },
-          onLog: (log) => {
-            console.log('[Connection]', log)
+          onLog: (logMsg) => {
+            log.info('Connection', logMsg)
           },
         })
 
@@ -111,10 +152,14 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
             break
 
           case ConnectionMode.REAL_DRONE:
-            // MAVLink 실제 드론 (2차 목표)
+            // MAVLink 실제 드론 연결
             config.mavlink = {
-              connectionType: 'udp',
-              udpPort: 14550,
+              connectionType: mavlinkTransportType,
+              transportType: mavlinkTransportType,
+              host: mavlinkTransportType === 'udp' ? mavlinkHost : undefined,
+              port: mavlinkTransportType === 'udp' ? mavlinkPort : undefined,
+              device: mavlinkTransportType === 'serial' ? mavlinkSerialDevice : undefined,
+              baudRate: mavlinkTransportType === 'serial' ? mavlinkBaudRate : undefined,
             }
             break
 
@@ -132,7 +177,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
           wsService.getMessageListener()?.(message)
         })
 
-        console.log(`[Store] Connected in ${mode} mode`)
+        log.info('ConnectionStore', `Connected in ${mode} mode`)
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Connection failed'
         set({ error: errorMsg, status: ConnectionStatus.ERROR })
@@ -144,7 +189,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
         await manager.disconnect()
         set({ status: ConnectionStatus.DISCONNECTED, error: null })
       } catch (error) {
-        console.error('[Store] Disconnect error:', error)
+        log.error('ConnectionStore', 'Disconnect error:', error)
       }
     },
 

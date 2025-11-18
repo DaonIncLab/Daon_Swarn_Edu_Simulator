@@ -3,7 +3,9 @@
  * Standard MAVLink connection using UDP (default port 14550)
  */
 
-import { MAVLinkTransport, TransportConfig } from './MAVLinkTransport'
+import type { TransportConfig } from './MAVLinkTransport'
+import { MAVLinkTransport } from './MAVLinkTransport'
+import { log } from '@/utils/logger'
 
 export class UDPTransport extends MAVLinkTransport {
   private socket: WebSocket | null = null
@@ -24,13 +26,13 @@ export class UDPTransport extends MAVLinkTransport {
         // Format: ws://host:wsPort/mavlink/udp/host/port
         const wsUrl = `ws://${host}:${port + 1000}/mavlink`
 
-        console.log(`[UDPTransport] Connecting to ${wsUrl}`)
+        log.info('Connecting', { wsUrl })
 
         this.socket = new WebSocket(wsUrl)
         this.socket.binaryType = 'arraybuffer'
 
         this.socket.onopen = () => {
-          console.log('[UDPTransport] Connected')
+          log.info('Connected')
           this.isConnected = true
           this.reconnectAttempts = 0
           resolve()
@@ -44,7 +46,7 @@ export class UDPTransport extends MAVLinkTransport {
         }
 
         this.socket.onerror = (error) => {
-          console.error('[UDPTransport] WebSocket error:', error)
+          log.error('WebSocket error', { error })
           const err = new Error('UDP transport connection error')
           this.handleError(err)
 
@@ -54,7 +56,7 @@ export class UDPTransport extends MAVLinkTransport {
         }
 
         this.socket.onclose = () => {
-          console.log('[UDPTransport] Disconnected')
+          log.info('Disconnected')
           const wasConnected = this.isConnected
           this.handleDisconnect()
 
@@ -114,15 +116,17 @@ export class UDPTransport extends MAVLinkTransport {
     }
 
     this.reconnectAttempts++
-    console.log(
-      `[UDPTransport] Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-    )
+    log.info('Reconnecting...', {
+      delay: this.reconnectDelay,
+      attempt: this.reconnectAttempts,
+      maxAttempts: this.maxReconnectAttempts
+    })
 
     this.reconnectTimer = window.setTimeout(() => {
       this.reconnectTimer = null
       if (this.config) {
         this.connect(this.config).catch((err) => {
-          console.error('[UDPTransport] Reconnect failed:', err)
+          log.error('Reconnect failed', { error: err })
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect()
           }

@@ -291,7 +291,7 @@ describe('MAVLink Protocol - Packet Parsing', () => {
       0, 0, 0, 0, 0, 0, 0, 0,
     ])
     expect(() => parsePacket(incompleteBuffer)).toThrow(MAVLinkProtocolError)
-    expect(() => parsePacket(incompleteBuffer)).toThrow('Incomplete packet')
+    expect(() => parsePacket(incompleteBuffer)).toThrow('Buffer too short for MAVLink packet')
   })
 
   test('validates CRC by default', () => {

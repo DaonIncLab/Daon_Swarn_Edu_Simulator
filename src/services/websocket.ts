@@ -1,5 +1,6 @@
 import { ConnectionStatus, WS_CONFIG } from '@/constants/connection'
 import type { WSMessage, ExecuteScriptMessage } from '@/types/websocket'
+import { log } from '@/utils/logger'
 
 /**
  * WebSocket 클라이언트 서비스
@@ -25,7 +26,7 @@ export class WebSocketService {
    */
   connect(ipAddress: string, port: number = 8080): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      console.warn('Already connected')
+      log.warn('WebSocketService', 'Already connected')
       return
     }
 
@@ -125,12 +126,12 @@ export class WebSocketService {
           this.onMessage(message)
         }
       } catch (error) {
-        console.error('Failed to parse message:', error)
+        log.error('WebSocketService', 'Failed to parse message:', error)
       }
     }
 
     this.ws.onerror = (event) => {
-      console.error('WebSocket error:', event)
+      log.error('WebSocketService', 'WebSocket error:', event)
       this._handleConnectionError('Connection error occurred')
     }
 

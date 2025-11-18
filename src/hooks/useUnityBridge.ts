@@ -7,6 +7,7 @@
 import { useEffect, useCallback, useState } from 'react'
 import { useUnityContext } from 'react-unity-webgl'
 import type { UnityBuildConfig, UnityToReactMessage, ReactToUnityMessage } from '@/types/unity'
+import { log } from '@/utils/logger'
 
 interface UseUnityBridgeProps {
   buildConfig: UnityBuildConfig
@@ -51,7 +52,7 @@ export function useUnityBridge({
   // Unity 로드 완료 시
   useEffect(() => {
     if (isLoaded) {
-      console.log('[UnityBridge] Unity WebGL loaded successfully')
+      log.info("Unity WebGL loaded successfully", { context: "UnityBridge" })
       setIsReady(true)
       onReady?.()
     }
@@ -64,17 +65,17 @@ export function useUnityBridge({
   const sendToUnity = useCallback(
     (message: ReactToUnityMessage) => {
       if (!isLoaded) {
-        console.warn('[UnityBridge] Unity not loaded yet')
+        log.warn("Unity not loaded yet", { context: "UnityBridge" })
         return false
       }
 
       try {
         // Unity의 GameManager 오브젝트의 ReceiveMessage 메서드 호출
         sendMessage('GameManager', 'ReceiveMessage', JSON.stringify(message))
-        console.log('[UnityBridge] Message sent to Unity:', message.type)
+        log.debug("Message sent to Unity", { context: "UnityBridge", messageType: message.type })
         return true
       } catch (error) {
-        console.error('[UnityBridge] Failed to send message to Unity:', error)
+        log.error("Failed to send message to Unity", { context: "UnityBridge", error })
         onError?.(`Failed to send message: ${error}`)
         return false
       }
@@ -89,10 +90,10 @@ export function useUnityBridge({
     (messageJson: string) => {
       try {
         const message: UnityToReactMessage = JSON.parse(messageJson)
-        console.log('[UnityBridge] Message received from Unity:', message.type)
+        log.debug("Message received from Unity", { context: "UnityBridge", messageType: message.type })
         onMessage?.(message)
       } catch (error) {
-        console.error('[UnityBridge] Failed to parse Unity message:', error)
+        log.error("Failed to parse Unity message", { context: "UnityBridge", error })
         onError?.(`Failed to parse Unity message: ${error}`)
       }
     },

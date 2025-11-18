@@ -5,6 +5,7 @@
 
 import type { DroneState } from '@/types/websocket'
 import type { ExecutionContext } from '@/types/execution'
+import { log } from '@/utils/logger'
 
 /**
  * 조건 평가 결과
@@ -34,7 +35,7 @@ export class ConditionEvaluator {
       const result = this._evaluateCondition(condition)
       return { result }
     } catch (error) {
-      console.error('[ConditionEvaluator] Error evaluating condition:', condition, error)
+      log.error('ConditionEvaluator', 'Error evaluating condition:', condition, error)
       return {
         result: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -128,7 +129,7 @@ export class ConditionEvaluator {
     if (trimmed === 'false') return false
 
     // 알 수 없는 조건 - 기본값 false
-    console.warn(`[ConditionEvaluator] Unknown condition: ${condition}`)
+    log.warn('ConditionEvaluator', 'Unknown condition:', condition)
     return false
   }
 
@@ -167,7 +168,7 @@ export class ConditionEvaluator {
     const value = this.context.variables.get(varName)
 
     if (value === undefined) {
-      console.warn(`[ConditionEvaluator] Variable not found: ${varName}`)
+      log.warn('ConditionEvaluator', 'Variable not found:', varName)
       return false
     }
 
@@ -181,7 +182,7 @@ export class ConditionEvaluator {
     const drone = this.droneStates.find(d => d.id === droneId)
 
     if (!drone) {
-      console.warn(`[ConditionEvaluator] Drone ${droneId} not found`)
+      log.warn('ConditionEvaluator', 'Drone not found:', droneId)
       return false
     }
 
@@ -195,7 +196,7 @@ export class ConditionEvaluator {
     const drone = this.droneStates.find(d => d.id === droneId)
 
     if (!drone) {
-      console.warn(`[ConditionEvaluator] Drone ${droneId} not found`)
+      log.warn('ConditionEvaluator', 'Drone not found:', droneId)
       return false
     }
 
@@ -209,7 +210,7 @@ export class ConditionEvaluator {
     const startTime = this.context.executionStartTime
 
     if (!startTime) {
-      console.warn('[ConditionEvaluator] Execution start time not set')
+      log.warn('ConditionEvaluator', 'Execution start time not set')
       return false
     }
 
@@ -238,7 +239,7 @@ export class ConditionEvaluator {
       case '!==':
         return a !== b
       default:
-        console.warn(`[ConditionEvaluator] Unknown operator: ${operator}`)
+        log.warn('ConditionEvaluator', 'Unknown operator:', operator)
         return false
     }
   }

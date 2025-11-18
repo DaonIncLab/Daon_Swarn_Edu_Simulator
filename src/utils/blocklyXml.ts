@@ -4,6 +4,7 @@
  */
 
 import * as Blockly from 'blockly'
+import { log } from '@/utils/logger'
 
 /**
  * 워크스페이스를 XML 문자열로 변환
@@ -28,9 +29,9 @@ export function xmlToWorkspace(xmlText: string, workspace: Blockly.WorkspaceSvg)
     // 워크스페이스에 로드
     Blockly.Xml.domToWorkspace(xml, workspace)
 
-    console.log('[BlocklyXML] Workspace loaded from XML')
+    log.info("Workspace loaded from XML", { context: "BlocklyXML" })
   } catch (error) {
-    console.error('[BlocklyXML] Failed to load XML:', error)
+    log.error("Failed to load XML", { context: "BlocklyXML", error })
     throw new Error('Failed to load workspace from XML')
   }
 }
@@ -44,13 +45,13 @@ export function validateXml(xmlText: string): boolean {
 
     // 기본 검증: xml 태그가 존재하는지 확인
     if (xml.nodeName !== 'xml') {
-      console.warn('[BlocklyXML] Invalid root node:', xml.nodeName)
+      log.warn("Invalid root node", { context: "BlocklyXML", nodeName: xml.nodeName })
       return false
     }
 
     return true
   } catch (error) {
-    console.error('[BlocklyXML] XML validation failed:', error)
+    log.error("XML validation failed", { context: "BlocklyXML", error })
     return false
   }
 }
@@ -75,14 +76,14 @@ export function generateThumbnail(
     // SVG 추출
     const svgElement = workspace.getCanvas()
     if (!svgElement) {
-      console.warn('[BlocklyXML] Cannot get workspace canvas')
+      log.warn("Cannot get workspace canvas", { context: "BlocklyXML" })
       return undefined
     }
 
     // SVG의 bounding box 가져오기
     const bbox = svgElement.getBBox()
     if (bbox.width === 0 || bbox.height === 0) {
-      console.warn('[BlocklyXML] Workspace is empty, no thumbnail')
+      log.warn("Workspace is empty, no thumbnail", { context: "BlocklyXML" })
       return undefined
     }
 
@@ -104,7 +105,7 @@ export function generateThumbnail(
 
     const ctx = canvas.getContext('2d')
     if (!ctx) {
-      console.warn('[BlocklyXML] Cannot get canvas context')
+      log.warn("Cannot get canvas context", { context: "BlocklyXML" })
       return undefined
     }
 
@@ -118,11 +119,11 @@ export function generateThumbnail(
     const base64Svg = btoa(unescape(encodeURIComponent(svgData)))
     const thumbnail = `data:image/svg+xml;base64,${base64Svg}`
 
-    console.log('[BlocklyXML] Thumbnail generated')
+    log.debug("Thumbnail generated", { context: "BlocklyXML" })
 
     return thumbnail
   } catch (error) {
-    console.error('[BlocklyXML] Failed to generate thumbnail:', error)
+    log.error("Failed to generate thumbnail", { context: "BlocklyXML", error })
     return undefined
   }
 }

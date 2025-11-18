@@ -7,6 +7,7 @@
 import { create } from 'zustand'
 import type { DroneState } from '@/types/websocket'
 import type { DroneHistory, DroneHistoryPoint } from '@/types/telemetry'
+import { log } from '@/utils/logger'
 
 interface TelemetryStore {
   // State
@@ -107,8 +108,9 @@ export const useTelemetryStore = create<TelemetryStore>((set, get) => ({
         }
       }
 
-      console.log(
-        `[TelemetryStore] Pruned ${removed} old data points (total was ${totalPoints}, limit is ${maxTotalDataPoints})`
+      log.debug(
+        'TelemetryStore',
+        `Pruned ${removed} old data points (total was ${totalPoints}, limit is ${maxTotalDataPoints})`
       )
     }
 

@@ -13,6 +13,7 @@ import { CommandAction, FormationType, Direction } from '@/constants/commands'
 import { MAV_CMD, createCommandLong, createMissionItem, type CommandLongParams } from './MAVLinkCommands'
 import { createCommandLong as createCmdLongMsg } from './MAVLinkMessages'
 import { coordinateConverter } from './CoordinateConverter'
+import { log } from '@/utils/logger'
 
 /**
  * MAVLink Converter Class
@@ -73,7 +74,7 @@ export class MAVLinkConverter {
         return []
 
       default:
-        console.warn(`[MAVLinkConverter] Unsupported command: ${command.action}`)
+        log.warn('Unsupported command', { action: command.action })
         return []
     }
   }

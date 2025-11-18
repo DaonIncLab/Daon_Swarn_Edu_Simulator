@@ -13,6 +13,7 @@ import type {
   NodeType,
 } from '@/types/execution'
 import { evaluateCondition } from './conditionEvaluator'
+import { log } from '@/utils/logger'
 
 /**
  * 실행 상태 변경 리스너
@@ -74,7 +75,7 @@ export class Interpreter {
    * 트리 실행
    */
   async execute(tree: ExecutableNode): Promise<ExecutionResult> {
-    console.log('[Interpreter] Starting execution', tree)
+    log.info('Interpreter', 'Starting execution', tree)
 
     // Reset execution flags
     this.shouldStop = false
@@ -109,7 +110,7 @@ export class Interpreter {
       return { success: true, executedNodes }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-      console.error('[Interpreter] Execution error:', error)
+      log.error('Interpreter', 'Execution error:', error)
       this.updateState({ status: 'error', error: errorMsg })
       return { success: false, error: errorMsg, executedNodes }
     }
@@ -119,7 +120,7 @@ export class Interpreter {
    * 실행 중단
    */
   stop(): void {
-    console.log('[Interpreter] Stopping execution')
+    log.info('Interpreter', 'Stopping execution')
     this.shouldStop = true
     this.updateState({ status: 'idle' })
   }
@@ -129,11 +130,11 @@ export class Interpreter {
    */
   pause(): void {
     if (this.state.status !== 'running') {
-      console.warn('[Interpreter] Cannot pause: not running')
+      log.warn('Interpreter', 'Cannot pause: not running')
       return
     }
 
-    console.log('[Interpreter] Pausing execution')
+    log.info('Interpreter', 'Pausing execution')
     this.isPaused = true
 
     // Create a new promise that will be resolved when resume() is called
@@ -149,11 +150,11 @@ export class Interpreter {
    */
   resume(): void {
     if (this.state.status !== 'paused') {
-      console.warn('[Interpreter] Cannot resume: not paused')
+      log.warn('Interpreter', 'Cannot resume: not paused')
       return
     }
 
-    console.log('[Interpreter] Resuming execution')
+    log.info('Interpreter', 'Resuming execution')
     this.isPaused = false
 
     // Resolve the pause promise to unblock execution
@@ -189,7 +190,7 @@ export class Interpreter {
 
     this.updateState({ currentNodeId: node.id, currentNodePath: path })
 
-    console.log(`[Interpreter] Executing node ${node.id} (type: ${node.type})`)
+    log.debug('Interpreter', `Executing node ${node.id} (type: ${node.type})`)
 
     let executedCount = 1 // 현재 노드 포함
 
@@ -236,7 +237,7 @@ export class Interpreter {
 
       case 'variable_get':
         // Variable get is a value node, shouldn't be executed as statement
-        console.warn('[Interpreter] Variable get node used as statement')
+        log.warn('Interpreter', 'Variable get node used as statement')
         break
 
       case 'function_def':
@@ -248,7 +249,7 @@ export class Interpreter {
         break
 
       default:
-        console.warn(`[Interpreter] Unknown node type: ${(node as any).type}`)
+        log.warn('Interpreter', 'Unknown node type:', (node as any).type)
     }
 
     return executedCount
@@ -258,7 +259,7 @@ export class Interpreter {
    * 명령 노드 실행
    */
   private async executeCommand(node: any): Promise<void> {
-    console.log('[Interpreter] Executing command:', node.command.action)
+    log.debug('Interpreter', 'Executing command:', node.command.action)
 
     const response: CommandResponse = await this.connectionService.sendCommand(node.command)
 
@@ -292,14 +293,14 @@ export class Interpreter {
    * 반복 노드 실행
    */
   private async executeRepeat(node: any, path: number[]): Promise<number> {
-    console.log(`[Interpreter] Repeating ${node.times} times`)
+    log.debug('Interpreter', `Repeating ${node.times} times`)
 
     let totalExecuted = 0
 
     for (let i = 0; i < node.times; i++) {
       if (this.shouldStop) break
 
-      console.log(`[Interpreter] Repeat iteration ${i + 1}/${node.times}`)
+      log.debug('Interpreter', `Repeat iteration ${i + 1}/${node.times}`)
 
       // 컨텍스트에 반복 횟수 저장
       const oldRepeatCount = this.state.context.currentRepeatCount
@@ -320,7 +321,7 @@ export class Interpreter {
    * For 루프 노드 실행
    */
   private async executeForLoop(node: any, path: number[]): Promise<number> {
-    console.log(`[Interpreter] For loop: ${node.variable} from ${node.from} to ${node.to} by ${node.by}`)
+    log.debug('Interpreter', `For loop: ${node.variable} from ${node.from} to ${node.to} by ${node.by}`)
 
     let totalExecuted = 0
     const { variable, from, to, by } = node
@@ -331,7 +332,7 @@ export class Interpreter {
     for (let i = from; isIncrementing ? i <= to : i >= to; i += by) {
       if (this.shouldStop) break
 
-      console.log(`[Interpreter] Loop variable ${variable} = ${i}`)
+      log.debug('Interpreter', `Loop variable ${variable} = ${i}`)
 
       // 변수를 컨텍스트에 설정
       this.state.context.variables.set(variable, i)
@@ -355,15 +356,15 @@ export class Interpreter {
    * If 노드 실행
    */
   private async executeIf(node: any, path: number[]): Promise<number> {
-    console.log(`[Interpreter] Evaluating condition: ${node.condition}`)
+    log.debug('Interpreter', `Evaluating condition: ${node.condition}`)
 
     const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
 
     if (conditionResult.error) {
-      console.warn(`[Interpreter] Condition evaluation error: ${conditionResult.error}`)
+      log.warn('Interpreter', 'Condition evaluation error:', conditionResult.error)
     }
 
-    console.log(`[Interpreter] Condition result: ${conditionResult.result}`)
+    log.debug('Interpreter', `Condition result: ${conditionResult.result}`)
 
     if (conditionResult.result) {
       const childPath = [...path, 0]
@@ -377,15 +378,15 @@ export class Interpreter {
    * If-Else 노드 실행
    */
   private async executeIfElse(node: any, path: number[]): Promise<number> {
-    console.log(`[Interpreter] Evaluating condition: ${node.condition}`)
+    log.debug('Interpreter', `Evaluating condition: ${node.condition}`)
 
     const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
 
     if (conditionResult.error) {
-      console.warn(`[Interpreter] Condition evaluation error: ${conditionResult.error}`)
+      log.warn('Interpreter', 'Condition evaluation error:', conditionResult.error)
     }
 
-    console.log(`[Interpreter] Condition result: ${conditionResult.result}`)
+    log.debug('Interpreter', `Condition result: ${conditionResult.result}`)
 
     if (conditionResult.result) {
       const childPath = [...path, 0]
@@ -400,7 +401,7 @@ export class Interpreter {
    * 대기 노드 실행
    */
   private async executeWait(node: any): Promise<void> {
-    console.log(`[Interpreter] Waiting ${node.duration} seconds`)
+    log.debug('Interpreter', `Waiting ${node.duration} seconds`)
     await this.delay(node.duration * 1000)
   }
 
@@ -408,7 +409,7 @@ export class Interpreter {
    * While 루프 노드 실행 (Phase 6-A)
    */
   private async executeWhileLoop(node: any, path: number[]): Promise<number> {
-    console.log(`[Interpreter] While loop: ${node.condition} (max ${node.maxIterations} iterations)`)
+    log.debug('Interpreter', `While loop: ${node.condition} (max ${node.maxIterations} iterations)`)
 
     let totalExecuted = 0
     let iteration = 0
@@ -421,16 +422,16 @@ export class Interpreter {
       const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
 
       if (conditionResult.error) {
-        console.warn(`[Interpreter] While condition error: ${conditionResult.error}`)
+        log.warn('Interpreter', 'While condition error:', conditionResult.error)
         break
       }
 
       if (!conditionResult.result) {
-        console.log(`[Interpreter] While condition false, exiting loop`)
+        log.debug('Interpreter', 'While condition false, exiting loop')
         break
       }
 
-      console.log(`[Interpreter] While iteration ${iteration + 1}`)
+      log.debug('Interpreter', `While iteration ${iteration + 1}`)
 
       const childPath = [...path, iteration]
       const executed = await this.executeNode(node.body, childPath)
@@ -440,7 +441,7 @@ export class Interpreter {
     }
 
     if (iteration >= maxIterations) {
-      console.warn(`[Interpreter] While loop reached max iterations (${maxIterations})`)
+      log.warn('Interpreter', `While loop reached max iterations (${maxIterations})`)
     }
 
     return totalExecuted
@@ -450,7 +451,7 @@ export class Interpreter {
    * Repeat Until 루프 노드 실행 (Phase 6-A)
    */
   private async executeUntilLoop(node: any, path: number[]): Promise<number> {
-    console.log(`[Interpreter] Repeat Until loop: ${node.condition} (max ${node.maxIterations} iterations)`)
+    log.debug('Interpreter', `Repeat Until loop: ${node.condition} (max ${node.maxIterations} iterations)`)
 
     let totalExecuted = 0
     let iteration = 0
@@ -459,7 +460,7 @@ export class Interpreter {
     while (iteration < maxIterations) {
       if (this.shouldStop) break
 
-      console.log(`[Interpreter] Until iteration ${iteration + 1}`)
+      log.debug('Interpreter', `Until iteration ${iteration + 1}`)
 
       // 먼저 본문 실행
       const childPath = [...path, iteration]
@@ -470,12 +471,12 @@ export class Interpreter {
       const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
 
       if (conditionResult.error) {
-        console.warn(`[Interpreter] Until condition error: ${conditionResult.error}`)
+        log.warn('Interpreter', 'Until condition error:', conditionResult.error)
         break
       }
 
       if (conditionResult.result) {
-        console.log(`[Interpreter] Until condition true, exiting loop`)
+        log.debug('Interpreter', 'Until condition true, exiting loop')
         break
       }
 
@@ -483,7 +484,7 @@ export class Interpreter {
     }
 
     if (iteration >= maxIterations) {
-      console.warn(`[Interpreter] Until loop reached max iterations (${maxIterations})`)
+      log.warn('Interpreter', `Until loop reached max iterations (${maxIterations})`)
     }
 
     return totalExecuted
@@ -493,7 +494,7 @@ export class Interpreter {
    * 변수 설정 노드 실행 (Phase 6-A)
    */
   private async executeVariableSet(node: any): Promise<void> {
-    console.log(`[Interpreter] Setting variable ${node.variableName} = ${node.value}`)
+    log.debug('Interpreter', `Setting variable ${node.variableName} = ${node.value}`)
     this.state.context.variables.set(node.variableName, node.value)
   }
 
@@ -501,7 +502,7 @@ export class Interpreter {
    * 함수 정의 노드 실행 (Phase 6-A)
    */
   private async executeFunctionDef(node: any): Promise<void> {
-    console.log(`[Interpreter] Defining function: ${node.functionName}`)
+    log.debug('Interpreter', `Defining function: ${node.functionName}`)
     this.state.context.functions.set(node.functionName, node.body)
   }
 
@@ -510,7 +511,7 @@ export class Interpreter {
    */
   private async executeFunctionCall(node: any, path: number[]): Promise<number> {
     const functionName = node.functionName
-    console.log(`[Interpreter] Calling function: ${functionName}`)
+    log.debug('Interpreter', `Calling function: ${functionName}`)
 
     // 함수 존재 확인
     const functionBody = this.state.context.functions.get(functionName)

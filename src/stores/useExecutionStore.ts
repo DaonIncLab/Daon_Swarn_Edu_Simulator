@@ -10,6 +10,7 @@ import { parseBlocklyWorkspace } from '@/services/execution'
 import { getConnectionManager } from '@/services/connection/ConnectionManager'
 import type { ExecutionState } from '@/types/execution'
 import * as Blockly from 'blockly'
+import { log } from '@/utils/logger'
 
 /**
  * Simple string hash function for cache validation
@@ -102,11 +103,11 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
       const cachedHash = blocklyStore.getWorkspaceHash()
 
       if (cachedHash === currentHash && blocklyStore.getParsedTree()) {
-        console.log('[ExecutionStore] Using cached execution tree')
+        log.debug('ExecutionStore', 'Using cached execution tree')
         executionTree = blocklyStore.getParsedTree()
       } else {
         // Blockly 워크스페이스를 실행 트리로 파싱
-        console.log('[ExecutionStore] Parsing workspace (cache miss)')
+        log.debug('ExecutionStore', 'Parsing workspace (cache miss)')
         executionTree = parseBlocklyWorkspace(workspace)
 
         if (!executionTree) {
@@ -116,7 +117,7 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
 
         // Cache the parsed tree
         blocklyStore.setCachedParsedTree(executionTree, currentHash)
-        console.log('[ExecutionStore] Cached execution tree')
+        log.debug('ExecutionStore', 'Cached execution tree')
       }
 
       if (!executionTree) {
@@ -124,11 +125,11 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
         return
       }
 
-      console.log('[ExecutionStore] Using execution tree:', executionTree)
+      log.debug('ExecutionStore', 'Using execution tree:', executionTree)
 
       // ConnectionManager에서 현재 연결 서비스 가져오기
       const connectionManager = getConnectionManager()
-      const connectionService = (connectionManager as any).currentService
+      const connectionService = connectionManager.getCurrentService()
 
       if (!connectionService) {
         set({ error: 'Not connected to any service' })
@@ -162,10 +163,10 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
         const result = await interpreter.execute(executionTree)
 
         if (result.success) {
-          console.log(`[ExecutionStore] Execution completed. Executed ${result.executedNodes} nodes.`)
+          log.info('ExecutionStore', `Execution completed. Executed ${result.executedNodes} nodes.`)
           set({ status: ExecutionStatus.COMPLETED })
         } else {
-          console.error(`[ExecutionStore] Execution failed: ${result.error}`)
+          log.error('ExecutionStore', `Execution failed: ${result.error}`)
           set({
             status: ExecutionStatus.ERROR,
             error: result.error || 'Execution failed',
@@ -173,7 +174,7 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-        console.error('[ExecutionStore] Execution error:', error)
+        log.error('ExecutionStore', 'Execution error:', error)
         set({
           status: ExecutionStatus.ERROR,
           error: errorMsg,
@@ -237,7 +238,7 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
      * 실행 상태 업데이트 (Interpreter로부터)
      */
     updateExecutionState: (state: ExecutionState) => {
-      console.log('[ExecutionStore] State update from interpreter:', state)
+      log.debug('ExecutionStore', 'State update from interpreter:', state)
 
       set({
         currentNodeId: state.currentNodeId,
@@ -281,7 +282,7 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
           break
 
         case MessageType.ERROR:
-          console.error('[ExecutionStore] Server error:', message.error)
+          log.error('ExecutionStore', 'Server error:', message.error)
           break
 
         case MessageType.ACK:
@@ -289,7 +290,7 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
           break
 
         default:
-          console.warn('[ExecutionStore] Unknown message type:', message)
+          log.warn('ExecutionStore', 'Unknown message type:', message)
       }
     },
   }

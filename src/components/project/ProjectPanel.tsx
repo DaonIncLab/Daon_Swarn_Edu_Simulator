@@ -4,6 +4,7 @@ import { useBlocklyStore } from '@/stores/useBlocklyStore'
 import { Button } from '@/components/common/Button'
 import { NewProjectModal } from './NewProjectModal'
 import { ProjectListModal } from './ProjectListModal'
+import { log } from '@/utils/logger'
 
 export function ProjectPanel() {
   const { currentProject, saveCurrentProject, exportProjectToFile, isLoading } = useProjectStore()
@@ -16,7 +17,7 @@ export function ProjectPanel() {
       await saveCurrentProject()
       alert('프로젝트가 저장되었습니다')
     } catch (error) {
-      console.error('Save failed:', error)
+      log.error("Save failed", { context: "ProjectPanel", error })
       alert('저장 실패')
     }
   }
@@ -27,7 +28,7 @@ export function ProjectPanel() {
     try {
       await exportProjectToFile(currentProject.id)
     } catch (error) {
-      console.error('Export failed:', error)
+      log.error("Export failed", { context: "ProjectPanel", error })
       alert('내보내기 실패')
     }
   }

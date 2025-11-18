@@ -4,6 +4,7 @@
 
 import * as Blockly from 'blockly'
 import { CommandAction, FormationType, Direction } from '@/constants/commands'
+import { log } from '@/utils/logger'
 
 /**
  * 모든 드론 이륙
@@ -513,5 +514,5 @@ Blockly.Blocks['logic_negate'] = {
  */
 export function registerSwarmBlocks() {
   // 블록은 이미 위에서 정의되었으므로 추가 등록 불필요
-  console.log('Swarm blocks registered')
+  log.info("Swarm blocks registered", { context: "swarmBlocks" })
 }

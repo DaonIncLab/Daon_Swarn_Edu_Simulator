@@ -18,11 +18,21 @@ export function ConnectionPanel() {
     error,
     testModeDroneCount,
     mavlinkDroneCount,
+    mavlinkTransportType,
+    mavlinkHost,
+    mavlinkPort,
+    mavlinkSerialDevice,
+    mavlinkBaudRate,
     setMode,
     setIpAddress,
     setPort,
     setTestModeDroneCount,
     setMavlinkDroneCount,
+    setMavlinkTransportType,
+    setMavlinkHost,
+    setMavlinkPort,
+    setMavlinkSerialDevice,
+    setMavlinkBaudRate,
     connect,
     disconnect,
     clearError,
@@ -31,7 +41,9 @@ export function ConnectionPanel() {
   const isTestMode = mode === ConnectionMode.TEST
   const isSimMode = mode === ConnectionMode.SIMULATION
   const isUnityWebGLMode = mode === ConnectionMode.UNITY_WEBGL
-  const isMAVLinkMode = mode === ConnectionMode.MAVLINK_SIMULATION
+  const isMAVLinkSimMode = mode === ConnectionMode.MAVLINK_SIMULATION
+  const isRealMAVLinkMode = mode === ConnectionMode.REAL_DRONE
+  const isMAVLinkMode = isMAVLinkSimMode || isRealMAVLinkMode
 
   const [localIp, setLocalIp] = useState(ipAddress)
   const [localPort, setLocalPort] = useState(port.toString())
@@ -75,8 +87,8 @@ export function ConnectionPanel() {
   const handleConnect = () => {
     clearError()
 
-    // 테스트 모드, Unity WebGL, MAVLink 모드면 바로 연결
-    if (isTestMode || isUnityWebGLMode || isMAVLinkMode) {
+    // 테스트 모드, Unity WebGL, MAVLink 시뮬레이션 모드면 바로 연결
+    if (isTestMode || isUnityWebGLMode || isMAVLinkSimMode || isRealMAVLinkMode) {
       connect()
       return
     }
@@ -178,20 +190,43 @@ export function ConnectionPanel() {
               onClick={() => handleModeChange(ConnectionMode.MAVLINK_SIMULATION)}
               disabled={isConnected || isConnecting}
               className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                isMAVLinkMode
+                isMAVLinkSimMode
                   ? 'border-primary-600 bg-primary-50'
                   : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
               }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isMAVLinkMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
+                  isMAVLinkSimMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
                 }`}>
-                  {isMAVLinkMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
+                  {isMAVLinkSimMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
                 </div>
                 <div>
                   <div className="font-medium text-[var(--text-primary)]">🚁 MAVLink Simulation</div>
                   <div className="text-xs text-[var(--text-secondary)]">MAVLink protocol simulator</div>
+                </div>
+              </div>
+            </button>
+
+            {/* Real MAVLink Mode */}
+            <button
+              onClick={() => handleModeChange(ConnectionMode.REAL_DRONE)}
+              disabled={isConnected || isConnecting}
+              className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                isRealMAVLinkMode
+                  ? 'border-orange-600 bg-orange-50'
+                  : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  isRealMAVLinkMode ? 'border-orange-600' : 'border-[var(--border-secondary)]'
+                }`}>
+                  {isRealMAVLinkMode && <div className="w-2 h-2 rounded-full bg-orange-600" />}
+                </div>
+                <div>
+                  <div className="font-medium text-[var(--text-primary)]">🔧 {t('connection.mavlink.title')}</div>
+                  <div className="text-xs text-[var(--text-secondary)]">{t('connection.mavlink.description')}</div>
                 </div>
               </div>
             </button>
@@ -228,7 +263,7 @@ export function ConnectionPanel() {
         </div>
 
         {/* MAVLink Simulation Mode Settings */}
-        {isMAVLinkMode && !isConnected && (
+        {isMAVLinkSimMode && !isConnected && (
           <>
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <p className="text-sm text-green-800">
@@ -272,6 +307,132 @@ export function ConnectionPanel() {
                 className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isConnecting ? 'Connecting...' : 'Connect (MAVLink)'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Real MAVLink Mode Settings */}
+        {isRealMAVLinkMode && !isConnected && (
+          <>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <p className="text-sm text-orange-800">
+                🔧 <strong>{t('connection.mavlink.title')}</strong>
+              </p>
+              <p className="text-xs text-orange-700 mt-1">
+                {t('connection.mavlink.description')}
+              </p>
+            </div>
+
+            {/* Transport Type Selector */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                {t('connection.mavlink.transportType')}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setMavlinkTransportType('udp')}
+                  className={`py-2 px-4 rounded-lg border-2 font-medium transition-all ${
+                    mavlinkTransportType === 'udp'
+                      ? 'border-orange-600 bg-orange-50 text-orange-700'
+                      : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)]'
+                  }`}
+                >
+                  📡 {t('connection.mavlink.transportUdp')}
+                </button>
+                <button
+                  onClick={() => setMavlinkTransportType('serial')}
+                  className={`py-2 px-4 rounded-lg border-2 font-medium transition-all ${
+                    mavlinkTransportType === 'serial'
+                      ? 'border-orange-600 bg-orange-50 text-orange-700'
+                      : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)]'
+                  }`}
+                >
+                  🔌 {t('connection.mavlink.transportSerial')}
+                </button>
+              </div>
+            </div>
+
+            {/* UDP Configuration */}
+            {mavlinkTransportType === 'udp' && (
+              <>
+                <Input
+                  label={t('connection.mavlink.udp.host')}
+                  type="text"
+                  value={mavlinkHost}
+                  onChange={(e) => setMavlinkHost(e.target.value)}
+                  placeholder={t('connection.mavlink.udp.hostPlaceholder')}
+                />
+                <Input
+                  label={t('connection.mavlink.udp.port')}
+                  type="number"
+                  value={mavlinkPort.toString()}
+                  onChange={(e) => setMavlinkPort(parseInt(e.target.value) || 14550)}
+                  placeholder={t('connection.mavlink.udp.portPlaceholder')}
+                  helperText={t('connection.mavlink.udp.portDefault')}
+                />
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 font-medium">
+                    💡 {t('connection.mavlink.info.udpTitle')}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    {t('connection.mavlink.info.udpDescription')}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-2 font-medium">
+                    ⚠️ {t('connection.mavlink.info.requiresBridge')}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Serial Configuration */}
+            {mavlinkTransportType === 'serial' && (
+              <>
+                <Input
+                  label={t('connection.mavlink.serial.device')}
+                  type="text"
+                  value={mavlinkSerialDevice}
+                  onChange={(e) => setMavlinkSerialDevice(e.target.value)}
+                  placeholder={t('connection.mavlink.serial.devicePlaceholder')}
+                />
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                    {t('connection.mavlink.serial.baudRate')}
+                  </label>
+                  <select
+                    value={mavlinkBaudRate}
+                    onChange={(e) => setMavlinkBaudRate(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-[var(--border-primary)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  >
+                    <option value={9600}>9600</option>
+                    <option value={19200}>19200</option>
+                    <option value={38400}>38400</option>
+                    <option value={57600}>57600 (Default)</option>
+                    <option value={115200}>115200</option>
+                  </select>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                    {t('connection.mavlink.serial.baudRateDefault')}
+                  </p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 font-medium">
+                    💡 {t('connection.mavlink.info.serialTitle')}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    {t('connection.mavlink.info.serialDescription')}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Connect Button for Real MAVLink Mode */}
+            <div className="pt-4">
+              <button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isConnecting ? 'Connecting...' : `Connect (${mavlinkTransportType.toUpperCase()})`}
               </button>
             </div>
           </>

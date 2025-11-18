@@ -3,7 +3,55 @@
  * Direct hardware connection via Web Serial API
  */
 
-import { MAVLinkTransport, TransportConfig } from './MAVLinkTransport'
+import type { TransportConfig } from './MAVLinkTransport'
+import { MAVLinkTransport } from './MAVLinkTransport'
+import { log } from '@/utils/logger'
+
+// Web Serial API types
+declare global {
+  interface Navigator {
+    serial: Serial
+  }
+
+  interface Serial {
+    requestPort(options?: SerialPortRequestOptions): Promise<SerialPort>
+    getPorts(): Promise<SerialPort[]>
+    addEventListener(type: string, listener: EventListener): void
+    removeEventListener(type: string, listener: EventListener): void
+  }
+
+  interface SerialPort {
+    readable: ReadableStream<Uint8Array> | null
+    writable: WritableStream<Uint8Array> | null
+    getInfo(): SerialPortInfo
+    open(options: SerialOptions): Promise<void>
+    close(): Promise<void>
+  }
+
+  interface SerialPortInfo {
+    usbVendorId?: number
+    usbProductId?: number
+  }
+
+  interface SerialPortRequestOptions {
+    filters?: SerialPortFilter[]
+  }
+
+  interface SerialPortFilter {
+    usbVendorId?: number
+    usbProductId?: number
+  }
+
+  interface SerialOptions {
+    baudRate: number
+    dataBits?: number
+    stopBits?: number
+    parity?: 'none' | 'even' | 'odd'
+    bufferSize?: number
+    rtscts?: boolean
+    signal?: AbortSignal
+  }
+}
 
 export class SerialTransport extends MAVLinkTransport {
   private port: SerialPort | null = null
@@ -30,7 +78,7 @@ export class SerialTransport extends MAVLinkTransport {
       // Open the serial port
       await this.port.open({ baudRate })
 
-      console.log(`[SerialTransport] Connected at ${baudRate} baud`)
+      log.info('Connected', { baudRate })
 
       // Set up reader and writer
       if (this.port.readable && this.port.writable) {
@@ -45,13 +93,13 @@ export class SerialTransport extends MAVLinkTransport {
         throw new Error('Serial port streams not available')
       }
     } catch (error) {
-      console.error('[SerialTransport] Connection failed:', error)
+      log.error('Connection failed', { error })
       throw error
     }
   }
 
   async disconnect(): Promise<void> {
-    console.log('[SerialTransport] Disconnecting')
+    log.info('Disconnecting')
 
     // Stop read loop
     if (this.abortController) {
@@ -134,7 +182,7 @@ export class SerialTransport extends MAVLinkTransport {
         const { value, done } = await this.reader.read()
 
         if (done) {
-          console.log('[SerialTransport] Read stream ended')
+          log.info('Read stream ended')
           break
         }
 
@@ -169,7 +217,7 @@ export class SerialTransport extends MAVLinkTransport {
               buffer.length = 0
             } else if (buffer.length > maxPacketLen) {
               // Invalid packet, clear and resync
-              console.warn('[SerialTransport] Invalid packet, resyncing')
+              log.warn('Invalid packet, resyncing')
               buffer.length = 0
             }
           }
@@ -177,13 +225,13 @@ export class SerialTransport extends MAVLinkTransport {
 
         // Prevent buffer overflow
         if (buffer.length > 300) {
-          console.warn('[SerialTransport] Buffer overflow, clearing')
+          log.warn('Buffer overflow, clearing')
           buffer.length = 0
         }
       }
     } catch (error) {
       if (!this.abortController?.signal.aborted) {
-        console.error('[SerialTransport] Read error:', error)
+        log.error('Read error', { error })
         this.handleError(
           error instanceof Error ? error : new Error('Serial read error')
         )

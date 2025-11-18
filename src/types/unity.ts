@@ -16,7 +16,7 @@ export interface UnityBuildConfig {
  * Unity → React 메시지
  */
 export interface UnityToReactMessage {
-  type: 'telemetry' | 'command_finish' | 'error' | 'log'
+  type: 'init' | 'telemetry' | 'command_finish' | 'error' | 'log'
   data: unknown
   timestamp: number
 }
@@ -25,9 +25,18 @@ export interface UnityToReactMessage {
  * React → Unity 메시지
  */
 export interface ReactToUnityMessage {
-  type: 'execute_script' | 'emergency_stop' | 'config'
+  type: 'request_init' | 'execute_script' | 'emergency_stop' | 'config'
   data: unknown
   timestamp: number
+}
+
+/**
+ * Unity 초기화 응답 데이터
+ */
+export interface UnityInitData {
+  droneCount: number
+  positions?: Array<{ x: number; y: number; z: number }>
+  config?: Record<string, unknown>
 }
 
 /**
@@ -37,4 +46,18 @@ export interface UnityLoadingProgress {
   progress: number // 0.0 ~ 1.0
   stage: 'downloading' | 'loading' | 'ready' | 'error'
   message?: string
+}
+
+/**
+ * Unity Bridge 인터페이스
+ * useUnityBridge hook의 반환 타입
+ */
+export interface UnityBridge {
+  isReady: boolean
+  loadingProgress: number
+  sendToUnity: (message: ReactToUnityMessage) => boolean
+  executeCommands: (commands: unknown[]) => boolean
+  emergencyStop: () => boolean
+  unload: () => Promise<void>
+  unityProvider: unknown
 }

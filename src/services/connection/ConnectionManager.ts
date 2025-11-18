@@ -18,6 +18,7 @@ import { MAVLinkConnectionService } from './MAVLinkConnectionService'
 import { TestConnectionService } from './TestConnectionService'
 import { UnityWebGLConnectionService } from './UnityWebGLConnectionService'
 import { ConnectionStatus } from '@/constants/connection'
+import { log } from '@/utils/logger'
 
 /**
  * 연결 관리자
@@ -36,7 +37,7 @@ export class ConnectionManager {
   async connect(config: ConnectionConfig): Promise<void> {
     // 기존 연결이 있으면 완전히 종료
     if (this.currentService) {
-      console.log('[ConnectionManager] Cleaning up previous connection before new connect')
+      log.info('ConnectionManager', 'Cleaning up previous connection before new connect')
       await this.disconnect()
     }
 
@@ -66,7 +67,7 @@ export class ConnectionManager {
    */
   async disconnect(): Promise<void> {
     if (this.currentService) {
-      console.log('[ConnectionManager] Disconnecting and cleaning up service')
+      log.info('ConnectionManager', 'Disconnecting and cleaning up service')
       await this.currentService.disconnect()
       this.currentService.cleanup()
 
@@ -128,6 +129,13 @@ export class ConnectionManager {
   }
 
   /**
+   * 현재 연결 서비스 가져오기
+   */
+  getCurrentService(): IConnectionService | null {
+    return this.currentService
+  }
+
+  /**
    * 현재 연결 상태 조회
    */
   getStatus(): ConnectionStatus {
@@ -163,9 +171,12 @@ export class ConnectionManager {
   /**
    * Set message listener (for services that support it like TestConnectionService)
    */
-  setMessageListener(listener: (message: any) => void): void {
+  setMessageListener(listener: (message: unknown) => void): void {
     if (this.currentService && 'setMessageListener' in this.currentService) {
-      ;(this.currentService as any).setMessageListener(listener)
+      const serviceWithListener = this.currentService as IConnectionService & {
+        setMessageListener: (listener: (message: unknown) => void) => void
+      }
+      serviceWithListener.setMessageListener(listener)
     }
   }
 
@@ -184,7 +195,7 @@ export class ConnectionManager {
    * 연결 모드 전환 (재연결 필요)
    */
   async switchMode(newConfig: ConnectionConfig): Promise<void> {
-    console.log(`[ConnectionManager] Switching mode from ${this.currentMode} to ${newConfig.mode}`)
+    log.info('ConnectionManager', `Switching mode from ${this.currentMode} to ${newConfig.mode}`)
 
     await this.disconnect()
     await this.connect(newConfig)
@@ -194,7 +205,7 @@ export class ConnectionManager {
    * 클린업 (완전한 정리)
    */
   cleanup(): void {
-    console.log('[ConnectionManager] Complete cleanup')
+    log.info('ConnectionManager', 'Complete cleanup')
 
     if (this.currentService) {
       this.currentService.cleanup()
@@ -215,30 +226,26 @@ export class ConnectionManager {
   private _createService(mode: ConnectionMode, config?: ConnectionConfig): IConnectionService {
     switch (mode) {
       case 'simulation':
-        console.log('[ConnectionManager] Creating WebSocket service')
+        log.info('ConnectionManager', 'Creating WebSocket service')
         return new WebSocketConnectionService()
 
       case 'unity_webgl':
-        console.log('[ConnectionManager] Creating Unity WebGL service')
+        log.info('ConnectionManager', 'Creating Unity WebGL service')
         return new UnityWebGLConnectionService()
 
       case 'mavlink_simulation': {
         const mavlinkDroneCount = config?.mavlink?.droneCount || 4
-        console.log(
-          '[ConnectionManager] Creating MAVLink Simulation service with',
-          mavlinkDroneCount,
-          'drones'
-        )
+        log.info('ConnectionManager', 'Creating MAVLink Simulation service with', mavlinkDroneCount, 'drones')
         return new MAVLinkConnectionService(mavlinkDroneCount)
       }
 
       case 'real_drone':
-        console.log('[ConnectionManager] Creating MAVLink Real Drone service')
+        log.info('ConnectionManager', 'Creating MAVLink Real Drone service')
         return new MAVLinkConnectionService(1)
 
       case 'test': {
         const droneCount = config?.test?.droneCount || 4
-        console.log('[ConnectionManager] Creating Test service with', droneCount, 'drones')
+        log.info('ConnectionManager', 'Creating Test service with', droneCount, 'drones')
         return new TestConnectionService(droneCount)
       }
 

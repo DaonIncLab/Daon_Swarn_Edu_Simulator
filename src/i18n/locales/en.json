@@ -60,6 +60,33 @@
       "connecting": "Connecting...",
       "disconnected": "Disconnected",
       "error": "Connection Error"
+    },
+    "mavlink": {
+      "title": "MAVLink Hardware Connection",
+      "description": "Connect to real drones via MAVLink protocol",
+      "transportType": "Transport Type",
+      "transportUdp": "UDP (Network)",
+      "transportSerial": "Serial (USB)",
+      "udp": {
+        "host": "Host Address",
+        "hostPlaceholder": "e.g., localhost, 192.168.1.100",
+        "port": "Port",
+        "portDefault": "Default: 14550",
+        "portPlaceholder": "14550"
+      },
+      "serial": {
+        "device": "Serial Device",
+        "devicePlaceholder": "e.g., COM3, /dev/ttyUSB0",
+        "baudRate": "Baud Rate",
+        "baudRateDefault": "Default: 57600"
+      },
+      "info": {
+        "udpTitle": "UDP Connection Info",
+        "udpDescription": "Connect to MAVLink over network (e.g., WiFi telemetry, SITL simulator)",
+        "serialTitle": "Serial Connection Info",
+        "serialDescription": "Connect to flight controller hardware directly via USB/Serial port",
+        "requiresBridge": "Note: UDP connection requires a WebSocket bridge server"
+      }
     }
   },
   "execution": {

@@ -14,6 +14,7 @@ import type {
   CommandResponse,
   TelemetryData,
 } from './types'
+import { log } from '@/utils/logger'
 
 /**
  * WebSocket 연결 서비스
@@ -39,7 +40,7 @@ export class WebSocketConnectionService implements IConnectionService {
     }
 
     if (this.ws?.readyState === WebSocket.OPEN) {
-      console.warn('[WebSocket] Already connected')
+      log.warn('Already connected')
       return
     }
 
@@ -91,7 +92,7 @@ export class WebSocketConnectionService implements IConnectionService {
       const payload = JSON.stringify(message)
       this.ws.send(payload)
 
-      console.log('[WebSocket] Commands sent:', commands.length)
+      log.info('Commands sent', { count: commands.length })
 
       return {
         success: true,
@@ -134,7 +135,7 @@ export class WebSocketConnectionService implements IConnectionService {
    * 비상 정지 명령
    */
   async emergencyStop(): Promise<CommandResponse> {
-    console.warn('[WebSocket] EMERGENCY STOP')
+    log.warn('EMERGENCY STOP')
 
     const emergencyCommand: Command = {
       action: 'emergency_stop' as any,
@@ -220,7 +221,7 @@ export class WebSocketConnectionService implements IConnectionService {
     if (!this.ws) return
 
     this.ws.onopen = () => {
-      console.log('[WebSocket] Connected to', this.url)
+      log.info('Connected', { url: this.url })
       this._clearTimers()
       this.reconnectAttempts = 0
       this._updateStatus(ConnectionStatus.CONNECTED)
@@ -233,19 +234,19 @@ export class WebSocketConnectionService implements IConnectionService {
         const data = JSON.parse(event.data)
         this._handleMessage(data)
       } catch (error) {
-        console.error('[WebSocket] Failed to parse message:', error)
+        log.error('Failed to parse message', { error })
       }
     }
 
     this.ws.onerror = (event) => {
-      console.error('[WebSocket] Error:', event)
+      log.error('WebSocket error', { event })
       const errorMsg = 'Connection error occurred'
       this._handleConnectionError(errorMsg)
       reject(new Error(errorMsg))
     }
 
     this.ws.onclose = (event) => {
-      console.log('[WebSocket] Closed:', event.code, event.reason)
+      log.info('Closed', { code: event.code, reason: event.reason })
       this._clearTimers()
       this._updateStatus(ConnectionStatus.DISCONNECTED)
 
@@ -283,7 +284,7 @@ export class WebSocketConnectionService implements IConnectionService {
         // Ping 응답은 별도 처리
         break
       default:
-        console.log('[WebSocket] Unknown message type:', data.type)
+        log.debug('Unknown message type', { type: data.type })
     }
   }
 
@@ -317,13 +318,14 @@ export class WebSocketConnectionService implements IConnectionService {
 
   private _scheduleReconnect(): void {
     this.reconnectAttempts++
-    console.log(
-      `[WebSocket] Reconnecting... (${this.reconnectAttempts}/${WS_CONFIG.MAX_RECONNECT_ATTEMPTS})`
-    )
+    log.info('Reconnecting...', {
+      attempt: this.reconnectAttempts,
+      maxAttempts: WS_CONFIG.MAX_RECONNECT_ATTEMPTS
+    })
 
     this.reconnectTimer = window.setTimeout(() => {
       this._connect().catch((error) => {
-        console.error('[WebSocket] Reconnect failed:', error)
+        log.error('Reconnect failed', { error })
       })
     }, WS_CONFIG.RECONNECT_INTERVAL)
   }

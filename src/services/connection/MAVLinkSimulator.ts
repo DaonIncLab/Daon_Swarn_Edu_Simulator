@@ -10,6 +10,7 @@ import { DroneSimulator } from './DroneSimulator'
 import { MAVLinkConverter } from '@/services/mavlink/MAVLinkConverter'
 import { MAV_CMD } from '@/services/mavlink/MAVLinkCommands'
 import type { CommandLongParams } from '@/services/mavlink/MAVLinkCommands'
+import { log } from '@/utils/logger'
 
 /**
  * MAVLink telemetry message
@@ -249,7 +250,7 @@ export class MAVLinkSimulator {
       }
 
       default:
-        console.warn(`[MAVLinkSimulator] Unsupported MAV_CMD: ${mavCmd}`)
+        log.warn('Unsupported MAV_CMD', { mavCmd })
     }
   }
 

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { Button } from '@/components/common/Button'
 import type { ProjectMetadata } from '@/types/project'
+import { log } from '@/utils/logger'
+import { validateProjectName } from '@/utils/validation'
 
 interface ProjectListModalProps {
   isOpen: boolean
@@ -15,6 +17,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -34,7 +37,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
       await loadProject(id)
       onClose()
     } catch (error) {
-      console.error('Failed to load project:', error)
+      log.error("Failed to load project", { context: "ProjectListModal", error })
       alert(t('project.list.loadError'))
     }
   }
@@ -44,7 +47,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
       try {
         await deleteProject(id)
       } catch (error) {
-        console.error('Failed to delete project:', error)
+        log.error("Failed to delete project", { context: "ProjectListModal", error })
         alert(t('project.list.deleteError'))
       }
     }
@@ -57,17 +60,27 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
 
   const handleRename = async (id: string) => {
     if (!editingName.trim()) {
-      alert(t('project.list.renameEmpty'))
+      setValidationError(t('project.list.renameEmpty'))
       return
     }
 
+    // Validate project name
+    const nameValidation = validateProjectName(editingName.trim())
+    if (!nameValidation.success) {
+      setValidationError(nameValidation.error || 'Invalid project name')
+      return
+    }
+
+    setValidationError(null)
+
     try {
-      await renameProject(id, editingName.trim())
+      await renameProject(id, nameValidation.data!)
       setEditingId(null)
       setEditingName('')
+      setValidationError(null)
     } catch (error) {
-      console.error('Failed to rename project:', error)
-      alert(t('project.list.renameError'))
+      log.error("Failed to rename project", { context: "ProjectListModal", error })
+      setValidationError(t('project.list.renameError'))
     }
   }
 
@@ -155,9 +168,16 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
                   onEditingNameChange={setEditingName}
                   onLoad={() => handleLoad(project.id)}
                   onDelete={() => handleDelete(project.id, project.name)}
-                  onStartRename={() => startRename(project.id, project.name)}
+                  onStartRename={() => {
+                    startRename(project.id, project.name)
+                    setValidationError(null)
+                  }}
                   onRename={() => handleRename(project.id)}
-                  onCancelRename={() => setEditingId(null)}
+                  onCancelRename={() => {
+                    setEditingId(null)
+                    setValidationError(null)
+                  }}
+                  validationError={validationError}
                   formatDate={formatDate}
                   t={t}
                 />
@@ -190,6 +210,7 @@ interface ProjectCardProps {
   onStartRename: () => void
   onRename: () => void
   onCancelRename: () => void
+  validationError: string | null
   formatDate: (date: string) => string
   t: (key: string, options?: any) => string
 }
@@ -204,6 +225,7 @@ function ProjectCard({
   onStartRename,
   onRename,
   onCancelRename,
+  validationError,
   formatDate,
   t,
 }: ProjectCardProps) {
@@ -212,17 +234,27 @@ function ProjectCard({
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           {isEditing ? (
-            <input
-              type="text"
-              value={editingName}
-              onChange={(e) => onEditingNameChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onRename()
-                if (e.key === 'Escape') onCancelRename()
-              }}
-              className="w-full px-2 py-1 border border-primary-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-600 bg-[var(--bg-secondary)] text-[var(--text-primary)]"
-              autoFocus
-            />
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => onEditingNameChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onRename()
+                  if (e.key === 'Escape') onCancelRename()
+                }}
+                className={`w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-primary-600 bg-[var(--bg-secondary)] text-[var(--text-primary)] ${
+                  validationError ? 'border-red-500 focus:ring-red-500' : 'border-primary-600'
+                }`}
+                autoFocus
+              />
+              {validationError && (
+                <p className="text-xs text-red-600">{validationError}</p>
+              )}
+              <p className="text-xs text-[var(--text-tertiary)]">
+                {t('project.validation.nameHelper', { defaultValue: 'Letters, Korean, numbers, spaces, hyphens, underscores only (max 100 characters)' })}
+              </p>
+            </div>
           ) : (
             <h3 className="font-semibold text-[var(--text-primary)] truncate">{project.name}</h3>
           )}

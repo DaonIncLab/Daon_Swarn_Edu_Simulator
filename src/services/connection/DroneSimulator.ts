@@ -9,6 +9,7 @@
 
 import type { DroneState } from '@/types/websocket'
 import { CommandAction, FormationType, Direction } from '@/constants/commands'
+import { log } from '@/utils/logger'
 
 export interface SimulatedDrone {
   id: number
@@ -226,7 +227,7 @@ export class DroneSimulator {
    * Execute takeoff_all command
    */
   executeTakeoffAll(altitude: number = 2): void {
-    console.log(`[DroneSimulator] Takeoff all to ${altitude}m`)
+    log.debug('DroneSimulator', `Takeoff all to ${altitude}m`)
 
     for (const drone of this.drones.values()) {
       if (drone.status === 'landed' || drone.status === 'idle') {
@@ -245,7 +246,7 @@ export class DroneSimulator {
    * Execute land_all command
    */
   executeLandAll(): void {
-    console.log('[DroneSimulator] Land all')
+    log.debug('DroneSimulator', 'Land all')
 
     for (const drone of this.drones.values()) {
       if (drone.status !== 'landed') {
@@ -266,7 +267,7 @@ export class DroneSimulator {
     type: FormationType,
     options: { rows?: number; cols?: number; spacing?: number; radius?: number } = {}
   ): void {
-    console.log(`[DroneSimulator] Set formation: ${type}`)
+    log.debug('DroneSimulator', `Set formation: ${type}`)
 
     this.formationType = type
     this.formationSpacing = options.spacing || 2
@@ -343,7 +344,7 @@ export class DroneSimulator {
    * Execute move_formation command
    */
   executeMoveFormation(direction: Direction, distance: number): void {
-    console.log(`[DroneSimulator] Move formation: ${direction} by ${distance}m`)
+    log.debug('DroneSimulator', `Move formation: ${direction} by ${distance}m`)
 
     let dx = 0,
       dy = 0
@@ -377,7 +378,7 @@ export class DroneSimulator {
    * Execute move_drone command (single drone)
    */
   executeMoveDrone(droneId: number, x: number, y: number, z: number): void {
-    console.log(`[DroneSimulator] Move drone ${droneId} to (${x}, ${y}, ${z})`)
+    log.debug('DroneSimulator', `Move drone ${droneId} to (${x}, ${y}, ${z})`)
 
     const drone = this.drones.get(droneId)
     if (drone) {
@@ -390,7 +391,7 @@ export class DroneSimulator {
    * Execute rotate_drone command (single drone)
    */
   executeRotateDrone(droneId: number, yaw: number): void {
-    console.log(`[DroneSimulator] Rotate drone ${droneId} to ${yaw}°`)
+    log.debug('DroneSimulator', `Rotate drone ${droneId} to ${yaw}°`)
 
     const drone = this.drones.get(droneId)
     if (drone) {
@@ -402,7 +403,7 @@ export class DroneSimulator {
    * Emergency stop - land all immediately
    */
   emergencyStop(): void {
-    console.warn('[DroneSimulator] EMERGENCY STOP')
+    log.warn('DroneSimulator', 'EMERGENCY STOP')
 
     for (const drone of this.drones.values()) {
       drone.targetPosition = {

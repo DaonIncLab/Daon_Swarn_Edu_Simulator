@@ -7,6 +7,7 @@ import type { Project, ProjectMetadata, ExportedProject, StorageType as StorageT
 import { StorageType } from '@/constants/project'
 import { IndexedDBAdapter, getIndexedDBAdapter } from './indexedDBAdapter'
 import { LocalStorageAdapter, getLocalStorageAdapter } from './localStorageAdapter'
+import { log } from '@/utils/logger'
 
 /**
  * 프로젝트 저장소 서비스
@@ -18,11 +19,11 @@ export class ProjectStorage {
   constructor() {
     // IndexedDB 지원 여부 확인
     if (IndexedDBAdapter.isSupported()) {
-      console.log('[ProjectStorage] Using IndexedDB')
+      log.info('Using IndexedDB')
       this.adapter = getIndexedDBAdapter()
       this.storageType = StorageType.INDEXED_DB
     } else if (LocalStorageAdapter.isSupported()) {
-      console.log('[ProjectStorage] Falling back to LocalStorage')
+      log.info('Falling back to LocalStorage')
       this.adapter = getLocalStorageAdapter()
       this.storageType = StorageType.LOCAL_STORAGE
     } else {
@@ -53,7 +54,7 @@ export class ProjectStorage {
     try {
       await this.adapter.saveProject(project)
     } catch (error) {
-      console.error('[ProjectStorage] Save failed:', error)
+      log.error('Save failed', { error })
       throw error
     }
   }
@@ -65,7 +66,7 @@ export class ProjectStorage {
     try {
       return await this.adapter.loadProject(id)
     } catch (error) {
-      console.error('[ProjectStorage] Load failed:', error)
+      log.error('Load failed', { error })
       throw error
     }
   }
@@ -77,7 +78,7 @@ export class ProjectStorage {
     try {
       await this.adapter.deleteProject(id)
     } catch (error) {
-      console.error('[ProjectStorage] Delete failed:', error)
+      log.error('Delete failed', { error })
       throw error
     }
   }
@@ -89,7 +90,7 @@ export class ProjectStorage {
     try {
       return await this.adapter.listProjects()
     } catch (error) {
-      console.error('[ProjectStorage] List failed:', error)
+      log.error('List failed', { error })
       throw error
     }
   }
@@ -101,7 +102,7 @@ export class ProjectStorage {
     try {
       return await this.adapter.projectExists(id)
     } catch (error) {
-      console.error('[ProjectStorage] Exists check failed:', error)
+      log.error('Exists check failed', { error })
       return false
     }
   }
@@ -136,9 +137,9 @@ export class ProjectStorage {
 
       URL.revokeObjectURL(url)
 
-      console.log(`[ProjectStorage] Project exported: ${project.name}`)
+      log.info('Project exported', { projectName: project.name })
     } catch (error) {
-      console.error('[ProjectStorage] Export failed:', error)
+      log.error('Export failed', { error })
       throw error
     }
   }
@@ -172,11 +173,11 @@ export class ProjectStorage {
 
       await this.saveProject(project)
 
-      console.log(`[ProjectStorage] Project imported: ${project.name}`)
+      log.info('Project imported', { projectName: project.name })
 
       return project
     } catch (error) {
-      console.error('[ProjectStorage] Import failed:', error)
+      log.error('Import failed', { error })
       throw error instanceof Error ? error : new Error('Failed to import project')
     }
   }
@@ -187,9 +188,9 @@ export class ProjectStorage {
   async clearAll(): Promise<void> {
     try {
       await this.adapter.clearAll()
-      console.log('[ProjectStorage] All projects cleared')
+      log.info('All projects cleared')
     } catch (error) {
-      console.error('[ProjectStorage] Clear failed:', error)
+      log.error('Clear failed', { error })
       throw error
     }
   }

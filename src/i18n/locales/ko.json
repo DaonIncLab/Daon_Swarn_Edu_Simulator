@@ -60,6 +60,33 @@
       "connecting": "연결 중...",
       "disconnected": "연결 끊김",
       "error": "연결 오류"
+    },
+    "mavlink": {
+      "title": "MAVLink 하드웨어 연결",
+      "description": "MAVLink 프로토콜로 실제 드론에 연결",
+      "transportType": "전송 방식",
+      "transportUdp": "UDP (네트워크)",
+      "transportSerial": "Serial (USB)",
+      "udp": {
+        "host": "호스트 주소",
+        "hostPlaceholder": "예: localhost, 192.168.1.100",
+        "port": "포트",
+        "portDefault": "기본값: 14550",
+        "portPlaceholder": "14550"
+      },
+      "serial": {
+        "device": "시리얼 장치",
+        "devicePlaceholder": "예: COM3, /dev/ttyUSB0",
+        "baudRate": "전송 속도",
+        "baudRateDefault": "기본값: 57600"
+      },
+      "info": {
+        "udpTitle": "UDP 연결 정보",
+        "udpDescription": "네트워크를 통한 MAVLink 연결 (예: WiFi 텔레메트리, SITL 시뮬레이터)",
+        "serialTitle": "Serial 연결 정보",
+        "serialDescription": "USB/Serial 포트를 통해 비행 컨트롤러에 직접 연결",
+        "requiresBridge": "참고: UDP 연결은 WebSocket 브릿지 서버가 필요합니다"
+      }
     }
   },
   "execution": {

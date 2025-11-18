@@ -3,6 +3,7 @@
  */
 
 import type { Project, ProjectMetadata } from '@/types/project'
+import { log } from '@/utils/logger'
 
 const KEY_PREFIX = 'drone-swarm-project-'
 const METADATA_KEY = 'drone-swarm-projects-metadata'
@@ -48,9 +49,9 @@ export class LocalStorageAdapter {
       // 메타데이터 업데이트
       await this.updateMetadata(project)
 
-      console.log(`[LocalStorageAdapter] Project saved: ${project.id}`)
+      log.info('Project saved', { projectId: project.id })
     } catch (error) {
-      console.error('[LocalStorageAdapter] Save failed:', error)
+      log.error('Save failed', { error })
       throw error instanceof Error ? error : new Error('Failed to save project')
     }
   }
@@ -70,7 +71,7 @@ export class LocalStorageAdapter {
       const project = JSON.parse(data) as Project
       return project
     } catch (error) {
-      console.error('[LocalStorageAdapter] Load failed:', error)
+      log.error('Load failed', { error })
       throw new Error('Failed to load project')
     }
   }
@@ -86,9 +87,9 @@ export class LocalStorageAdapter {
       // 메타데이터에서 제거
       await this.removeFromMetadata(id)
 
-      console.log(`[LocalStorageAdapter] Project deleted: ${id}`)
+      log.info('Project deleted', { id })
     } catch (error) {
-      console.error('[LocalStorageAdapter] Delete failed:', error)
+      log.error('Delete failed', { error })
       throw new Error('Failed to delete project')
     }
   }
@@ -108,7 +109,7 @@ export class LocalStorageAdapter {
       const metadata = JSON.parse(metadataJson) as ProjectMetadata[]
       return metadata
     } catch (error) {
-      console.error('[LocalStorageAdapter] List failed:', error)
+      log.error('List failed', { error })
       // 에러 발생 시 재구성 시도
       return await this.rebuildMetadata()
     }
@@ -142,9 +143,9 @@ export class LocalStorageAdapter {
       // 메타데이터 삭제
       localStorage.removeItem(METADATA_KEY)
 
-      console.log('[LocalStorageAdapter] All projects cleared')
+      log.info('All projects cleared')
     } catch (error) {
-      console.error('[LocalStorageAdapter] Clear failed:', error)
+      log.error('Clear failed', { error })
       throw new Error('Failed to clear projects')
     }
   }
@@ -201,7 +202,7 @@ export class LocalStorageAdapter {
    * 메타데이터 재구성 (손상되었거나 없는 경우)
    */
   private async rebuildMetadata(): Promise<ProjectMetadata[]> {
-    console.log('[LocalStorageAdapter] Rebuilding metadata...')
+    log.info('Rebuilding metadata...')
 
     const metadata: ProjectMetadata[] = []
 
@@ -227,7 +228,7 @@ export class LocalStorageAdapter {
             })
           }
         } catch (error) {
-          console.error(`[LocalStorageAdapter] Failed to parse project from ${key}:`, error)
+          log.error('Failed to parse project', { key, error })
         }
       }
     }

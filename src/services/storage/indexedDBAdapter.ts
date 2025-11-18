@@ -3,6 +3,7 @@
  */
 
 import type { Project, ProjectMetadata } from '@/types/project'
+import { log } from '@/utils/logger'
 
 const DB_NAME = 'DroneSwarmGCS'
 const DB_VERSION = 1
@@ -26,13 +27,13 @@ export class IndexedDBAdapter {
       const request = indexedDB.open(DB_NAME, DB_VERSION)
 
       request.onerror = () => {
-        console.error('[IndexedDBAdapter] Failed to open database:', request.error)
+        log.error('Failed to open database', { error: request.error })
         reject(new Error('Failed to open IndexedDB'))
       }
 
       request.onsuccess = () => {
         this.db = request.result
-        console.log('[IndexedDBAdapter] Database opened successfully')
+        log.info('Database opened successfully')
         resolve()
       }
 
@@ -48,7 +49,7 @@ export class IndexedDBAdapter {
           objectStore.createIndex('createdAt', 'createdAt', { unique: false })
           objectStore.createIndex('updatedAt', 'updatedAt', { unique: false })
 
-          console.log('[IndexedDBAdapter] Object store created with indexes')
+          log.info('Object store created with indexes')
         }
       }
     })
@@ -73,12 +74,12 @@ export class IndexedDBAdapter {
       const request = store.put(project)
 
       request.onsuccess = () => {
-        console.log(`[IndexedDBAdapter] Project saved: ${project.id}`)
+        log.info('Project saved', { projectId: project.id })
         resolve()
       }
 
       request.onerror = () => {
-        console.error('[IndexedDBAdapter] Save failed:', request.error)
+        log.error('Save failed', { error: request.error })
         reject(new Error(`Failed to save project: ${request.error}`))
       }
     })
@@ -101,7 +102,7 @@ export class IndexedDBAdapter {
       }
 
       request.onerror = () => {
-        console.error('[IndexedDBAdapter] Load failed:', request.error)
+        log.error('Load failed', { error: request.error })
         reject(new Error(`Failed to load project: ${request.error}`))
       }
     })
@@ -119,12 +120,12 @@ export class IndexedDBAdapter {
       const request = store.delete(id)
 
       request.onsuccess = () => {
-        console.log(`[IndexedDBAdapter] Project deleted: ${id}`)
+        log.info('Project deleted', { id })
         resolve()
       }
 
       request.onerror = () => {
-        console.error('[IndexedDBAdapter] Delete failed:', request.error)
+        log.error('Delete failed', { error: request.error })
         reject(new Error(`Failed to delete project: ${request.error}`))
       }
     })
@@ -160,7 +161,7 @@ export class IndexedDBAdapter {
       }
 
       request.onerror = () => {
-        console.error('[IndexedDBAdapter] List failed:', request.error)
+        log.error('List failed', { error: request.error })
         reject(new Error(`Failed to list projects: ${request.error}`))
       }
     })
@@ -182,7 +183,7 @@ export class IndexedDBAdapter {
       }
 
       request.onerror = () => {
-        console.error('[IndexedDBAdapter] Exists check failed:', request.error)
+        log.error('Exists check failed', { error: request.error })
         reject(new Error(`Failed to check if project exists: ${request.error}`))
       }
     })
@@ -200,12 +201,12 @@ export class IndexedDBAdapter {
       const request = store.clear()
 
       request.onsuccess = () => {
-        console.log('[IndexedDBAdapter] All projects cleared')
+        log.info('All projects cleared')
         resolve()
       }
 
       request.onerror = () => {
-        console.error('[IndexedDBAdapter] Clear failed:', request.error)
+        log.error('Clear failed', { error: request.error })
         reject(new Error(`Failed to clear projects: ${request.error}`))
       }
     })
@@ -218,7 +219,7 @@ export class IndexedDBAdapter {
     if (this.db) {
       this.db.close()
       this.db = null
-      console.log('[IndexedDBAdapter] Database closed')
+      log.info('Database closed')
     }
   }
 

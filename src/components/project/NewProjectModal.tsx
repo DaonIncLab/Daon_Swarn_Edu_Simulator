@@ -4,6 +4,8 @@ import type { ProjectTemplate as ProjectTemplateType } from '@/types/project'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
+import { log } from '@/utils/logger'
+import { validateProjectName, validateProjectDescription } from '@/utils/validation'
 
 interface NewProjectModalProps {
   isOpen: boolean
@@ -14,20 +16,32 @@ export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplateType>(ProjectTemplate.BLANK)
+  const [validationError, setValidationError] = useState<string | null>(null)
   const { createProject, isLoading } = useProjectStore()
 
   if (!isOpen) return null
 
   const handleCreate = async () => {
-    if (!name.trim()) {
-      alert('프로젝트 이름을 입력해주세요')
+    // Validate and sanitize project name
+    const nameValidation = validateProjectName(name)
+    if (!nameValidation.success) {
+      setValidationError(nameValidation.error || 'Invalid project name')
       return
     }
 
+    // Validate and sanitize description
+    const descValidation = validateProjectDescription(description)
+    if (!descValidation.success) {
+      setValidationError(descValidation.error || 'Invalid description')
+      return
+    }
+
+    setValidationError(null)
+
     try {
       await createProject({
-        name: name.trim(),
-        description: description.trim() || undefined,
+        name: nameValidation.data!,
+        description: descValidation.data || undefined,
         template: selectedTemplate,
       })
 
@@ -35,10 +49,11 @@ export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
       setName('')
       setDescription('')
       setSelectedTemplate(ProjectTemplate.BLANK)
+      setValidationError(null)
       onClose()
     } catch (error) {
-      console.error('Failed to create project:', error)
-      alert('프로젝트 생성 실패')
+      log.error('NewProjectModal', 'Failed to create project', error)
+      setValidationError('프로젝트 생성 실패')
     }
   }
 
@@ -118,15 +133,25 @@ export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Validation Error */}
+          {validationError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{validationError}</p>
+            </div>
+          )}
+
           {/* Project Name */}
           <Input
             label="프로젝트 이름"
             type="text"
             placeholder="나의 드론 프로젝트"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value)
+              setValidationError(null)
+            }}
             disabled={isLoading}
-            helperText="프로젝트를 구분할 수 있는 이름을 입력하세요"
+            helperText="영문, 한글, 숫자, 공백, 하이픈, 언더스코어만 사용 가능 (최대 100자)"
           />
 
           {/* Description */}
@@ -137,10 +162,14 @@ export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
             <textarea
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               rows={3}
-              placeholder="프로젝트에 대한 간단한 설명을 입력하세요"
+              placeholder="프로젝트에 대한 간단한 설명을 입력하세요 (최대 500자)"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value)
+                setValidationError(null)
+              }}
               disabled={isLoading}
+              maxLength={500}
             />
           </div>
 

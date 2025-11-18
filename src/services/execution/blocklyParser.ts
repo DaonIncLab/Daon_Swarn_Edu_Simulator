@@ -5,6 +5,8 @@
 import * as Blockly from 'blockly'
 import type { Command } from '@/types/websocket'
 import { CommandAction } from '@/constants/commands'
+import type { FormationType, Direction } from '@/constants/commands'
+import { log } from '@/utils/logger'
 import type {
   ExecutableNode,
   CommandNode,
@@ -46,27 +48,39 @@ export function parseBlocklyWorkspace(workspace: Blockly.Workspace): ExecutableN
 
   // 모든 최상위 블록들을 시퀀스로 묶음
   const children: ExecutableNode[] = []
+  const functionDefs: ExecutableNode[] = []
 
   for (const block of topBlocks) {
-    const parsed = parseBlock(block)
-    if (parsed) {
-      children.push(parsed)
+    // 함수 정의 블록은 별도로 수집 (실행 순서와 무관하게 먼저 등록)
+    if (block.type === 'procedures_defnoreturn') {
+      const funcDef = parseFunctionDefBlock(block)
+      if (funcDef) {
+        functionDefs.push(funcDef)
+      }
+    } else {
+      const parsed = parseBlock(block)
+      if (parsed) {
+        children.push(parsed)
+      }
     }
   }
 
-  if (children.length === 0) {
+  // 함수 정의가 있으면 먼저 추가
+  const allNodes = [...functionDefs, ...children]
+
+  if (allNodes.length === 0) {
     return null
   }
 
-  if (children.length === 1) {
-    return children[0]
+  if (allNodes.length === 1) {
+    return allNodes[0]
   }
 
   // 여러 최상위 블록이 있으면 시퀀스로 묶음
   return {
     id: generateNodeId(),
     type: 'sequence',
-    children,
+    children: allNodes,
   }
 }
 
@@ -166,12 +180,12 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
 
   // 센서 블록과 논리 블록은 값 블록이므로 단독으로 파싱하지 않음
   if (type.startsWith('sensor_') || type.startsWith('logic_')) {
-    console.warn(`[BlocklyParser] Value block cannot be used as statement: ${type}`)
+    log.warn('BlocklyParser', 'Value block cannot be used as statement:', type)
     return null
   }
 
   // 알 수 없는 블록 타입
-  console.warn(`[BlocklyParser] Unknown block type: ${type}`)
+  log.warn('BlocklyParser', 'Unknown block type:', type)
   return null
 }
 
@@ -189,7 +203,7 @@ function parseRepeatBlock(block: Blockly.Block): RepeatNode | null {
   const body = statementBlock ? parseBlock(statementBlock) : null
 
   if (!body) {
-    console.warn('[BlocklyParser] Repeat block has no body')
+    log.warn('BlocklyParser', 'Repeat block has no body')
     return null
   }
 
@@ -216,7 +230,7 @@ function parseForLoopBlock(block: Blockly.Block): ForLoopNode | null {
   const body = statementBlock ? parseBlock(statementBlock) : null
 
   if (!body) {
-    console.warn('[BlocklyParser] For loop has no body')
+    log.warn('BlocklyParser', 'For loop has no body')
     return null
   }
 
@@ -243,7 +257,7 @@ function parseIfBlock(block: Blockly.Block): IfNode | null {
   const thenBranch = thenBlock ? parseBlock(thenBlock) : null
 
   if (!thenBranch) {
-    console.warn('[BlocklyParser] If block has no then branch')
+    log.warn('BlocklyParser', 'If block has no then branch')
     return null
   }
 
@@ -271,12 +285,12 @@ function parseIfElseBlock(block: Blockly.Block): IfElseNode | null {
   const elseBranch = elseBlock ? parseBlock(elseBlock) : null
 
   if (!thenBranch) {
-    console.warn('[BlocklyParser] If-Else block has no then branch')
+    log.warn('BlocklyParser', 'If-Else block has no then branch')
     return null
   }
 
   if (!elseBranch) {
-    console.warn('[BlocklyParser] If-Else block has no else branch')
+    log.warn('BlocklyParser', 'If-Else block has no else branch')
     return null
   }
 
@@ -314,7 +328,7 @@ function parseWhileLoopBlock(block: Blockly.Block): WhileLoopNode | null {
   const body = statementBlock ? parseBlock(statementBlock) : null
 
   if (!body) {
-    console.warn('[BlocklyParser] While loop has no body')
+    log.warn('BlocklyParser', 'While loop has no body')
     return null
   }
 
@@ -339,7 +353,7 @@ function parseUntilLoopBlock(block: Blockly.Block): UntilLoopNode | null {
   const body = statementBlock ? parseBlock(statementBlock) : null
 
   if (!body) {
-    console.warn('[BlocklyParser] Repeat Until loop has no body')
+    log.warn('BlocklyParser', 'Repeat Until loop has no body')
     return null
   }
 
@@ -355,9 +369,30 @@ function parseUntilLoopBlock(block: Blockly.Block): UntilLoopNode | null {
 /**
  * 변수 설정 블록 파싱 (Phase 6-A)
  */
-function parseVariableSetBlock(block: Blockly.Block): VariableSetNode {
+function parseVariableSetBlock(block: Blockly.Block): VariableSetNode | null {
   const variableName = block.getFieldValue('VAR') as string
-  const value = block.getFieldValue('VALUE') as number
+
+  // VALUE 입력이 연결되어 있는지 확인
+  const valueInput = block.getInput('VALUE')
+  const valueConnection = valueInput?.connection
+  const valueBlock = valueConnection?.targetBlock()
+
+  let value: number | VariableGetNode
+
+  if (valueBlock) {
+    // 다른 블록으로부터 값을 받는 경우 (예: variables_get)
+    if (valueBlock.type === 'variables_get') {
+      const varGetNode = parseVariableGetBlock(valueBlock)
+      value = varGetNode
+    } else {
+      // 센서 블록이나 수식 블록 등은 현재 미지원
+      log.warn('BlocklyParser', 'Unsupported value block type in variable_set:', valueBlock.type)
+      return null
+    }
+  } else {
+    // 필드로부터 직접 값을 받는 경우
+    value = block.getFieldValue('VALUE') as number
+  }
 
   return {
     id: generateNodeId(),
@@ -392,7 +427,7 @@ function parseFunctionDefBlock(block: Blockly.Block): FunctionDefNode | null {
   const body = statementBlock ? parseBlock(statementBlock) : null
 
   if (!body) {
-    console.warn('[BlocklyParser] Function definition has no body')
+    log.warn('BlocklyParser', 'Function definition has no body')
     return null
   }
 
@@ -457,7 +492,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
       return {
         action: CommandAction.SET_FORMATION,
         params: {
-          type: block.getFieldValue('FORMATION_TYPE') as string,
+          type: block.getFieldValue('FORMATION_TYPE') as FormationType,
           rows: block.getFieldValue('ROWS') as number,
           cols: block.getFieldValue('COLS') as number,
           spacing: block.getFieldValue('SPACING') as number
@@ -468,7 +503,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
       return {
         action: CommandAction.MOVE_FORMATION,
         params: {
-          direction: block.getFieldValue('DIRECTION') as string,
+          direction: block.getFieldValue('DIRECTION') as Direction,
           distance: block.getFieldValue('DISTANCE') as number
         }
       }

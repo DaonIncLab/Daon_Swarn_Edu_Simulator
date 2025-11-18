@@ -10,6 +10,7 @@ import { useUnityBridge } from '@/hooks/useUnityBridge'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { getConnectionManager } from '@/services/connection'
 import type { UnityWebGLConnectionService } from '@/services/connection/UnityWebGLConnectionService'
+import { log } from '@/utils/logger'
 
 // Unity 빌드 설정 (실제 빌드 파일 경로)
 const UNITY_BUILD_CONFIG = {
@@ -26,7 +27,7 @@ export function UnitySimulatorPanel() {
   const unityBridge = useUnityBridge({
     buildConfig: UNITY_BUILD_CONFIG,
     onMessage: (message) => {
-      console.log('[UnitySimulatorPanel] Message from Unity:', message)
+      log.debug("Message from Unity", { context: "UnitySimulatorPanel", message })
 
       // Unity 메시지를 ConnectionService로 전달
       const manager = getConnectionManager()
@@ -37,7 +38,7 @@ export function UnitySimulatorPanel() {
       }
     },
     onReady: () => {
-      console.log('[UnitySimulatorPanel] Unity WebGL ready')
+      log.info("Unity WebGL ready", { context: "UnitySimulatorPanel" })
 
       // Unity 브릿지를 ConnectionService에 주입
       const manager = getConnectionManager()
@@ -48,7 +49,7 @@ export function UnitySimulatorPanel() {
       }
     },
     onError: (error) => {
-      console.error('[UnitySimulatorPanel] Unity error:', error)
+      log.error("Unity error", { context: "UnitySimulatorPanel", error })
       setError(error)
     },
   })

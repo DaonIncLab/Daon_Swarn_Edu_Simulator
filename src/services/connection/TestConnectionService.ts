@@ -17,6 +17,7 @@ import type {
   CommandResponse,
 } from './types'
 import { DroneSimulator } from './DroneSimulator'
+import { log } from '@/utils/logger'
 
 /**
  * Test Connection Service
@@ -33,7 +34,7 @@ export class TestConnectionService implements IConnectionService {
   }
 
   async connect(config: ConnectionConfig): Promise<void> {
-    console.log('[Test] Connecting to test mode...')
+    log.info('Connecting to test mode...')
 
     this._updateStatus(ConnectionStatus.CONNECTING)
 
@@ -65,11 +66,11 @@ export class TestConnectionService implements IConnectionService {
       })
     }
 
-    console.log('[Test] Connected successfully (simulating', this.droneCount, 'drones)')
+    log.info('Connected successfully (simulating drones)', { droneCount: this.droneCount })
   }
 
   async disconnect(): Promise<void> {
-    console.log('[Test] Disconnecting...')
+    log.info('Disconnecting...')
 
     if (this.simulator) {
       this.simulator.stop()
@@ -80,7 +81,7 @@ export class TestConnectionService implements IConnectionService {
   }
 
   async sendCommand(command: Command): Promise<CommandResponse> {
-    console.log('[Test] Command sent:', command)
+    log.debug('Command sent', { command })
 
     if (!this.simulator) {
       return {
@@ -104,7 +105,7 @@ export class TestConnectionService implements IConnectionService {
   }
 
   async sendCommands(commands: Command[]): Promise<CommandResponse> {
-    console.log('[Test] Executing script with', commands.length, 'commands')
+    log.info('Executing script', { commandCount: commands.length })
 
     if (!this.simulator) {
       return {
@@ -167,7 +168,7 @@ export class TestConnectionService implements IConnectionService {
       }
     }
 
-    console.log('[Test] All commands completed')
+    log.info('All commands completed')
   }
 
   /**
@@ -227,7 +228,7 @@ export class TestConnectionService implements IConnectionService {
         break
 
       default:
-        console.warn('[Test] Unknown command action:', action)
+        log.warn('Unknown command action', { action })
     }
   }
 
@@ -285,7 +286,7 @@ export class TestConnectionService implements IConnectionService {
   }
 
   async emergencyStop(): Promise<CommandResponse> {
-    console.warn('[Test] EMERGENCY STOP')
+    log.warn('EMERGENCY STOP')
 
     if (this.simulator) {
       this.simulator.emergencyStop()

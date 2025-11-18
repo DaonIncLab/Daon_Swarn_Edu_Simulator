@@ -19,7 +19,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'ko',
+    fallbackLng: 'en',
     supportedLngs: ['ko', 'en'],
     detection: {
       order: ['localStorage', 'navigator'],

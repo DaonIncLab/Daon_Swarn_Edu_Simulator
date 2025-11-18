@@ -7,6 +7,7 @@
 
 import type { MAVLinkPacket } from '@/types/mavlink'
 import { MAVLinkProtocolError, MAVLinkCRCError } from './MAVLinkError'
+import { log } from '@/utils/logger'
 
 /**
  * MAVLink v2 Magic Number
@@ -288,13 +289,13 @@ export function createMAVLinkPacket(
   header[8] = (msgId >> 8) & 0xFF
   header[9] = (msgId >> 16) & 0xFF
 
-  const checksumData = new Uint8Array(header.length + payload.length + 1)
-  checksumData.set(header.slice(1)) // Skip magic byte
-  checksumData.set(payload, header.length - 1)
+  const checksumData = new Uint8Array(9 + payload.length + 1)
+  checksumData.set(header.slice(1, 10), 0) // Skip magic byte, copy header bytes 1-9
+  checksumData.set(payload, 9) // Copy payload after header
 
   // Add CRC_EXTRA if available
   const crcExtra = CRC_EXTRA[msgId] ?? 0
-  checksumData[checksumData.length - 1] = crcExtra
+  checksumData[9 + payload.length] = crcExtra
 
   packet.checksum = crcCalculate(checksumData)
 
@@ -363,21 +364,22 @@ export function parsePacket(buffer: Uint8Array, validateCrc: boolean = true): MA
 
   // Validate CRC if requested
   if (validateCrc) {
-    const checksumData = new Uint8Array(buffer.length - 11) // header (9 bytes) + payload + crc_extra
-    checksumData.set(buffer.slice(1, 10)) // Skip magic byte, copy header
+    // checksumData = header (9 bytes) + payload (len bytes) + crc_extra (1 byte)
+    const checksumData = new Uint8Array(9 + len + 1)
+    checksumData.set(buffer.slice(1, 10), 0) // Skip magic byte, copy header (bytes 1-9)
     checksumData.set(buffer.slice(10, 10 + len), 9) // Copy payload
 
     // Add CRC_EXTRA if available
     const crcExtra = CRC_EXTRA[msgid]
     if (crcExtra !== undefined) {
-      checksumData[checksumData.length - 1] = crcExtra
+      checksumData[9 + len] = crcExtra
       const calculatedCrc = crcCalculate(checksumData)
 
       if (calculatedCrc !== receivedChecksum) {
         throw new MAVLinkCRCError(calculatedCrc, receivedChecksum, msgid)
       }
     } else {
-      console.warn(`[MAVLinkProtocol] No CRC_EXTRA for message ${msgid}, skipping validation`)
+      log.warn('MAVLinkProtocol', 'No CRC_EXTRA for message, skipping validation', msgid)
     }
   }
 
@@ -405,7 +407,7 @@ export function parsePacketSafe(buffer: Uint8Array, validateCrc: boolean = true)
   try {
     return parsePacket(buffer, validateCrc)
   } catch (error) {
-    console.error('[MAVLinkProtocol] Failed to parse packet:', error)
+    log.error('Failed to parse packet', { error })
     return null
   }
 }

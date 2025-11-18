@@ -13,6 +13,7 @@ import { useProjectStore } from "@/stores/useProjectStore";
 import { ConnectionStatus } from "@/constants/connection";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { initializeProjectStorage } from "@/services/storage";
+import { log } from "@/utils/logger";
 
 function App() {
   const { t } = useTranslation();
@@ -27,7 +28,7 @@ function App() {
   // Initialize project storage
   useEffect(() => {
     initializeProjectStorage().catch((err) => {
-      console.error("[App] Failed to initialize project storage:", err);
+      log.error("Failed to initialize project storage", { context: "App", error: err });
     });
   }, []);
 
