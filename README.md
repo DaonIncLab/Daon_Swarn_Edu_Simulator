@@ -115,7 +115,7 @@ Open browser at `http://localhost:5173`
 - **Error Boundary Pattern**: React error boundaries for crash recovery
 - **Adapter Pattern**: Storage abstraction (IndexedDB/localStorage)
 
-For complete architecture details, see [ARCHITECTURE.md](ARCHITECTURE.md).
+For complete architecture details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -123,11 +123,13 @@ For complete architecture details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Core Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and design patterns
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture and design patterns
 - [docs/DIAGRAMS.md](docs/DIAGRAMS.md) - Visual Mermaid diagrams
 - [docs/API.md](docs/API.md) - API reference for stores and services
 - [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) - Development guidelines
-- [CODING_RULES.md](CODING_RULES.md) - Critical coding rules
+- [docs/CODING_RULES.md](docs/CODING_RULES.md) - Critical coding rules
+- [docs/DEBUG_GUIDE.md](docs/DEBUG_GUIDE.md) - Debugging guide
+- [docs/DEVELOPMENT_DIARY_30DAYS.md](docs/DEVELOPMENT_DIARY_30DAYS.md) - Development diary
 
 ### Quick Links
 
@@ -211,9 +213,34 @@ Simulated drones for testing without Unity.
 }
 ```
 
-### 4. MAVLink (Phase 2)
+### 4. MAVLink Simulation
 
-Real drone connection via MAVLink protocol (not yet implemented).
+MAVLink protocol simulation for testing.
+
+```typescript
+{
+  mode: 'mavlink_sim',
+  mavlink: {
+    connectionType: 'simulation',
+    droneCount: 4,
+  }
+}
+```
+
+### 5. Real Drone (MAVLink)
+
+Real drone connection via MAVLink protocol (UDP/Serial).
+
+```typescript
+{
+  mode: 'real_drone',
+  mavlink: {
+    connectionType: 'udp',
+    host: 'localhost',
+    port: 14550,
+  }
+}
+```
 
 ---
 
@@ -238,6 +265,13 @@ Real drone connection via MAVLink protocol (not yet implemented).
 - 🔁 **Repeat Until**: Repeat until condition becomes true
 - ❓ **If 조건문** (If): Conditional execution
 - ❓ **If-Else**: Conditional with alternative branch
+
+### Mission Blocks (4 blocks)
+
+- 📍 **웨이포인트 추가** (Add Waypoint): Add waypoint with coordinates and speed
+- 🎯 **웨이포인트 이동** (Goto Waypoint): Move to specific waypoint
+- ▶️ **미션 실행** (Execute Mission): Execute all waypoints sequentially
+- 🗑️ **웨이포인트 초기화** (Clear Waypoints): Clear all waypoints
 
 ### Formation Types (7 types)
 
@@ -383,7 +417,7 @@ function MyComponent() {
 }
 ```
 
-For theme customization details, see [ARCHITECTURE.md](ARCHITECTURE.md#12-theme-system).
+For theme customization details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#12-theme-system).
 
 ---
 
@@ -416,7 +450,7 @@ npm run check
 - **Component Props**: Always define interfaces
 - **Zustand Stores**: Separate state and actions clearly
 
-See [CODING_RULES.md](CODING_RULES.md) for critical rules.
+See [docs/CODING_RULES.md](docs/CODING_RULES.md) for critical rules.
 
 ---
 
@@ -435,7 +469,7 @@ We welcome contributions! Please read [docs/CONTRIBUTING.md](docs/CONTRIBUTING.m
 
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Make changes following [CODING_RULES.md](CODING_RULES.md)
+3. Make changes following [docs/CODING_RULES.md](docs/CODING_RULES.md)
 4. Test thoroughly (see [Testing](docs/CONTRIBUTING.md#testing))
 5. Commit with conventional commits (`feat:`, `fix:`, etc.)
 6. Push to branch (`git push origin feature/amazing-feature`)
@@ -471,7 +505,7 @@ See [Common Issues](docs/CONTRIBUTING.md#common-issues) for more solutions.
 
 ## 🗺️ Roadmap
 
-### Phase 1 (Current) ✅
+### Phase 1 ✅
 
 - [x] Blockly visual programming
 - [x] Connection management (WebSocket, Unity WebGL, Test)
@@ -483,19 +517,19 @@ See [Common Issues](docs/CONTRIBUTING.md#common-issues) for more solutions.
 - [x] Error boundaries
 - [x] Comprehensive documentation
 
-### Phase 2 (Planned)
+### Phase 2 ✅
 
-- [ ] **MAVLink Integration**: Real drone connection
-- [ ] **Multi-language Support**: i18n
-- [ ] **Advanced Formations**: Pre-built formation patterns
-- [ ] **Mission Planning**: Waypoint-based planning
-- [ ] **Custom Blocks**: User-defined block library
+- [x] **MAVLink Integration**: Real drone connection support
+- [x] **Multi-language Support**: i18n (Korean/English)
+- [x] **Theme System**: Light/dark mode with 70+ CSS variables
+- [x] **Advanced Formations**: TRIANGLE, SQUARE, DIAMOND patterns
+- [x] **Mission Planning**: Waypoint-based mission system
 
-### Phase 3 (Future)
+### Phase 3 (Current)
 
-- [ ] **Unit Testing**: Vitest + React Testing Library
-- [ ] **E2E Testing**: Playwright
-- [ ] **Performance Profiling**: React DevTools Profiler
+- [ ] **WebSocket-UDP Bridge**: Real drone connection server
+- [ ] **ArduPilot SITL Testing**: Software-in-the-loop integration
+- [ ] **Unit Testing**: Vitest + React Testing Library (80% coverage)
 - [ ] **PWA Support**: Offline capability
 - [ ] **Cloud Sync**: Multi-device project sync
 

@@ -79,10 +79,12 @@ drone-swarm-gcs/
 │   └── App.tsx              # Main application
 ├── docs/                    # Documentation
 │   ├── ARCHITECTURE.md      # System architecture
-│   ├── DIAGRAMS.md          # Mermaid diagrams
 │   ├── API.md               # API reference
-│   └── CONTRIBUTING.md      # This file
-├── CODING_RULES.md          # Critical coding rules
+│   ├── CODING_RULES.md      # Critical coding rules
+│   ├── CONTRIBUTING.md      # This file
+│   ├── DEBUG_GUIDE.md       # Debugging guide
+│   ├── DEVELOPMENT_DIARY_30DAYS.md  # Development diary
+│   └── DIAGRAMS.md          # Mermaid diagrams
 └── README.md                # Project overview
 ```
 
@@ -827,10 +829,12 @@ useFlightRecordingStore.getState().deleteRecording(oldRecordingId)
 
 ### Documentation
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
 - [DIAGRAMS.md](./DIAGRAMS.md) - Visual diagrams
 - [API.md](./API.md) - API reference
-- [CODING_RULES.md](../CODING_RULES.md) - Critical coding rules
+- [CODING_RULES.md](./CODING_RULES.md) - Critical coding rules
+- [DEBUG_GUIDE.md](./DEBUG_GUIDE.md) - Debugging guide
+- [DEVELOPMENT_DIARY_30DAYS.md](./DEVELOPMENT_DIARY_30DAYS.md) - Development diary
 
 ### External Resources
 

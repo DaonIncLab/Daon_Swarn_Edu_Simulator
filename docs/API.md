@@ -1501,7 +1501,11 @@ await loadProject(projectId)
 
 ## Related Documentation
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture overview
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture overview
 - [DIAGRAMS.md](./DIAGRAMS.md) - Visual diagrams
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - Development guidelines
 - [README.md](../README.md) - Project overview
+
+---
+
+**Last Updated**: 2025-11-21

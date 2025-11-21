@@ -687,12 +687,17 @@ graph TD
 
 - All diagrams are rendered using Mermaid syntax
 - For best viewing experience, use a Markdown viewer that supports Mermaid (e.g., GitHub, GitLab, VS Code with Mermaid extension)
-- These diagrams complement the detailed text documentation in [ARCHITECTURE.md](../ARCHITECTURE.md)
+- These diagrams complement the detailed text documentation in [ARCHITECTURE.md](./ARCHITECTURE.md)
 - Diagrams are kept up-to-date with code changes during major refactoring
 
 ## Related Documentation
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - Comprehensive architecture documentation
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Comprehensive architecture documentation
 - [API.md](./API.md) - API reference for stores and services
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - Development guidelines
+- [CODING_RULES.md](./CODING_RULES.md) - Critical coding rules
 - [README.md](../README.md) - Project overview and quick start
+
+---
+
+**Last Updated**: 2025-11-21

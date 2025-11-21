@@ -513,5 +513,5 @@ All other colors MUST use CSS variables.
 
 ---
 
-**Last Updated**: 2025-01-14
-**Version**: 1.1.0
+**Last Updated**: 2025-11-21
+**Version**: 2.0.0
