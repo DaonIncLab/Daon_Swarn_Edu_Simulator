@@ -61,6 +61,12 @@ const categoryBlocks = {
     { kind: 'block', type: 'swarm_wait_all', fields: { DURATION: 3 } },
     { kind: 'block', type: 'swarm_sync_all' },
   ],
+  mission: [
+    { kind: 'block', type: 'swarm_add_waypoint', fields: { NAME: 'WP1', X: 0, Y: 0, Z: 2, SPEED: 2, HOLD_TIME: 0 } },
+    { kind: 'block', type: 'swarm_goto_waypoint', fields: { WAYPOINT_NAME: 'WP1', SPEED: 2 } },
+    { kind: 'block', type: 'swarm_execute_mission', fields: { LOOP: 'FALSE', SPEED: 2 } },
+    { kind: 'block', type: 'swarm_clear_waypoints' },
+  ],
 }
 
 /**

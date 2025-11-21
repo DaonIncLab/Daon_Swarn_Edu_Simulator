@@ -227,6 +227,30 @@ export class TestConnectionService implements IConnectionService {
         // Wait is handled by delay, no action needed
         break
 
+      case CommandAction.ADD_WAYPOINT:
+        this.simulator.addWaypoint((params as any).waypoint)
+        break
+
+      case CommandAction.GOTO_WAYPOINT:
+        this.simulator.gotoWaypoint(
+          (params as any).waypointId,
+          (params as any).speed
+        )
+        break
+
+      case CommandAction.EXECUTE_MISSION:
+        // Note: executeMission is async but we don't await here
+        // The mission runs in background
+        this.simulator.executeMission(
+          (params as any).loop,
+          (params as any).speed
+        )
+        break
+
+      case CommandAction.CLEAR_WAYPOINTS:
+        this.simulator.clearWaypoints()
+        break
+
       default:
         log.warn('Unknown command action', { action })
     }

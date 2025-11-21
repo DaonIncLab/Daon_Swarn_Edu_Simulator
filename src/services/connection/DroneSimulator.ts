@@ -7,7 +7,7 @@
  * - State transitions (idle, flying, hovering, landed, error)
  */
 
-import type { DroneState } from '@/types/websocket'
+import type { DroneState, Waypoint } from '@/types/websocket'
 import { CommandAction, FormationType, Direction } from '@/constants/commands'
 import { log } from '@/utils/logger'
 
@@ -33,8 +33,19 @@ export class DroneSimulator {
   private formationType: FormationType = FormationType.LINE
   private formationSpacing: number = 2
 
+  // Waypoint mission support
+  private waypoints: Map<string, Waypoint> = new Map()
+  private waypointOrder: string[] = []
+
   constructor(private droneCount: number = 4) {
     this.initializeDrones()
+  }
+
+  /**
+   * Get drone count
+   */
+  getDroneCount(): number {
+    return this.droneCount
   }
 
   /**
@@ -267,13 +278,16 @@ export class DroneSimulator {
     type: FormationType,
     options: { rows?: number; cols?: number; spacing?: number; radius?: number } = {}
   ): void {
-    log.debug('DroneSimulator', `Set formation: ${type}`)
+    log.info('DroneSimulator', `🔷 Set formation: ${type}`, options)
 
     this.formationType = type
     this.formationSpacing = options.spacing || 2
 
     const droneArray = Array.from(this.drones.values())
     const centerAltitude = droneArray[0]?.position.z || 2
+
+    log.debug('DroneSimulator', `Formation center altitude: ${centerAltitude}m (from drone 0 z=${droneArray[0]?.position.z})`)
+    log.debug('DroneSimulator', `Formation spacing: ${this.formationSpacing}m, drone count: ${droneArray.length}`)
 
     switch (type) {
       case FormationType.LINE:
@@ -284,11 +298,13 @@ export class DroneSimulator {
             z: centerAltitude,
           }
           drone.isMoving = true
+          log.debug('DroneSimulator', `  Drone ${drone.id}: (${drone.position.x.toFixed(1)}, ${drone.position.y.toFixed(1)}, ${drone.position.z.toFixed(1)}) → target (${drone.targetPosition.x.toFixed(1)}, ${drone.targetPosition.y.toFixed(1)}, ${drone.targetPosition.z.toFixed(1)})`)
         })
         break
 
       case FormationType.GRID: {
         const cols = options.cols || Math.ceil(Math.sqrt(droneArray.length))
+        log.debug('DroneSimulator', `Grid formation: ${cols} cols`)
         droneArray.forEach((drone, i) => {
           const row = Math.floor(i / cols)
           const col = i % cols
@@ -298,6 +314,7 @@ export class DroneSimulator {
             z: centerAltitude,
           }
           drone.isMoving = true
+          log.debug('DroneSimulator', `  Drone ${drone.id}: row ${row}, col ${col} → target (${drone.targetPosition.x.toFixed(1)}, ${drone.targetPosition.y.toFixed(1)}, ${drone.targetPosition.z.toFixed(1)})`)
         })
         break
       }
@@ -305,6 +322,7 @@ export class DroneSimulator {
       case FormationType.CIRCLE: {
         const radius = options.radius || 5
         const angleStep = (2 * Math.PI) / droneArray.length
+        log.debug('DroneSimulator', `Circle formation: radius ${radius}m, angle step ${(angleStep * 180 / Math.PI).toFixed(1)}°`)
         droneArray.forEach((drone, i) => {
           const angle = i * angleStep
           drone.targetPosition = {
@@ -313,17 +331,20 @@ export class DroneSimulator {
             z: centerAltitude,
           }
           drone.isMoving = true
+          log.debug('DroneSimulator', `  Drone ${drone.id}: angle ${(angle * 180 / Math.PI).toFixed(1)}° → target (${drone.targetPosition.x.toFixed(1)}, ${drone.targetPosition.y.toFixed(1)}, ${drone.targetPosition.z.toFixed(1)})`)
         })
         break
       }
 
-      case FormationType.V: {
+      case FormationType.V_SHAPE: {
         const spacing = this.formationSpacing
         const halfCount = Math.floor(droneArray.length / 2)
+        log.debug('DroneSimulator', `V-Shape formation: spacing ${spacing}m`)
         droneArray.forEach((drone, i) => {
           if (i === 0) {
             // Leader at front
             drone.targetPosition = { x: 0, y: 0, z: centerAltitude }
+            log.debug('DroneSimulator', `  Drone ${drone.id}: leader → target (0.0, 0.0, ${centerAltitude.toFixed(1)})`)
           } else {
             const side = i % 2 === 0 ? 1 : -1
             const offset = Math.ceil(i / 2)
@@ -332,8 +353,86 @@ export class DroneSimulator {
               y: -offset * spacing,
               z: centerAltitude,
             }
+            log.debug('DroneSimulator', `  Drone ${drone.id}: ${side > 0 ? 'right' : 'left'} wing, offset ${offset} → target (${drone.targetPosition.x.toFixed(1)}, ${drone.targetPosition.y.toFixed(1)}, ${drone.targetPosition.z.toFixed(1)})`)
           }
           drone.isMoving = true
+        })
+        break
+      }
+
+      case FormationType.TRIANGLE: {
+        // Triangle/pyramid formation - rows increase in size
+        const spacing = this.formationSpacing
+        const rowCount = Math.ceil((-1 + Math.sqrt(1 + 8 * droneArray.length)) / 2)
+        log.debug('DroneSimulator', `Triangle formation: spacing ${spacing}m, ${rowCount} rows`)
+
+        let droneIdx = 0
+        for (let row = 0; row < rowCount && droneIdx < droneArray.length; row++) {
+          const dronesInRow = row + 1
+          for (let col = 0; col < dronesInRow && droneIdx < droneArray.length; col++) {
+            const drone = droneArray[droneIdx]
+            drone.targetPosition = {
+              x: (col - row / 2) * spacing,
+              y: row * spacing,
+              z: centerAltitude,
+            }
+            drone.isMoving = true
+            log.debug('DroneSimulator', `  Drone ${drone.id}: row ${row}, col ${col} → target (${drone.targetPosition.x.toFixed(1)}, ${drone.targetPosition.y.toFixed(1)}, ${drone.targetPosition.z.toFixed(1)})`)
+            droneIdx++
+          }
+        }
+        break
+      }
+
+      case FormationType.SQUARE: {
+        // Square formation - evenly distributed
+        const spacing = this.formationSpacing
+        const sideLength = Math.ceil(Math.sqrt(droneArray.length))
+        log.debug('DroneSimulator', `Square formation: spacing ${spacing}m, ${sideLength}x${sideLength}`)
+
+        droneArray.forEach((drone, i) => {
+          const row = Math.floor(i / sideLength)
+          const col = i % sideLength
+          drone.targetPosition = {
+            x: (col - (sideLength - 1) / 2) * spacing,
+            y: (row - (sideLength - 1) / 2) * spacing,
+            z: centerAltitude,
+          }
+          drone.isMoving = true
+          log.debug('DroneSimulator', `  Drone ${drone.id}: row ${row}, col ${col} → target (${drone.targetPosition.x.toFixed(1)}, ${drone.targetPosition.y.toFixed(1)}, ${drone.targetPosition.z.toFixed(1)})`)
+        })
+        break
+      }
+
+      case FormationType.DIAMOND: {
+        // Diamond/rhombus formation
+        const spacing = this.formationSpacing
+        const half = Math.ceil(droneArray.length / 2)
+        log.debug('DroneSimulator', `Diamond formation: spacing ${spacing}m, ${droneArray.length} drones`)
+
+        droneArray.forEach((drone, i) => {
+          let x: number, y: number
+
+          if (i < half) {
+            // Top half - expanding
+            const row = i
+            x = 0
+            y = row * spacing
+          } else {
+            // Bottom half - contracting
+            x = 0
+            y = -(droneArray.length - 1 - i) * spacing
+          }
+
+          // Offset alternating drones left/right for diamond shape
+          if (i > 0 && i < droneArray.length - 1) {
+            const offset = Math.min(i, droneArray.length - 1 - i)
+            x = (i % 2 === 0 ? 1 : -1) * offset * spacing * 0.5
+          }
+
+          drone.targetPosition = { x, y, z: centerAltitude }
+          drone.isMoving = true
+          log.debug('DroneSimulator', `  Drone ${drone.id}: → target (${drone.targetPosition.x.toFixed(1)}, ${drone.targetPosition.y.toFixed(1)}, ${drone.targetPosition.z.toFixed(1)})`)
         })
         break
       }
@@ -431,5 +530,129 @@ export class DroneSimulator {
     this.droneCount = count
     this.stop()
     this.reset()
+  }
+
+  // ============================================
+  // Waypoint Mission Methods
+  // ============================================
+
+  /**
+   * Add a waypoint to the mission
+   */
+  addWaypoint(waypoint: Waypoint): void {
+    log.info('DroneSimulator', `Adding waypoint: ${waypoint.name} at (${waypoint.x}, ${waypoint.y}, ${waypoint.z})`)
+
+    // Store by name for easy lookup
+    this.waypoints.set(waypoint.name || waypoint.id, waypoint)
+    this.waypointOrder.push(waypoint.name || waypoint.id)
+  }
+
+  /**
+   * Move all drones to a specific waypoint
+   */
+  gotoWaypoint(waypointName: string, speed?: number): boolean {
+    const waypoint = this.waypoints.get(waypointName)
+
+    if (!waypoint) {
+      log.warn('DroneSimulator', `Waypoint not found: ${waypointName}`)
+      return false
+    }
+
+    log.info('DroneSimulator', `Going to waypoint: ${waypointName} at (${waypoint.x}, ${waypoint.y}, ${waypoint.z})`)
+
+    // Move all drones to the waypoint position (maintaining formation offset)
+    const droneArray = Array.from(this.drones.values())
+    const centerX = droneArray.reduce((sum, d) => sum + d.position.x, 0) / droneArray.length
+    const centerY = droneArray.reduce((sum, d) => sum + d.position.y, 0) / droneArray.length
+
+    for (const drone of this.drones.values()) {
+      // Calculate offset from formation center
+      const offsetX = drone.position.x - centerX
+      const offsetY = drone.position.y - centerY
+
+      drone.targetPosition = {
+        x: waypoint.x + offsetX,
+        y: waypoint.y + offsetY,
+        z: waypoint.z,
+      }
+      drone.isMoving = true
+    }
+
+    return true
+  }
+
+  /**
+   * Execute the entire mission (all waypoints in order)
+   */
+  async executeMission(loop: boolean = false, speed?: number): Promise<void> {
+    if (this.waypointOrder.length === 0) {
+      log.warn('DroneSimulator', 'No waypoints in mission')
+      return
+    }
+
+    log.info('DroneSimulator', `Executing mission with ${this.waypointOrder.length} waypoints, loop=${loop}`)
+
+    do {
+      for (const waypointName of this.waypointOrder) {
+        const waypoint = this.waypoints.get(waypointName)
+        if (!waypoint) continue
+
+        this.gotoWaypoint(waypointName, speed || waypoint.speed)
+
+        // Wait for drones to reach waypoint (simplified - check every 100ms)
+        await this.waitForDronesToReachTarget()
+
+        // Hold at waypoint if specified
+        if (waypoint.holdTime && waypoint.holdTime > 0) {
+          await new Promise(resolve => setTimeout(resolve, waypoint.holdTime! * 1000))
+        }
+      }
+    } while (loop)
+
+    log.info('DroneSimulator', 'Mission complete')
+  }
+
+  /**
+   * Wait for all drones to reach their target positions
+   */
+  private waitForDronesToReachTarget(): Promise<void> {
+    return new Promise(resolve => {
+      const checkInterval = setInterval(() => {
+        let allReached = true
+        for (const drone of this.drones.values()) {
+          if (drone.isMoving) {
+            allReached = false
+            break
+          }
+        }
+        if (allReached) {
+          clearInterval(checkInterval)
+          resolve()
+        }
+      }, 100)
+    })
+  }
+
+  /**
+   * Clear all waypoints
+   */
+  clearWaypoints(): void {
+    log.info('DroneSimulator', 'Clearing all waypoints')
+    this.waypoints.clear()
+    this.waypointOrder = []
+  }
+
+  /**
+   * Get all waypoints (for visualization)
+   */
+  getWaypoints(): Waypoint[] {
+    return this.waypointOrder.map(name => this.waypoints.get(name)!).filter(Boolean)
+  }
+
+  /**
+   * Get waypoint by name
+   */
+  getWaypoint(name: string): Waypoint | undefined {
+    return this.waypoints.get(name)
   }
 }

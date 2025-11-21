@@ -510,6 +510,90 @@ Blockly.Blocks['logic_negate'] = {
 }
 
 /**
+ * 웨이포인트 추가 (Phase 2 - Mission)
+ */
+Blockly.Blocks['swarm_add_waypoint'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('📍 웨이포인트 추가')
+      .appendField('이름')
+      .appendField(new Blockly.FieldTextInput('WP1'), 'NAME')
+    this.appendDummyInput()
+      .appendField('X:')
+      .appendField(new Blockly.FieldNumber(0, -50, 50, 0.5), 'X')
+      .appendField('Y:')
+      .appendField(new Blockly.FieldNumber(0, -50, 50, 0.5), 'Y')
+      .appendField('Z:')
+      .appendField(new Blockly.FieldNumber(2, 0, 20, 0.5), 'Z')
+    this.appendDummyInput()
+      .appendField('속도(m/s)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPEED')
+      .appendField('대기(초)')
+      .appendField(new Blockly.FieldNumber(0, 0, 60, 1), 'HOLD_TIME')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(60)
+    this.setTooltip('미션에 웨이포인트를 추가합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * 웨이포인트로 이동 (Phase 2 - Mission)
+ */
+Blockly.Blocks['swarm_goto_waypoint'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('🎯 웨이포인트로 이동')
+      .appendField('이름')
+      .appendField(new Blockly.FieldTextInput('WP1'), 'WAYPOINT_NAME')
+    this.appendDummyInput()
+      .appendField('속도(m/s)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPEED')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(60)
+    this.setTooltip('지정된 웨이포인트로 모든 드론을 이동시킵니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * 미션 실행 (Phase 2 - Mission)
+ */
+Blockly.Blocks['swarm_execute_mission'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('🚀 미션 실행')
+      .appendField('반복')
+      .appendField(new Blockly.FieldCheckbox('FALSE'), 'LOOP')
+    this.appendDummyInput()
+      .appendField('속도(m/s)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPEED')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(60)
+    this.setTooltip('등록된 모든 웨이포인트를 순서대로 비행합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * 웨이포인트 초기화 (Phase 2 - Mission)
+ */
+Blockly.Blocks['swarm_clear_waypoints'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('🗑️ 웨이포인트 초기화')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(60)
+    this.setTooltip('모든 웨이포인트를 삭제합니다')
+    this.setHelpUrl('')
+  }
+}
+
+/**
  * 모든 커스텀 블록 등록
  */
 export function registerSwarmBlocks() {

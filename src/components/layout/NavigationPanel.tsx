@@ -25,6 +25,7 @@ export const blockCategories: Category[] = [
   { id: 'sensors', name: '센서', icon: '📡', colour: '120' },
   { id: 'logic', name: '논리', icon: '🧠', colour: '210' },
   { id: 'sync', name: '동기화', icon: '⏱️', colour: '120' },
+  { id: 'mission', name: '미션', icon: '📍', colour: '60' },
 ]
 
 interface NavigationPanelProps {

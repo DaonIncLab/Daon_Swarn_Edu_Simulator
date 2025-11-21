@@ -163,6 +163,46 @@ function blockToCommand(block: Blockly.Block): Command | null {
         }
       }
 
+    case 'swarm_add_waypoint':
+      return {
+        action: CommandAction.ADD_WAYPOINT,
+        params: {
+          waypoint: {
+            id: `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: block.getFieldValue('NAME') as string,
+            x: block.getFieldValue('X') as number,
+            y: block.getFieldValue('Y') as number,
+            z: block.getFieldValue('Z') as number,
+            speed: block.getFieldValue('SPEED') as number,
+            holdTime: block.getFieldValue('HOLD_TIME') as number
+          }
+        }
+      }
+
+    case 'swarm_goto_waypoint':
+      return {
+        action: CommandAction.GOTO_WAYPOINT,
+        params: {
+          waypointId: block.getFieldValue('WAYPOINT_NAME') as string,
+          speed: block.getFieldValue('SPEED') as number
+        }
+      }
+
+    case 'swarm_execute_mission':
+      return {
+        action: CommandAction.EXECUTE_MISSION,
+        params: {
+          loop: block.getFieldValue('LOOP') === 'TRUE',
+          speed: block.getFieldValue('SPEED') as number
+        }
+      }
+
+    case 'swarm_clear_waypoints':
+      return {
+        action: CommandAction.CLEAR_WAYPOINTS,
+        params: {}
+      }
+
     default:
       return null
   }

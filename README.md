@@ -219,22 +219,58 @@ Real drone connection via MAVLink protocol (not yet implemented).
 
 ## 🧩 Blockly Commands
 
-Available command blocks:
+### Basic Control Blocks (8 blocks)
 
-- **Takeoff**: Take off to specified altitude
-- **Land**: Land at current position
-- **Move To**: Move to absolute position (x, y, z)
-- **Move Relative**: Move relative to current position
-- **Rotate**: Rotate to heading
-- **Hover**: Hover at current position
-- **Set Speed**: Set movement speed
+- 🚁 **모든 드론 이륙** (Takeoff All): Take off all drones to specified altitude
+- 🛬 **모든 드론 착륙** (Land All): Land all drones at current position
+- 📐 **대형 설정** (Set Formation): Arrange drones in formation (Grid, Line, Circle, V-Shape, etc.)
+- ➡️ **대형 이동** (Move Formation): Move formation in direction while maintaining shape
+- 🎯 **개별 드론 이동** (Move Drone): Move specific drone to position
+- ⏱️ **대기** (Wait): Wait for specified duration
+- 🔄 **호버링** (Hover): Hover at current position
+- ⏸️ **모든 드론 동기화** (Sync All): Wait for all drones to complete current command
 
-Control flow blocks:
+### Control Flow Blocks (6 blocks)
 
-- **If/Else**: Conditional execution
-- **While Loop**: Loop while condition is true
-- **Repeat**: Repeat N times
-- **Wait**: Wait for duration
+- 🔁 **반복** (Repeat N times): Execute blocks N times
+- 🔢 **For 루프** (For Loop): Loop with variable from/to/by
+- 🔄 **While 루프** (While Loop): Loop while condition is true
+- 🔁 **Repeat Until**: Repeat until condition becomes true
+- ❓ **If 조건문** (If): Conditional execution
+- ❓ **If-Else**: Conditional with alternative branch
+
+### Formation Types (7 types)
+
+- **LINE**: Arrange drones in a line
+- **GRID**: Arrange in grid pattern (customizable rows/cols)
+- **CIRCLE**: Arrange in circle (customizable radius)
+- **V_SHAPE**: V-formation (leader + wings)
+- **TRIANGLE**: Triangle formation
+- **SQUARE**: Square formation
+- **DIAMOND**: Diamond formation
+
+### 📚 Example: Formation Demo
+
+```blockly
+1. 🚁 모든 드론 이륙 (고도: 3m)
+2. ⏱️ 대기 (3초)
+3. 📐 대형 설정 (일렬 LINE, 간격: 2m)
+4. ⏱️ 대기 (2초)
+5. 📐 대형 설정 (원형 CIRCLE, 반지름: 5m)
+6. ⏱️ 대기 (3초)
+7. ➡️ 대형 이동 (앞으로, 3m)
+8. ⏱️ 대기 (2초)
+9. 🛬 모든 드론 착륙
+```
+
+**Expected Result**:
+- 4 drones take off to 3m altitude
+- Line formation with 2m spacing
+- **Transform to circular formation** (radius 5m) - very visible!
+- Move forward 3m while maintaining circle
+- Land
+
+> 💡 **Tip**: Formation changes are most visible when switching from LINE → CIRCLE or GRID → CIRCLE!
 
 ---
 
