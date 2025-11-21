@@ -244,16 +244,44 @@
 
 ---
 
-## 🚀 다음 단계 (Phase 3)
+## 📊 Phase 2 Extension: 고급 기능 확장
 
-1. **테스트 커버리지 80%** 달성 (~100-150개 테스트 추가)
-2. **PWA 지원**: Service Worker, 오프라인 기능
-3. **클라우드 동기화**: Firebase/Supabase 통합
-4. **고급 대형**: 사용자 정의 대형 생성기
-5. **성능 프로파일링**: React DevTools Profiler 통합
+### Day 31 (11/21) - 고급 대형 및 웨이포인트 미션 시스템
+
+**고급 대형 패턴 완성**
+- TRIANGLE 대형: 정삼각형 배치, 드론 수에 따라 층별 배분
+- SQUARE 대형: 정사각형 둘레 배치, 균등 간격
+- DIAMOND 대형: 마름모 형태 배치, 4변 분배 알고리즘
+
+**웨이포인트 미션 시스템 구현**
+- 타입 정의: `Waypoint`, `AddWaypointParams`, `GotoWaypointParams`, `ExecuteMissionParams`
+- 4개 Blockly 블록:
+  - `swarm_add_waypoint`: 웨이포인트 추가 (이름, 좌표, 속도, 대기시간)
+  - `swarm_goto_waypoint`: 특정 웨이포인트로 이동
+  - `swarm_execute_mission`: 전체 미션 실행 (루프 옵션)
+  - `swarm_clear_waypoints`: 웨이포인트 초기화
+- 코드 생성기: 블록 → CommandAction 변환
+- 툴박스/네비게이션: 미션 카테고리 추가 (📍)
+- DroneSimulator: 웨이포인트 저장, 이동, 미션 실행 로직
+- TestConnectionService: 웨이포인트 명령 처리
+
+**MAVLink 실제 드론 연결 분석**
+- 현재 구현 상태 점검: MAVLinkConnectionService, Protocol, Transport
+- UDP/Serial 전송 계층 분석
+- SITL 테스트 환경 구성 방안 검토
 
 ---
 
-**프로젝트 완료일**: 2025년 11월 18일
-**최종 상태**: Production-Ready, 테스트 커버리지 40-50%
-**다음 릴리스**: Phase 3 계획 수립 중
+## 🚀 다음 단계 (Phase 3)
+
+1. **WebSocket-UDP 브릿지 서버** 구현 (실제 드론 연결용)
+2. **ArduPilot SITL 연동** 테스트
+3. **테스트 커버리지 80%** 달성 (~100-150개 테스트 추가)
+4. **PWA 지원**: Service Worker, 오프라인 기능
+5. **클라우드 동기화**: Firebase/Supabase 통합
+
+---
+
+**최종 업데이트**: 2025년 11월 21일
+**현재 상태**: Phase 2 완료, Phase 3 진입 준비
+**다음 작업**: 실제 드론 연결 테스트 또는 Phase 3 기능
