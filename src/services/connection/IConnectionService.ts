@@ -73,6 +73,12 @@ export interface IConnectionService {
   ping(): Promise<number>
 
   /**
+   * 드론 위치 및 상태 초기화
+   * @returns 초기화 결과
+   */
+  reset(): Promise<CommandResponse>
+
+  /**
    * 서비스 클린업 (메모리 해제)
    */
   cleanup(): void

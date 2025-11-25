@@ -4,8 +4,7 @@
 
 import * as Blockly from 'blockly'
 import type { Command } from '@/types/websocket'
-import { CommandAction } from '@/constants/commands'
-import type { FormationType, Direction } from '@/constants/commands'
+import { CommandAction, FormationType, Direction } from '@/constants/commands'
 import { log } from '@/utils/logger'
 import type {
   ExecutableNode,
@@ -488,14 +487,83 @@ function blockToCommand(block: Blockly.Block): Command | null {
         params: {}
       }
 
-    case 'swarm_set_formation':
+    case 'swarm_formation_grid':
       return {
         action: CommandAction.SET_FORMATION,
         params: {
-          type: block.getFieldValue('FORMATION_TYPE') as FormationType,
+          type: FormationType.GRID,
           rows: block.getFieldValue('ROWS') as number,
           cols: block.getFieldValue('COLS') as number,
-          spacing: block.getFieldValue('SPACING') as number
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_line':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.LINE,
+          rows: block.getFieldValue('ROWS') as number,
+          cols: block.getFieldValue('COLS') as number,
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_circle':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.CIRCLE,
+          cols: block.getFieldValue('RADIUS') as number, // RADIUS → cols (반지름)
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_vshape':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.V_SHAPE,
+          rows: block.getFieldValue('DEPTH') as number, // DEPTH → rows (깊이)
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_triangle':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.TRIANGLE,
+          rows: block.getFieldValue('MAX_ROWS') as number, // MAX_ROWS → rows
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_square':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.SQUARE,
+          rows: block.getFieldValue('ROWS') as number,
+          cols: block.getFieldValue('COLS') as number,
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_diamond':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.DIAMOND,
+          rows: block.getFieldValue('SIZE') as number, // SIZE → rows (크기)
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
         }
       }
 

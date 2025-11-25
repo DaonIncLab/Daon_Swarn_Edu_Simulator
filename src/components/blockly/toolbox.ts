@@ -13,8 +13,38 @@ const categoryBlocks = {
   formation: [
     {
       kind: 'block',
-      type: 'swarm_set_formation',
-      fields: { FORMATION_TYPE: 'grid', ROWS: 2, COLS: 5, SPACING: 2 }
+      type: 'swarm_formation_grid',
+      fields: { ROWS: 2, COLS: 4, SPACING: 2 }
+    },
+    {
+      kind: 'block',
+      type: 'swarm_formation_line',
+      fields: { ROWS: 1, COLS: 4, SPACING: 2 }
+    },
+    {
+      kind: 'block',
+      type: 'swarm_formation_circle',
+      fields: { RADIUS: 5, SPACING: 2 }
+    },
+    {
+      kind: 'block',
+      type: 'swarm_formation_vshape',
+      fields: { DEPTH: 3, SPACING: 2 }
+    },
+    {
+      kind: 'block',
+      type: 'swarm_formation_triangle',
+      fields: { MAX_ROWS: 3, SPACING: 2 }
+    },
+    {
+      kind: 'block',
+      type: 'swarm_formation_square',
+      fields: { ROWS: 3, COLS: 3, SPACING: 2 }
+    },
+    {
+      kind: 'block',
+      type: 'swarm_formation_diamond',
+      fields: { SIZE: 3, SPACING: 2 }
     },
     {
       kind: 'block',

@@ -269,8 +269,25 @@ export class TestConnectionService implements IConnectionService {
       case CommandAction.LAND_ALL:
         return 3000 // 3 seconds to land
 
-      case CommandAction.SET_FORMATION:
-        return 2000 // 2 seconds to set formation
+      case CommandAction.SET_FORMATION: {
+        // Calculate delay based on formation size
+        const spacing = (params as any).spacing || 2
+        const rows = (params as any).rows || 1
+        const cols = (params as any).cols || 4
+
+        // Estimate max distance a drone might need to travel
+        // Worst case: drone moves from one corner to opposite corner
+        const maxWidth = (cols - 1) * spacing
+        const maxHeight = (rows - 1) * spacing
+        const maxDistance = Math.sqrt(maxWidth * maxWidth + maxHeight * maxHeight)
+
+        // Drone speed is 2 m/s, add buffer
+        const droneSpeed = 2.0 // m/s
+        const estimatedTime = (maxDistance / droneSpeed) * 1000 // ms
+        const bufferTime = 1000 // 1 second buffer
+
+        return Math.max(2000, estimatedTime + bufferTime) // minimum 2s
+      }
 
       case CommandAction.MOVE_FORMATION:
         const distance = (params as any).distance || 1
@@ -330,6 +347,23 @@ export class TestConnectionService implements IConnectionService {
     // Simulate ping latency (10-50ms random)
     const latency = Math.random() * 40 + 10
     return Promise.resolve(latency)
+  }
+
+  async reset(): Promise<CommandResponse> {
+    log.info('Resetting drone simulator to initial state')
+
+    if (this.simulator) {
+      this.simulator.reset()
+    }
+
+    if (this.listeners.onLog) {
+      this.listeners.onLog('[Test] Drone positions reset to initial state')
+    }
+
+    return {
+      success: true,
+      timestamp: Date.now(),
+    }
   }
 
   cleanup(): void {

@@ -5,7 +5,7 @@
  * Supports playback mode with flight path visualization
  */
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -14,6 +14,7 @@ import { useFlightRecordingStore, PlaybackStatus } from "@/stores/useFlightRecor
 import { FlightPathWithMarker } from "./FlightPathLine";
 import type { DroneState } from "@/types/websocket";
 import type { DroneHistory } from "@/types/telemetry";
+import { getConnectionManager } from "@/services/connection/ConnectionManager";
 
 /**
  * Individual Drone 3D Model
@@ -69,7 +70,7 @@ function Drone3DModel({ drone }: { drone: DroneState }) {
         anchorX="center"
         anchorY="middle"
       >
-        #{drone.id}
+        #{drone.id + 1}
       </Text>
 
       {/* Battery indicator (small sphere) */}
@@ -210,6 +211,7 @@ interface Drone3DViewProps {
 export function Drone3DView({ playbackMode = false, className = "" }: Drone3DViewProps) {
   const { drones } = useExecutionStore();
   const { playback } = useFlightRecordingStore();
+  const [isResetting, setIsResetting] = useState(false);
 
   // Determine what to display
   const isPlaybackActive = playbackMode && playback.recording && playback.status !== PlaybackStatus.IDLE;
@@ -222,6 +224,19 @@ export function Drone3DView({ playbackMode = false, className = "" }: Drone3DVie
     : drones.length;
 
   const showEmpty = !playbackMode && drones.length === 0;
+
+  // Reset handler
+  const handleReset = async () => {
+    setIsResetting(true);
+    try {
+      const connectionManager = getConnectionManager();
+      await connectionManager.reset();
+    } catch (error) {
+      console.error('Failed to reset:', error);
+    } finally {
+      setTimeout(() => setIsResetting(false), 1000);
+    }
+  };
 
   return (
     <div className={`relative w-full h-[600px] bg-gray-900 rounded-lg overflow-hidden ${className}`}>
@@ -248,6 +263,18 @@ export function Drone3DView({ playbackMode = false, className = "" }: Drone3DVie
             currentTime={currentTime}
           />
         </Canvas>
+      )}
+
+      {/* Reset Button */}
+      {!playbackMode && (
+        <button
+          onClick={handleReset}
+          disabled={isResetting}
+          className="absolute top-4 left-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm font-medium px-4 py-2 rounded shadow-lg backdrop-blur-sm transition-colors flex items-center gap-2"
+        >
+          <span>{isResetting ? '🔄' : '↻'}</span>
+          <span>{isResetting ? '초기화 중...' : '위치 초기화'}</span>
+        </button>
       )}
 
       {/* Controls Info */}

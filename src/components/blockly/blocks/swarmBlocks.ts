@@ -39,33 +39,175 @@ Blockly.Blocks['swarm_land_all'] = {
 }
 
 /**
- * 대형 설정
+ * Grid 대형 설정
  */
-Blockly.Blocks['swarm_set_formation'] = {
+Blockly.Blocks['swarm_formation_grid'] = {
   init: function() {
     this.appendDummyInput()
-      .appendField('📐 대형 설정')
-      .appendField(new Blockly.FieldDropdown([
-        ['그리드 (Grid)', FormationType.GRID],
-        ['일렬 (Line)', FormationType.LINE],
-        ['원형 (Circle)', FormationType.CIRCLE],
-        ['V자 (V-Shape)', FormationType.V_SHAPE],
-        ['삼각형 (Triangle)', FormationType.TRIANGLE],
-        ['사각형 (Square)', FormationType.SQUARE],
-        ['다이아몬드 (Diamond)', FormationType.DIAMOND]
-      ]), 'FORMATION_TYPE')
+      .appendField('📐 Grid 대형')
     this.appendDummyInput()
       .appendField('행(rows)')
       .appendField(new Blockly.FieldNumber(2, 1, 10, 1), 'ROWS')
       .appendField('열(cols)')
-      .appendField(new Blockly.FieldNumber(5, 1, 10, 1), 'COLS')
+      .appendField(new Blockly.FieldNumber(4, 1, 10, 1), 'COLS')
     this.appendDummyInput()
       .appendField('간격(m)')
       .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPACING')
+    this.appendDummyInput()
+      .appendField('기준 드론 #')
+      .appendField(new Blockly.FieldNumber(1, 1, 100, 1), 'LEADER_DRONE')
     this.setPreviousStatement(true, null)
     this.setNextStatement(true, null)
     this.setColour(160)
-    this.setTooltip('드론들을 지정된 대형으로 배치합니다')
+    this.setTooltip('드론들을 rows × cols 격자 형태로 배치합니다\n기준 드론: 대형의 중심이 될 드론 번호')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * Line 대형 설정
+ */
+Blockly.Blocks['swarm_formation_line'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('📏 Line 대형')
+    this.appendDummyInput()
+      .appendField('줄 수')
+      .appendField(new Blockly.FieldNumber(1, 1, 10, 1), 'ROWS')
+      .appendField('줄당 드론 수')
+      .appendField(new Blockly.FieldNumber(4, 1, 10, 1), 'COLS')
+    this.appendDummyInput()
+      .appendField('간격(m)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPACING')
+    this.appendDummyInput()
+      .appendField('기준 드론 #')
+      .appendField(new Blockly.FieldNumber(1, 1, 100, 1), 'LEADER_DRONE')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(160)
+    this.setTooltip('드론들을 일렬로 배치합니다\n줄 수: 몇 개의 줄로 배치할지\n줄당 드론 수: 한 줄에 몇 대씩 배치할지\n기준 드론: 대형의 중심이 될 드론 번호')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * Circle 대형 설정
+ */
+Blockly.Blocks['swarm_formation_circle'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('⭕ Circle 대형')
+    this.appendDummyInput()
+      .appendField('반지름(m)')
+      .appendField(new Blockly.FieldNumber(5, 1, 20, 0.5), 'RADIUS')
+    this.appendDummyInput()
+      .appendField('간격(m)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPACING')
+    this.appendDummyInput()
+      .appendField('기준 드론 #')
+      .appendField(new Blockly.FieldNumber(1, 1, 100, 1), 'LEADER_DRONE')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(160)
+    this.setTooltip('드론들을 원형으로 배치합니다\n반지름: 원의 크기 (미터 단위)\n기준 드론: 0도 위치에 배치될 드론 번호')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * V-Shape 대형 설정
+ */
+Blockly.Blocks['swarm_formation_vshape'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('✈️ V-Shape 대형')
+    this.appendDummyInput()
+      .appendField('깊이')
+      .appendField(new Blockly.FieldNumber(3, 1, 10, 1), 'DEPTH')
+    this.appendDummyInput()
+      .appendField('간격(m)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPACING')
+    this.appendDummyInput()
+      .appendField('기준 드론 #')
+      .appendField(new Blockly.FieldNumber(1, 1, 100, 1), 'LEADER_DRONE')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(160)
+    this.setTooltip('드론들을 V자 형태로 배치합니다\n깊이: V자의 길이\n기준 드론: V자 선두에 배치될 드론 번호')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * Triangle 대형 설정
+ */
+Blockly.Blocks['swarm_formation_triangle'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('🔺 Triangle 대형')
+    this.appendDummyInput()
+      .appendField('최대 줄 수')
+      .appendField(new Blockly.FieldNumber(3, 1, 10, 1), 'MAX_ROWS')
+    this.appendDummyInput()
+      .appendField('간격(m)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPACING')
+    this.appendDummyInput()
+      .appendField('기준 드론 #')
+      .appendField(new Blockly.FieldNumber(1, 1, 100, 1), 'LEADER_DRONE')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(160)
+    this.setTooltip('드론들을 삼각형 형태로 배치합니다\n최대 줄 수: 삼각형의 높이\n기준 드론: 삼각형 선두에 배치될 드론 번호')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * Square 대형 설정
+ */
+Blockly.Blocks['swarm_formation_square'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('🟦 Square 대형')
+    this.appendDummyInput()
+      .appendField('행(rows)')
+      .appendField(new Blockly.FieldNumber(3, 1, 10, 1), 'ROWS')
+      .appendField('열(cols)')
+      .appendField(new Blockly.FieldNumber(3, 1, 10, 1), 'COLS')
+    this.appendDummyInput()
+      .appendField('간격(m)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPACING')
+    this.appendDummyInput()
+      .appendField('기준 드론 #')
+      .appendField(new Blockly.FieldNumber(1, 1, 100, 1), 'LEADER_DRONE')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(160)
+    this.setTooltip('드론들을 정사각형/직사각형으로 배치합니다\n기준 드론: 대형의 중심이 될 드론 번호')
+    this.setHelpUrl('')
+  }
+}
+
+/**
+ * Diamond 대형 설정
+ */
+Blockly.Blocks['swarm_formation_diamond'] = {
+  init: function() {
+    this.appendDummyInput()
+      .appendField('💎 Diamond 대형')
+    this.appendDummyInput()
+      .appendField('크기')
+      .appendField(new Blockly.FieldNumber(3, 1, 10, 1), 'SIZE')
+    this.appendDummyInput()
+      .appendField('간격(m)')
+      .appendField(new Blockly.FieldNumber(2, 0.5, 10, 0.5), 'SPACING')
+    this.appendDummyInput()
+      .appendField('기준 드론 #')
+      .appendField(new Blockly.FieldNumber(1, 1, 100, 1), 'LEADER_DRONE')
+    this.setPreviousStatement(true, null)
+    this.setNextStatement(true, null)
+    this.setColour(160)
+    this.setTooltip('드론들을 다이아몬드 형태로 배치합니다\n크기: 다이아몬드의 크기\n기준 드론: 대형의 중심이 될 드론 번호')
     this.setHelpUrl('')
   }
 }

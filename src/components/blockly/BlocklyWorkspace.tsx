@@ -158,8 +158,7 @@ function addInitialBlocks(workspace: Blockly.WorkspaceSvg) {
       <block type="swarm_takeoff_all" x="50" y="50">
         <field name="ALTITUDE">2</field>
         <next>
-          <block type="swarm_set_formation">
-            <field name="FORMATION_TYPE">grid</field>
+          <block type="swarm_formation_grid">
             <field name="ROWS">2</field>
             <field name="COLS">5</field>
             <field name="SPACING">2</field>

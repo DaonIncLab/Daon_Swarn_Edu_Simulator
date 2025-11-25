@@ -240,8 +240,7 @@ export function getTemplateXml(template: string): string {
   <block type="swarm_takeoff_all" x="50" y="50">
     <field name="ALTITUDE">2</field>
     <next>
-      <block type="swarm_set_formation">
-        <field name="FORMATION_TYPE">grid</field>
+      <block type="swarm_formation_grid">
         <field name="ROWS">2</field>
         <field name="COLS">5</field>
         <field name="SPACING">2</field>
@@ -264,8 +263,7 @@ export function getTemplateXml(template: string): string {
   <block type="swarm_takeoff_all" x="50" y="50">
     <field name="ALTITUDE">3</field>
     <next>
-      <block type="swarm_set_formation">
-        <field name="FORMATION_TYPE">line</field>
+      <block type="swarm_formation_line">
         <field name="ROWS">1</field>
         <field name="COLS">4</field>
         <field name="SPACING">2</field>
@@ -277,19 +275,15 @@ export function getTemplateXml(template: string): string {
               <block type="swarm_wait">
                 <field name="DURATION">2</field>
                 <next>
-                  <block type="swarm_set_formation">
-                    <field name="FORMATION_TYPE">circle</field>
-                    <field name="ROWS">4</field>
-                    <field name="COLS">1</field>
+                  <block type="swarm_formation_circle">
+                    <field name="RADIUS">5</field>
                     <field name="SPACING">3</field>
                     <next>
                       <block type="swarm_wait">
                         <field name="DURATION">2</field>
                         <next>
-                          <block type="swarm_set_formation">
-                            <field name="FORMATION_TYPE">v_shape</field>
-                            <field name="ROWS">2</field>
-                            <field name="COLS">2</field>
+                          <block type="swarm_formation_vshape">
+                            <field name="DEPTH">2</field>
                             <field name="SPACING">2.5</field>
                             <next>
                               <block type="swarm_move_formation">
@@ -320,10 +314,8 @@ export function getTemplateXml(template: string): string {
   <block type="swarm_takeoff_all" x="50" y="50">
     <field name="ALTITUDE">2.5</field>
     <next>
-      <block type="swarm_set_formation">
-        <field name="FORMATION_TYPE">circle</field>
-        <field name="ROWS">4</field>
-        <field name="COLS">1</field>
+      <block type="swarm_formation_circle">
+        <field name="RADIUS">5</field>
         <field name="SPACING">4</field>
         <next>
           <block type="controls_repeat">
@@ -354,8 +346,7 @@ export function getTemplateXml(template: string): string {
   <block type="swarm_takeoff_all" x="50" y="50">
     <field name="ALTITUDE">3</field>
     <next>
-      <block type="swarm_set_formation">
-        <field name="FORMATION_TYPE">grid</field>
+      <block type="swarm_formation_grid">
         <field name="ROWS">2</field>
         <field name="COLS">2</field>
         <field name="SPACING">5</field>
@@ -385,10 +376,8 @@ export function getTemplateXml(template: string): string {
               </block>
             </statement>
             <next>
-              <block type="swarm_set_formation">
-                <field name="FORMATION_TYPE">circle</field>
-                <field name="ROWS">4</field>
-                <field name="COLS">1</field>
+              <block type="swarm_formation_circle">
+                <field name="RADIUS">3</field>
                 <field name="SPACING">2</field>
                 <next>
                   <block type="swarm_wait">
@@ -415,8 +404,7 @@ export function getTemplateXml(template: string): string {
       <block type="controls_repeat">
         <field name="TIMES">2</field>
         <statement name="DO">
-          <block type="swarm_set_formation">
-            <field name="FORMATION_TYPE">line</field>
+          <block type="swarm_formation_line">
             <field name="ROWS">1</field>
             <field name="COLS">4</field>
             <field name="SPACING">2</field>
@@ -425,8 +413,7 @@ export function getTemplateXml(template: string): string {
                 <field name="DIRECTION">forward</field>
                 <field name="DISTANCE">3</field>
                 <next>
-                  <block type="swarm_set_formation">
-                    <field name="FORMATION_TYPE">grid</field>
+                  <block type="swarm_formation_grid">
                     <field name="ROWS">2</field>
                     <field name="COLS">2</field>
                     <field name="SPACING">2</field>

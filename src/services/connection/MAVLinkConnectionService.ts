@@ -778,6 +778,19 @@ export class MAVLinkConnectionService implements IConnectionService {
     return Promise.resolve(latency)
   }
 
+  async reset(): Promise<CommandResponse> {
+    log.info('MAVLinkConnectionService', 'Resetting drone positions')
+
+    if (this.mavlinkSimulator) {
+      this.mavlinkSimulator.reset()
+    }
+
+    return {
+      success: true,
+      timestamp: Date.now(),
+    }
+  }
+
   cleanup(): void {
     log.info('Cleanup')
 

@@ -187,6 +187,32 @@ export class UnityWebGLConnectionService implements IConnectionService {
     return Promise.resolve(1)
   }
 
+  async reset(): Promise<CommandResponse> {
+    log.info('UnityWebGLConnectionService', 'Resetting drone positions')
+
+    if (!this.unityBridge || !this.isInitialized) {
+      return {
+        success: false,
+        error: 'Unity not initialized',
+        timestamp: Date.now(),
+      }
+    }
+
+    try {
+      this.unityBridge.sendMessage('DroneController', 'ResetPositions', '')
+      return {
+        success: true,
+        timestamp: Date.now(),
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `Reset failed: ${error}`,
+        timestamp: Date.now(),
+      }
+    }
+  }
+
   cleanup(): void {
     log.info('Cleanup')
     this.listeners = {}

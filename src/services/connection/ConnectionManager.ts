@@ -129,6 +129,21 @@ export class ConnectionManager {
   }
 
   /**
+   * 드론 위치 및 상태 초기화
+   */
+  async reset(): Promise<CommandResponse> {
+    if (!this.currentService) {
+      return {
+        success: false,
+        error: 'No active connection',
+        timestamp: Date.now(),
+      }
+    }
+
+    return this.currentService.reset()
+  }
+
+  /**
    * 현재 연결 서비스 가져오기
    */
   getCurrentService(): IConnectionService | null {
