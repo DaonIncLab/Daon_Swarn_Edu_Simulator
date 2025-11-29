@@ -40,81 +40,89 @@ export const useTelemetryStore = create<TelemetryStore>((set, get) => ({
 
   // Add new telemetry data from Unity
   addTelemetryData: (drones: DroneState[]) => {
-    const { isRecording, maxHistoryPoints, maxTotalDataPoints, history } = get()
+    const { isRecording, maxHistoryPoints, maxTotalDataPoints } = get()
 
     if (!isRecording) return
 
     const timestamp = Date.now()
-    const newHistory = new Map(history)
 
-    for (const drone of drones) {
-      // Get or create drone history
-      let droneHistory = newHistory.get(drone.id)
+    // Optimized: Use Zustand's set with callback to minimize Map copying
+    set((state) => {
+      const newHistory = new Map(state.history)
 
-      if (!droneHistory) {
-        droneHistory = {
-          droneId: drone.id,
-          dataPoints: [],
+      for (const drone of drones) {
+        // Get or create drone history
+        let droneHistory = newHistory.get(drone.id)
+
+        if (!droneHistory) {
+          droneHistory = {
+            droneId: drone.id,
+            dataPoints: [],
+          }
+          newHistory.set(drone.id, droneHistory)
         }
-        newHistory.set(drone.id, droneHistory)
+
+        // Create new data point
+        const dataPoint: DroneHistoryPoint = {
+          timestamp,
+          position: { ...drone.position },
+          rotation: { ...drone.rotation },
+          velocity: { ...drone.velocity },
+          battery: drone.battery,
+          status: drone.status,
+        }
+
+        // Optimized: Use circular buffer pattern instead of slice
+        if (droneHistory.dataPoints.length >= maxHistoryPoints) {
+          droneHistory.dataPoints.shift() // Remove oldest
+        }
+        droneHistory.dataPoints.push(dataPoint)
       }
 
-      // Create new data point
-      const dataPoint: DroneHistoryPoint = {
-        timestamp,
-        position: { ...drone.position },
-        rotation: { ...drone.rotation },
-        velocity: { ...drone.velocity },
-        battery: drone.battery,
-        status: drone.status,
-      }
+      // Optimized: Throttle pruning check - only run every ~5 seconds (approximately every 50 updates at 10Hz)
+      const shouldPrune = timestamp % 5000 < 100 // Will be true approximately every 5 seconds
 
-      // Add to history
-      droneHistory.dataPoints.push(dataPoint)
+      if (shouldPrune) {
+        // Check total data points across all drones
+        let totalPoints = 0
+        for (const droneHistory of newHistory.values()) {
+          totalPoints += droneHistory.dataPoints.length
+        }
 
-      // Trim if exceeds max points per drone (keep most recent)
-      if (droneHistory.dataPoints.length > maxHistoryPoints) {
-        droneHistory.dataPoints = droneHistory.dataPoints.slice(-maxHistoryPoints)
-      }
-    }
+        // If exceeds max total, prune oldest data from drones with most history
+        if (totalPoints > maxTotalDataPoints) {
+          const pointsToRemove = totalPoints - maxTotalDataPoints
 
-    // Check total data points across all drones
-    let totalPoints = 0
-    for (const droneHistory of newHistory.values()) {
-      totalPoints += droneHistory.dataPoints.length
-    }
+          // Sort drones by history size (descending)
+          const dronesSortedBySize = Array.from(newHistory.values()).sort(
+            (a, b) => b.dataPoints.length - a.dataPoints.length
+          )
 
-    // If exceeds max total, prune oldest data from drones with most history
-    if (totalPoints > maxTotalDataPoints) {
-      const pointsToRemove = totalPoints - maxTotalDataPoints
+          let removed = 0
+          for (const droneHistory of dronesSortedBySize) {
+            if (removed >= pointsToRemove) break
 
-      // Sort drones by history size (descending)
-      const dronesSortedBySize = Array.from(newHistory.values()).sort(
-        (a, b) => b.dataPoints.length - a.dataPoints.length
-      )
+            const toRemoveFromThisDrone = Math.min(
+              pointsToRemove - removed,
+              droneHistory.dataPoints.length - 10 // Keep at least 10 points
+            )
 
-      let removed = 0
-      for (const droneHistory of dronesSortedBySize) {
-        if (removed >= pointsToRemove) break
+            if (toRemoveFromThisDrone > 0) {
+              // Optimized: Use splice instead of slice to avoid creating new array
+              droneHistory.dataPoints.splice(0, toRemoveFromThisDrone)
+              removed += toRemoveFromThisDrone
+            }
+          }
 
-        const toRemoveFromThisDrone = Math.min(
-          pointsToRemove - removed,
-          droneHistory.dataPoints.length - 10 // Keep at least 10 points
-        )
-
-        if (toRemoveFromThisDrone > 0) {
-          droneHistory.dataPoints = droneHistory.dataPoints.slice(toRemoveFromThisDrone)
-          removed += toRemoveFromThisDrone
+          log.debug(
+            'TelemetryStore',
+            `Pruned ${removed} old data points (total was ${totalPoints}, limit is ${maxTotalDataPoints})`
+          )
         }
       }
 
-      log.debug(
-        'TelemetryStore',
-        `Pruned ${removed} old data points (total was ${totalPoints}, limit is ${maxTotalDataPoints})`
-      )
-    }
-
-    set({ history: newHistory })
+      return { history: newHistory }
+    })
   },
 
   // Clear all history

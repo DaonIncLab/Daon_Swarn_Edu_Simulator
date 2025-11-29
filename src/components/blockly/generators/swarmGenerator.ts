@@ -1,34 +1,117 @@
 /**
- * Blockly 블록을 드론 제어 JSON 명령으로 변환하는 코드 생성기
+ * Blockly 블록을 MAVLink 드론 제어 JSON 명령으로 변환하는 코드 생성기
  */
 
 import * as Blockly from 'blockly'
 import type { Command } from '@/types/websocket'
-import { CommandAction, FormationType } from '@/constants/commands'
 
 // JSON 생성기 정의
-export const jsonGenerator = new Blockly.Generator('JSON')
+export const droneJsonGenerator = new Blockly.Generator('DroneJSON')
 
 // 코드 생성 순서 정의
-jsonGenerator.PRECEDENCE = 0
+droneJsonGenerator.PRECEDENCE = 0
 
 /**
  * 워크스페이스를 명령 배열로 변환
  */
-jsonGenerator.workspaceToCode = function(workspace: Blockly.Workspace): string {
+droneJsonGenerator.workspaceToCode = function(workspace: Blockly.Workspace): string {
   const commands: Command[] = []
   const topBlocks = workspace.getTopBlocks(true)
 
   topBlocks.forEach(block => {
-    if (block.type.startsWith('swarm_')) {
-      const command = blockToCommand(block)
-      if (command) {
-        commands.push(command)
-      }
-    }
+    const blockCommands = processBlock(block)
+    commands.push(...blockCommands)
   })
 
   return JSON.stringify(commands, null, 2)
+}
+
+/**
+ * 블록과 연결된 모든 블록을 재귀적으로 처리
+ */
+function processBlock(block: Blockly.Block): Command[] {
+  const commands: Command[] = []
+
+  let currentBlock: Blockly.Block | null = block
+  while (currentBlock) {
+    const command = blockToCommand(currentBlock)
+    if (command) {
+      commands.push(command)
+    }
+    currentBlock = currentBlock.getNextBlock()
+  }
+
+  return commands
+}
+
+/**
+ * Value input에서 값 가져오기
+ */
+function getValueInput(block: Blockly.Block, inputName: string): any {
+  const targetBlock = block.getInputTargetBlock(inputName)
+  if (!targetBlock) return null
+
+  // 숫자 블록
+  if (targetBlock.type === 'math_number') {
+    return targetBlock.getFieldValue('NUM')
+  }
+
+  // 변수 블록
+  if (targetBlock.type === 'var_get') {
+    return { type: 'variable', name: targetBlock.getFieldValue('VAR') }
+  }
+
+  // 센서 블록
+  if (targetBlock.type.startsWith('sensor_')) {
+    return { type: 'sensor', sensorType: targetBlock.type, droneId: targetBlock.getFieldValue('DRONE_ID') }
+  }
+
+  // 수식 블록
+  if (targetBlock.type === 'math_arithmetic') {
+    return {
+      type: 'expression',
+      operator: targetBlock.getFieldValue('OP'),
+      left: getValueInput(targetBlock, 'A'),
+      right: getValueInput(targetBlock, 'B')
+    }
+  }
+
+  // 비교 블록
+  if (targetBlock.type === 'logic_compare') {
+    return {
+      type: 'comparison',
+      operator: targetBlock.getFieldValue('OP'),
+      left: getValueInput(targetBlock, 'A'),
+      right: getValueInput(targetBlock, 'B')
+    }
+  }
+
+  // 논리 연산 블록
+  if (targetBlock.type === 'logic_operation') {
+    return {
+      type: 'logic',
+      operator: targetBlock.getFieldValue('OP'),
+      left: getValueInput(targetBlock, 'A'),
+      right: getValueInput(targetBlock, 'B')
+    }
+  }
+
+  // Boolean 블록
+  if (targetBlock.type === 'logic_boolean') {
+    return targetBlock.getFieldValue('BOOL') === 'TRUE'
+  }
+
+  return null
+}
+
+/**
+ * Statement input에서 명령들 가져오기
+ */
+function getStatementCommands(block: Blockly.Block, inputName: string): Command[] {
+  const statementBlock = block.getInputTargetBlock(inputName)
+  if (!statementBlock) return []
+
+  return processBlock(statementBlock)
 }
 
 /**
@@ -36,209 +119,125 @@ jsonGenerator.workspaceToCode = function(workspace: Blockly.Workspace): string {
  */
 function blockToCommand(block: Blockly.Block): Command | null {
   switch (block.type) {
-    case 'swarm_takeoff_all':
+    // =============================================================================
+    // 1. Flight Control (비행 제어)
+    // =============================================================================
+
+    case 'drone_takeoff':
       return {
-        action: CommandAction.TAKEOFF_ALL,
+        action: 'DRONE_TAKEOFF',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          altitude: block.getFieldValue('ALTITUDE') as number
+        }
+      }
+
+    case 'drone_land':
+      return {
+        action: 'DRONE_LAND',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number
+        }
+      }
+
+    case 'drone_takeoff_all':
+      return {
+        action: 'DRONE_TAKEOFF_ALL',
         params: {
           altitude: block.getFieldValue('ALTITUDE') as number
         }
       }
 
-    case 'swarm_land_all':
+    case 'drone_land_all':
       return {
-        action: CommandAction.LAND_ALL,
+        action: 'DRONE_LAND_ALL',
         params: {}
       }
 
-    case 'swarm_formation_grid':
+    case 'drone_hover':
       return {
-        action: CommandAction.SET_FORMATION,
+        action: 'DRONE_HOVER',
         params: {
-          type: FormationType.GRID,
-          rows: block.getFieldValue('ROWS') as number,
-          cols: block.getFieldValue('COLS') as number,
-          spacing: block.getFieldValue('SPACING') as number,
-          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+          droneId: block.getFieldValue('DRONE_ID') as number
         }
       }
 
-    case 'swarm_formation_line':
+    case 'drone_emergency':
       return {
-        action: CommandAction.SET_FORMATION,
+        action: 'DRONE_EMERGENCY',
         params: {
-          type: FormationType.LINE,
-          rows: block.getFieldValue('ROWS') as number,
-          cols: block.getFieldValue('COLS') as number,
-          spacing: block.getFieldValue('SPACING') as number,
-          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+          droneId: block.getFieldValue('DRONE_ID') as number
         }
       }
 
-    case 'swarm_formation_circle':
-      return {
-        action: CommandAction.SET_FORMATION,
-        params: {
-          type: FormationType.CIRCLE,
-          cols: block.getFieldValue('RADIUS') as number,
-          spacing: block.getFieldValue('SPACING') as number,
-          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
-        }
-      }
+    // =============================================================================
+    // 2. Movement (이동)
+    // =============================================================================
 
-    case 'swarm_formation_vshape':
+    case 'drone_move_direction':
       return {
-        action: CommandAction.SET_FORMATION,
+        action: 'DRONE_MOVE_DIRECTION',
         params: {
-          type: FormationType.V_SHAPE,
-          rows: block.getFieldValue('DEPTH') as number,
-          spacing: block.getFieldValue('SPACING') as number,
-          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
-        }
-      }
-
-    case 'swarm_formation_triangle':
-      return {
-        action: CommandAction.SET_FORMATION,
-        params: {
-          type: FormationType.TRIANGLE,
-          rows: block.getFieldValue('MAX_ROWS') as number,
-          spacing: block.getFieldValue('SPACING') as number,
-          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
-        }
-      }
-
-    case 'swarm_formation_square':
-      return {
-        action: CommandAction.SET_FORMATION,
-        params: {
-          type: FormationType.SQUARE,
-          rows: block.getFieldValue('ROWS') as number,
-          cols: block.getFieldValue('COLS') as number,
-          spacing: block.getFieldValue('SPACING') as number,
-          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
-        }
-      }
-
-    case 'swarm_formation_diamond':
-      return {
-        action: CommandAction.SET_FORMATION,
-        params: {
-          type: FormationType.DIAMOND,
-          rows: block.getFieldValue('SIZE') as number,
-          spacing: block.getFieldValue('SPACING') as number,
-          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
-        }
-      }
-
-    case 'swarm_move_formation':
-      return {
-        action: CommandAction.MOVE_FORMATION,
-        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
           direction: block.getFieldValue('DIRECTION') as string,
           distance: block.getFieldValue('DISTANCE') as number
         }
       }
 
-    case 'swarm_move_drone':
+    case 'drone_move_xyz':
       return {
-        action: CommandAction.MOVE_DRONE,
+        action: 'DRONE_MOVE_XYZ',
         params: {
           droneId: block.getFieldValue('DRONE_ID') as number,
           x: block.getFieldValue('X') as number,
           y: block.getFieldValue('Y') as number,
-          z: block.getFieldValue('Z') as number
+          z: block.getFieldValue('Z') as number,
+          speed: block.getFieldValue('SPEED') as number
         }
       }
 
-    case 'swarm_wait':
+    case 'drone_rotate':
       return {
-        action: CommandAction.WAIT,
+        action: 'DRONE_ROTATE',
         params: {
-          duration: block.getFieldValue('DURATION') as number
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          direction: block.getFieldValue('DIRECTION') as string,
+          degrees: block.getFieldValue('DEGREES') as number
         }
       }
 
-    case 'swarm_hover':
-      return {
-        action: CommandAction.HOVER,
-        params: {}
-      }
+    // =============================================================================
+    // 3. RC Control (수동 제어)
+    // =============================================================================
 
-    case 'controls_repeat':
+    case 'drone_rc_control':
       return {
-        action: CommandAction.REPEAT,
+        action: 'DRONE_RC_CONTROL',
         params: {
-          times: block.getFieldValue('TIMES') as number
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          roll: block.getFieldValue('ROLL') as number,
+          pitch: block.getFieldValue('PITCH') as number,
+          yaw: block.getFieldValue('YAW') as number,
+          throttle: block.getFieldValue('THROTTLE') as number
         }
       }
 
-    case 'controls_for':
-      return {
-        action: CommandAction.FOR_LOOP,
-        params: {
-          variable: block.getFieldValue('VAR') as string,
-          from: block.getFieldValue('FROM') as number,
-          to: block.getFieldValue('TO') as number,
-          by: block.getFieldValue('BY') as number
-        }
-      }
+    // =============================================================================
+    // 4. Telemetry (센서) - Value blocks는 별도 처리
+    // =============================================================================
 
-    case 'controls_if_simple':
-      return {
-        action: CommandAction.IF,
-        params: {
-          condition: block.getFieldValue('CONDITION') as string
-        }
-      }
+    // sensor_battery, sensor_altitude 등은 getValueInput에서 처리됨
 
-    case 'controls_if_else':
-      return {
-        action: CommandAction.IF_ELSE,
-        params: {
-          condition: block.getFieldValue('CONDITION') as string
-        }
-      }
+    // =============================================================================
+    // 5. Mission (미션)
+    // =============================================================================
 
-    case 'swarm_sync_all':
+    case 'mission_add_waypoint':
       return {
-        action: CommandAction.SYNC_ALL,
-        params: {}
-      }
-
-    case 'swarm_wait_all':
-      return {
-        action: CommandAction.WAIT_ALL,
-        params: {
-          duration: block.getFieldValue('DURATION') as number
-        }
-      }
-
-    case 'variables_set':
-      return {
-        action: 'set_variable',
-        params: {
-          variable: block.getFieldValue('VAR') as string,
-          value: block.getFieldValue('VALUE') as number
-        }
-      }
-
-    case 'math_arithmetic':
-      return {
-        action: 'math_op',
-        params: {
-          a: block.getFieldValue('A') as number,
-          op: block.getFieldValue('OP') as string,
-          b: block.getFieldValue('B') as number
-        }
-      }
-
-    case 'swarm_add_waypoint':
-      return {
-        action: CommandAction.ADD_WAYPOINT,
+        action: 'MISSION_ADD_WAYPOINT',
         params: {
           waypoint: {
             id: `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: block.getFieldValue('NAME') as string,
             x: block.getFieldValue('X') as number,
             y: block.getFieldValue('Y') as number,
             z: block.getFieldValue('Z') as number,
@@ -248,29 +247,127 @@ function blockToCommand(block: Blockly.Block): Command | null {
         }
       }
 
-    case 'swarm_goto_waypoint':
+    case 'mission_goto_waypoint':
       return {
-        action: CommandAction.GOTO_WAYPOINT,
+        action: 'MISSION_GOTO_WAYPOINT',
         params: {
-          waypointId: block.getFieldValue('WAYPOINT_NAME') as string,
+          waypointIndex: block.getFieldValue('WAYPOINT_INDEX') as number,
           speed: block.getFieldValue('SPEED') as number
         }
       }
 
-    case 'swarm_execute_mission':
+    case 'mission_execute':
       return {
-        action: CommandAction.EXECUTE_MISSION,
+        action: 'MISSION_EXECUTE',
         params: {
-          loop: block.getFieldValue('LOOP') === 'TRUE',
-          speed: block.getFieldValue('SPEED') as number
+          loop: block.getFieldValue('LOOP') === 'TRUE'
         }
       }
 
-    case 'swarm_clear_waypoints':
+    case 'mission_clear':
       return {
-        action: CommandAction.CLEAR_WAYPOINTS,
+        action: 'MISSION_CLEAR',
         params: {}
       }
+
+    // =============================================================================
+    // 6. Settings (설정)
+    // =============================================================================
+
+    case 'drone_set_speed':
+      return {
+        action: 'DRONE_SET_SPEED',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          speed: block.getFieldValue('SPEED') as number
+        }
+      }
+
+    // =============================================================================
+    // 7. Sync & Wait (동기화 & 대기)
+    // =============================================================================
+
+    case 'control_wait':
+      return {
+        action: 'CONTROL_WAIT',
+        params: {
+          duration: block.getFieldValue('DURATION') as number
+        }
+      }
+
+    // =============================================================================
+    // 8. Control Flow (제어 흐름)
+    // =============================================================================
+
+    case 'control_repeat':
+      return {
+        action: 'CONTROL_REPEAT',
+        params: {
+          times: block.getFieldValue('TIMES') as number,
+          commands: getStatementCommands(block, 'DO')
+        }
+      }
+
+    case 'control_for':
+      return {
+        action: 'CONTROL_FOR',
+        params: {
+          variable: block.getFieldValue('VAR') as string,
+          from: block.getFieldValue('FROM') as number,
+          to: block.getFieldValue('TO') as number,
+          by: block.getFieldValue('BY') as number,
+          commands: getStatementCommands(block, 'DO')
+        }
+      }
+
+    case 'control_while':
+      return {
+        action: 'CONTROL_WHILE',
+        params: {
+          condition: getValueInput(block, 'CONDITION'),
+          commands: getStatementCommands(block, 'DO')
+        }
+      }
+
+    case 'control_if':
+      return {
+        action: 'CONTROL_IF',
+        params: {
+          condition: getValueInput(block, 'CONDITION'),
+          commandsIf: getStatementCommands(block, 'DO_IF')
+        }
+      }
+
+    case 'control_if_else':
+      return {
+        action: 'CONTROL_IF_ELSE',
+        params: {
+          condition: getValueInput(block, 'CONDITION'),
+          commandsIf: getStatementCommands(block, 'DO_IF'),
+          commandsElse: getStatementCommands(block, 'DO_ELSE')
+        }
+      }
+
+    // =============================================================================
+    // 9. Variables & Math (변수 & 수식)
+    // =============================================================================
+
+    case 'var_set':
+      return {
+        action: 'VAR_SET',
+        params: {
+          variable: block.getFieldValue('VAR') as string,
+          value: getValueInput(block, 'VALUE')
+        }
+      }
+
+    // var_get, math_arithmetic, math_number는 getValueInput에서 처리됨
+
+    // =============================================================================
+    // 10. Logic (논리) - Value blocks는 별도 처리
+    // =============================================================================
+
+    // logic_compare, logic_operation, logic_negate, logic_boolean은 getValueInput에서 처리됨
 
     default:
       return null
@@ -285,18 +382,12 @@ export function generateCommands(workspace: Blockly.Workspace): Command[] {
   const topBlocks = workspace.getTopBlocks(true)
 
   topBlocks.forEach(block => {
-    // 연결된 블록들을 순서대로 처리
-    let currentBlock: Blockly.Block | null = block
-    while (currentBlock) {
-      if (currentBlock.type.startsWith('swarm_')) {
-        const command = blockToCommand(currentBlock)
-        if (command) {
-          commands.push(command)
-        }
-      }
-      currentBlock = currentBlock.getNextBlock()
-    }
+    const blockCommands = processBlock(block)
+    commands.push(...blockCommands)
   })
 
   return commands
 }
+
+// 별칭 export (하위 호환성)
+export const generateDroneCommands = generateCommands

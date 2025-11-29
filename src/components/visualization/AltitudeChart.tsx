@@ -4,7 +4,8 @@
  * Real-time altitude visualization using Chart.js
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
+import { shallow } from 'zustand/shallow'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -39,62 +40,64 @@ ChartJS.register(
  * Altitude Chart Component
  */
 export function AltitudeChart() {
-  const { drones } = useExecutionStore()
-  const { getAllHistory } = useTelemetryStore()
+  // Optimized: Use selectors to subscribe only to needed state
+  const drones = useExecutionStore(state => state.drones, shallow)
+  const history = useTelemetryStore(state => state.history, shallow)
   const chartRef = useRef<ChartJS<'line'>>(null)
 
   // Generate colors for each drone
-  const droneColors = [
+  const droneColors = useMemo(() => [
     { border: 'rgb(59, 130, 246)', bg: 'rgba(59, 130, 246, 0.1)' }, // blue
     { border: 'rgb(16, 185, 129)', bg: 'rgba(16, 185, 129, 0.1)' }, // green
     { border: 'rgb(245, 158, 11)', bg: 'rgba(245, 158, 11, 0.1)' }, // yellow
     { border: 'rgb(239, 68, 68)', bg: 'rgba(239, 68, 68, 0.1)' }, // red
     { border: 'rgb(139, 92, 246)', bg: 'rgba(139, 92, 246, 0.1)' }, // purple
     { border: 'rgb(236, 72, 153)', bg: 'rgba(236, 72, 153, 0.1)' }, // pink
-  ]
+  ], [])
 
-  const getColorForDrone = (index: number) => {
-    return droneColors[index % droneColors.length]
-  }
+  const getColorForDrone = useMemo(() =>
+    (index: number) => droneColors[index % droneColors.length],
+    [droneColors]
+  )
 
-  // Prepare chart data
-  const history = getAllHistory()
-  const datasets = drones.map((drone, index) => {
-    const droneHistory = history.get(drone.id)
-    const color = getColorForDrone(index)
+  // Optimized: Memoize datasets calculation
+  const datasets = useMemo(() => {
+    return drones.map((drone, index) => {
+      const droneHistory = history.get(drone.id)
+      const color = getColorForDrone(index)
 
-    if (!droneHistory || droneHistory.dataPoints.length === 0) {
+      if (!droneHistory || droneHistory.dataPoints.length === 0) {
+        return {
+          label: `Drone #${drone.id}`,
+          data: [],
+          borderColor: color.border,
+          backgroundColor: color.bg,
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+        }
+      }
+
       return {
         label: `Drone #${drone.id}`,
-        data: [],
+        data: droneHistory.dataPoints.map((point) => ({
+          x: point.timestamp,
+          y: point.position.z, // Z coordinate is altitude
+        })),
         borderColor: color.border,
         backgroundColor: color.bg,
         borderWidth: 2,
         tension: 0.4,
         pointRadius: 0,
         pointHoverRadius: 5,
+        fill: true,
       }
-    }
+    })
+  }, [drones, history, getColorForDrone])
 
-    return {
-      label: `Drone #${drone.id}`,
-      data: droneHistory.dataPoints.map((point) => ({
-        x: point.timestamp,
-        y: point.position.z, // Z coordinate is altitude
-      })),
-      borderColor: color.border,
-      backgroundColor: color.bg,
-      borderWidth: 2,
-      tension: 0.4,
-      pointRadius: 0,
-      pointHoverRadius: 5,
-      fill: true,
-    }
-  })
-
-  const chartData = {
-    datasets,
-  }
+  // Optimized: Memoize chart data
+  const chartData = useMemo(() => ({ datasets }), [datasets])
 
   const options = {
     responsive: true,
@@ -170,16 +173,12 @@ export function AltitudeChart() {
     },
   }
 
-  // Auto-update chart every second
+  // Optimized: Update chart only when data changes (no interval needed)
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (chartRef.current) {
-        chartRef.current.update('none') // Update without animation for performance
-      }
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [])
+    if (chartRef.current) {
+      chartRef.current.update('none') // Update without animation for performance
+    }
+  }, [chartData])
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">

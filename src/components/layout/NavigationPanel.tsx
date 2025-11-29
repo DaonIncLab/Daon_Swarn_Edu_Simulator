@@ -11,21 +11,22 @@ import { useState } from 'react'
 export interface Category {
   id: string
   name: string
-  icon: string
+  icon?: string
   colour: string
 }
 
+// MAVLink Drone SDK 기반 블록 카테고리
 export const blockCategories: Category[] = [
-  { id: 'basic', name: '기본 제어', icon: '🎮', colour: '230' },
-  { id: 'formation', name: '대형 제어', icon: '📐', colour: '160' },
-  { id: 'individual', name: '개별 제어', icon: '🎯', colour: '290' },
-  { id: 'control_flow', name: '제어 흐름', icon: '🔄', colour: '210' },
-  { id: 'variables', name: '변수 & 수식', icon: '🔢', colour: '330' },
-  { id: 'functions', name: '함수', icon: '⚙️', colour: '290' },
-  { id: 'sensors', name: '센서', icon: '📡', colour: '120' },
-  { id: 'logic', name: '논리', icon: '🧠', colour: '210' },
-  { id: 'sync', name: '동기화', icon: '⏱️', colour: '120' },
-  { id: 'mission', name: '미션', icon: '📍', colour: '60' },
+  { id: 'flight', name: '🚁 비행 제어', colour: '230' },
+  { id: 'movement', name: '➡️ 이동', colour: '160' },
+  { id: 'rc', name: '🎮 RC 제어', colour: '290' },
+  { id: 'sensors', name: '📊 센서', colour: '120' },
+  { id: 'mission', name: '🗺️ 미션', colour: '60' },
+  { id: 'settings', name: '⚙️ 설정', colour: '330' },
+  { id: 'sync', name: '⏱️ 대기', colour: '120' },
+  { id: 'control', name: '🔁 제어 흐름', colour: '210' },
+  { id: 'variables', name: '📦 변수', colour: '330' },
+  { id: 'logic', name: '🔍 논리', colour: '210' },
 ]
 
 interface NavigationPanelProps {
@@ -104,7 +105,6 @@ export function NavigationPanel({
                 }`}
                 title={category.name}
               >
-                <span className="text-lg">{category.icon}</span>
                 <span className="text-left flex-1">{category.name}</span>
               </button>
             ))}

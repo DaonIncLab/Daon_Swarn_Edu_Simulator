@@ -30,6 +30,29 @@ import {
   parsePacket,
 } from '@/services/mavlink/MAVLinkProtocol'
 import { log } from '@/utils/logger'
+import { VirtualLeaderFormationController } from '@/services/execution/VirtualLeaderFormation'
+import type { PositionSetpointCallback } from '@/services/execution/VirtualLeaderFormation'
+
+/**
+ * Formation Control Mode
+ * Determines how formation commands are executed
+ */
+export enum FormationControlMode {
+  /**
+   * GCS-Coordinated: GCS calculates each drone's position individually
+   * - Existing implementation using MAVLinkConverter
+   * - Each drone receives independent position setpoints
+   */
+  GCS_COORDINATED = 'gcs_coordinated',
+
+  /**
+   * Virtual Leader: Virtual point moves, drones follow with formation offsets
+   * - Smooth synchronized movement
+   * - Easier trajectory planning
+   * - Formation moves as one cohesive unit
+   */
+  VIRTUAL_LEADER = 'virtual_leader',
+}
 
 /**
  * MAVLink Connection Service
@@ -47,6 +70,10 @@ export class MAVLinkConnectionService implements IConnectionService {
   private heartbeatInterval: number | null = null
   private systemId: number = 255 // GCS system ID
   private componentId: number = 190 // GCS component ID
+
+  // Formation control
+  private formationMode: FormationControlMode = FormationControlMode.GCS_COORDINATED
+  private virtualLeaderController: VirtualLeaderFormationController | null = null
 
   constructor(droneCount: number = 4) {
     this.droneCount = droneCount
@@ -579,6 +606,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
   /**
    * Handle formation commands (SET_FORMATION, MOVE_FORMATION)
+   * Routes to appropriate formation controller based on mode
    */
   private async _handleFormationCommand(command: Command): Promise<CommandResponse> {
     // Check connection
@@ -599,37 +627,11 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
 
     try {
-      // Get all drone IDs
-      const droneIds = Array.from({ length: this.droneCount }, (_, i) => i)
-
-      // Convert formation command to individual waypoints
-      const formationWaypoints = MAVLinkConverter.convertFormationCommand(command, droneIds)
-
-      // Execute waypoint for each drone
-      for (const [droneId, params] of formationWaypoints) {
-        if (this.isSimulation) {
-          // Send to simulator
-          this.mavlinkSimulator!.executeMAVLinkCommand({
-            command: params.command,
-            targetSystem: droneId + 1,
-            targetComponent: 1,
-            params,
-          })
-        } else {
-          // Send to real drone via transport
-          await this._sendRealCommand(params)
-        }
-      }
-
-      if (this.listeners.onLog) {
-        this.listeners.onLog(
-          `[MAVLink] Formation command executed: ${command.action} for ${droneIds.length} drones`
-        )
-      }
-
-      return {
-        success: true,
-        timestamp: Date.now(),
+      // Route based on formation control mode
+      if (this.formationMode === FormationControlMode.VIRTUAL_LEADER) {
+        return await this._handleFormationCommandVirtualLeader(command)
+      } else {
+        return await this._handleFormationCommandGCS(command)
       }
     } catch (error) {
       log.error('Formation command error', { error })
@@ -638,6 +640,98 @@ export class MAVLinkConnectionService implements IConnectionService {
         error: error instanceof Error ? error.message : String(error),
         timestamp: Date.now(),
       }
+    }
+  }
+
+  /**
+   * Handle formation command using GCS-Coordinated mode (existing implementation)
+   */
+  private async _handleFormationCommandGCS(command: Command): Promise<CommandResponse> {
+    // Get all drone IDs
+    const droneIds = Array.from({ length: this.droneCount }, (_, i) => i)
+
+    // Convert formation command to individual waypoints
+    const formationWaypoints = MAVLinkConverter.convertFormationCommand(command, droneIds)
+
+    // Execute waypoint for each drone
+    for (const [droneId, params] of formationWaypoints) {
+      if (this.isSimulation) {
+        // Send to simulator
+        this.mavlinkSimulator!.executeMAVLinkCommand({
+          command: params.command,
+          targetSystem: droneId + 1,
+          targetComponent: 1,
+          params,
+        })
+      } else {
+        // Send to real drone via transport
+        await this._sendRealCommand(params)
+      }
+    }
+
+    if (this.listeners.onLog) {
+      this.listeners.onLog(
+        `[MAVLink] Formation command executed (GCS mode): ${command.action} for ${droneIds.length} drones`
+      )
+    }
+
+    return {
+      success: true,
+      timestamp: Date.now(),
+    }
+  }
+
+  /**
+   * Handle formation command using Virtual Leader mode (new implementation)
+   */
+  private async _handleFormationCommandVirtualLeader(command: Command): Promise<CommandResponse> {
+    // Initialize controller if needed
+    if (!this.virtualLeaderController) {
+      this._initializeVirtualLeaderController()
+    }
+
+    // Extract command parameters
+    const params = command.params as any
+
+    if (command.action === CommandAction.SET_FORMATION) {
+      // SET_FORMATION: Set formation shape and position
+      const formationType = params.formationType || 'line'
+      const spacing = params.spacing || 2.0
+      const centerX = params.centerX || 0
+      const centerY = params.centerY || 0
+      const centerZ = params.centerZ || 3.0
+      const leaderDroneId = params.leaderDroneId
+
+      this.virtualLeaderController!.setFormation(
+        formationType,
+        spacing,
+        { x: centerX, y: centerY, z: centerZ },
+        leaderDroneId
+      )
+
+      if (this.listeners.onLog) {
+        this.listeners.onLog(
+          `[MAVLink] Formation set (Virtual Leader): ${formationType} at (${centerX}, ${centerY}, ${centerZ})`
+        )
+      }
+    } else if (command.action === CommandAction.MOVE_FORMATION) {
+      // MOVE_FORMATION: Move virtual leader (all drones follow)
+      const direction = params.direction || 'forward'
+      const distance = params.distance || 1.0
+      const speed = params.speed || 2.0
+
+      this.virtualLeaderController!.moveVirtualLeader(direction, distance, speed)
+
+      if (this.listeners.onLog) {
+        this.listeners.onLog(
+          `[MAVLink] Formation moving (Virtual Leader): ${direction} ${distance}m at ${speed}m/s`
+        )
+      }
+    }
+
+    return {
+      success: true,
+      timestamp: Date.now(),
     }
   }
 
@@ -799,8 +893,84 @@ export class MAVLinkConnectionService implements IConnectionService {
       this.mavlinkSimulator = null
     }
 
+    if (this.virtualLeaderController) {
+      this.virtualLeaderController.stop()
+      this.virtualLeaderController = null
+    }
+
     this.lastTelemetry.clear()
     this.listeners = {}
+  }
+
+  /**
+   * Set formation control mode
+   */
+  setFormationMode(mode: FormationControlMode): void {
+    log.info('Setting formation mode', { mode })
+    this.formationMode = mode
+
+    // Initialize Virtual Leader controller if needed
+    if (mode === FormationControlMode.VIRTUAL_LEADER && !this.virtualLeaderController) {
+      this._initializeVirtualLeaderController()
+    }
+
+    // Stop Virtual Leader controller if switching away
+    if (mode === FormationControlMode.GCS_COORDINATED && this.virtualLeaderController) {
+      this.virtualLeaderController.stop()
+      this.virtualLeaderController = null
+    }
+
+    if (this.listeners.onLog) {
+      this.listeners.onLog(`[MAVLink] Formation mode set to: ${mode}`)
+    }
+  }
+
+  /**
+   * Get current formation control mode
+   */
+  getFormationMode(): FormationControlMode {
+    return this.formationMode
+  }
+
+  /**
+   * Initialize Virtual Leader Formation Controller
+   */
+  private _initializeVirtualLeaderController(): void {
+    log.info('Initializing Virtual Leader Controller', { droneCount: this.droneCount })
+
+    // Create position setpoint callback
+    const sendPositionSetpoint: PositionSetpointCallback = (droneId, position, velocity, yaw) => {
+      // Convert to MAVLink SET_POSITION_TARGET_LOCAL_NED command
+      const params = MAVLinkConverter.positionSetpointToMAVLink(
+        droneId,
+        position,
+        velocity,
+        yaw
+      )
+
+      // Send command
+      if (this.isSimulation && this.mavlinkSimulator) {
+        this.mavlinkSimulator.executeMAVLinkCommand({
+          command: params.command,
+          targetSystem: droneId + 1,
+          targetComponent: 1,
+          params,
+        })
+      } else if (!this.isSimulation && this.transport) {
+        this._sendRealCommand(params).catch((err) => {
+          log.error('Failed to send position setpoint', { droneId, error: err })
+        })
+      }
+    }
+
+    // Create controller
+    this.virtualLeaderController = new VirtualLeaderFormationController(
+      this.droneCount,
+      sendPositionSetpoint,
+      10 // 10Hz update rate
+    )
+
+    log.info('Virtual Leader Controller initialized')
   }
 
   // Private helpers

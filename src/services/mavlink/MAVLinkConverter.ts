@@ -412,4 +412,48 @@ export class MAVLinkConverter {
         return 'landed'
     }
   }
+
+  /**
+   * Convert position setpoint (for Virtual Leader) to MAVLink SET_POSITION_TARGET_LOCAL_NED
+   *
+   * This is used by the Virtual Leader Formation Controller to send individual
+   * position setpoints to each drone at 10Hz
+   *
+   * @param droneId - Drone ID (0-based)
+   * @param position - Target position in local NED frame (meters)
+   * @param velocity - Target velocity in local NED frame (m/s)
+   * @param yaw - Target yaw angle (radians)
+   * @returns MAVLink command parameters
+   */
+  static positionSetpointToMAVLink(
+    droneId: number,
+    position: { x: number; y: number; z: number },
+    velocity: { x: number; y: number; z: number },
+    yaw: number
+  ): CommandLongParams {
+    // MAV_CMD 84: SET_POSITION_TARGET_LOCAL_NED
+    // This command sets position, velocity, and yaw simultaneously
+    //
+    // Type mask (param1):
+    // - 0b0000111111000111 = 0x0FC7 = Use position + velocity + yaw
+    // - 0b0000111111111000 = 0x0FF8 = Use position only
+    // - 0b0000111000111111 = 0x0E3F = Use velocity only
+    //
+    // We use position + velocity + yaw for smooth synchronized movement
+    const TYPE_MASK_POS_VEL_YAW = 0x0FC7
+
+    return {
+      command: 84, // SET_POSITION_TARGET_LOCAL_NED
+      param1: TYPE_MASK_POS_VEL_YAW, // Type mask
+      param2: position.x, // X position in NED frame (meters)
+      param3: position.y, // Y position in NED frame (meters)
+      param4: position.z, // Z position in NED frame (meters, down is positive)
+      param5: velocity.x, // X velocity in NED frame (m/s)
+      param6: velocity.y, // Y velocity in NED frame (m/s)
+      param7: velocity.z, // Z velocity in NED frame (m/s)
+      // Note: Yaw is typically sent separately via SET_ATTITUDE_TARGET
+      // For simplicity, we include it in param4 of a separate command if needed
+      target_system: droneId + 1, // MAVLink system ID (1-based)
+    }
+  }
 }

@@ -14,9 +14,9 @@ import type {
   CommandResponse,
 } from './types'
 import { WebSocketConnectionService } from './WebSocketConnectionService'
+import { UnityWebGLConnectionService } from './UnityWebGLConnectionService'
 import { MAVLinkConnectionService } from './MAVLinkConnectionService'
 import { TestConnectionService } from './TestConnectionService'
-import { UnityWebGLConnectionService } from './UnityWebGLConnectionService'
 import { ConnectionStatus } from '@/constants/connection'
 import { log } from '@/utils/logger'
 
@@ -151,6 +151,13 @@ export class ConnectionManager {
   }
 
   /**
+   * 현재 연결 서비스 가져오기 (별칭)
+   */
+  getService(): IConnectionService | null {
+    return this.currentService
+  }
+
+  /**
    * 현재 연결 상태 조회
    */
   getStatus(): ConnectionStatus {
@@ -241,7 +248,7 @@ export class ConnectionManager {
   private _createService(mode: ConnectionMode, config?: ConnectionConfig): IConnectionService {
     switch (mode) {
       case 'simulation':
-        log.info('ConnectionManager', 'Creating WebSocket service')
+        log.info('ConnectionManager', 'Creating WebSocket service (Unity External Server)')
         return new WebSocketConnectionService()
 
       case 'unity_webgl':
@@ -250,7 +257,7 @@ export class ConnectionManager {
 
       case 'mavlink_simulation': {
         const mavlinkDroneCount = config?.mavlink?.droneCount || 4
-        log.info('ConnectionManager', 'Creating MAVLink Simulation service with', mavlinkDroneCount, 'drones')
+        log.info('ConnectionManager', 'Creating Three.js Simulator with', mavlinkDroneCount, 'drones')
         return new MAVLinkConnectionService(mavlinkDroneCount)
       }
 

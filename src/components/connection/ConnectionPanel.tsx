@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { ConnectionStatus as Status } from '@/constants/connection'
 import { ConnectionMode } from '@/services/connection'
+import { FormationControlMode } from '@/services/connection/MAVLinkConnectionService'
 import { Card } from '@/components/common/Card'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
@@ -23,6 +24,7 @@ export function ConnectionPanel() {
     mavlinkPort,
     mavlinkSerialDevice,
     mavlinkBaudRate,
+    formationMode,
     setMode,
     setIpAddress,
     setPort,
@@ -33,6 +35,7 @@ export function ConnectionPanel() {
     setMavlinkPort,
     setMavlinkSerialDevice,
     setMavlinkBaudRate,
+    setFormationMode,
     connect,
     disconnect,
     clearError,
@@ -139,30 +142,7 @@ export function ConnectionPanel() {
             {t('connection.mode')}
           </label>
           <div className="grid grid-cols-1 gap-2">
-            {/* WebSocket Mode */}
-            <button
-              onClick={() => handleModeChange(ConnectionMode.SIMULATION)}
-              disabled={isConnected || isConnecting}
-              className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                isSimMode
-                  ? 'border-primary-600 bg-primary-50'
-                  : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isSimMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
-                }`}>
-                  {isSimMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
-                </div>
-                <div>
-                  <div className="font-medium text-[var(--text-primary)]">WebSocket Server</div>
-                  <div className="text-xs text-[var(--text-secondary)]">Connect to separate Unity server</div>
-                </div>
-              </div>
-            </button>
-
-            {/* Unity WebGL Mode */}
+            {/* Unity WebGL Mode (Default) */}
             <button
               onClick={() => handleModeChange(ConnectionMode.UNITY_WEBGL)}
               disabled={isConnected || isConnecting}
@@ -179,31 +159,54 @@ export function ConnectionPanel() {
                   {isUnityWebGLMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
                 </div>
                 <div>
-                  <div className="font-medium text-[var(--text-primary)]">Unity WebGL Embed</div>
+                  <div className="font-medium text-[var(--text-primary)]">🎮 Unity WebGL Embed</div>
                   <div className="text-xs text-[var(--text-secondary)]">Built-in Unity simulator</div>
                 </div>
               </div>
             </button>
 
-            {/* MAVLink Simulation Mode */}
+            {/* Unity WebSocket Mode */}
             <button
-              onClick={() => handleModeChange(ConnectionMode.MAVLINK_SIMULATION)}
+              onClick={() => handleModeChange(ConnectionMode.SIMULATION)}
               disabled={isConnected || isConnecting}
               className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                isMAVLinkSimMode
+                isSimMode
                   ? 'border-primary-600 bg-primary-50'
                   : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
               }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isMAVLinkSimMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
+                  isSimMode ? 'border-primary-600' : 'border-[var(--border-secondary)]'
                 }`}>
-                  {isMAVLinkSimMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
+                  {isSimMode && <div className="w-2 h-2 rounded-full bg-primary-600" />}
                 </div>
                 <div>
-                  <div className="font-medium text-[var(--text-primary)]">🚁 MAVLink Simulation</div>
-                  <div className="text-xs text-[var(--text-secondary)]">MAVLink protocol simulator</div>
+                  <div className="font-medium text-[var(--text-primary)]">🔌 Unity External Server</div>
+                  <div className="text-xs text-[var(--text-secondary)]">Connect to separate Unity WebSocket server</div>
+                </div>
+              </div>
+            </button>
+
+            {/* Three.js Simulator Mode */}
+            <button
+              onClick={() => handleModeChange(ConnectionMode.MAVLINK_SIMULATION)}
+              disabled={isConnected || isConnecting}
+              className={`p-3 rounded-lg border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                isMAVLinkSimMode
+                  ? 'border-green-600 bg-green-50'
+                  : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  isMAVLinkSimMode ? 'border-green-600' : 'border-[var(--border-secondary)]'
+                }`}>
+                  {isMAVLinkSimMode && <div className="w-2 h-2 rounded-full bg-green-600" />}
+                </div>
+                <div>
+                  <div className="font-medium text-[var(--text-primary)]">🚁 Three.js Simulator</div>
+                  <div className="text-xs text-[var(--text-secondary)]">Physics simulation with MAVLink protocol</div>
                 </div>
               </div>
             </button>
@@ -262,15 +265,15 @@ export function ConnectionPanel() {
           <ConnectionStatus status={status} />
         </div>
 
-        {/* MAVLink Simulation Mode Settings */}
+        {/* Three.js Simulator Settings */}
         {isMAVLinkSimMode && !isConnected && (
           <>
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <p className="text-sm text-green-800">
-                🚁 <strong>MAVLink Simulation Mode</strong>
+                🎮 <strong>Three.js 3D Simulator</strong>
               </p>
               <p className="text-xs text-green-700 mt-1">
-                Test with real MAVLink protocol. Full telemetry, GPS conversion, and formation commands.
+                Physics-based drone simulation with Three.js 3D visualization and MAVLink protocol support.
               </p>
             </div>
 
@@ -295,18 +298,75 @@ export function ConnectionPanel() {
                 ))}
               </div>
               <p className="text-xs text-[var(--text-secondary)] mt-2">
-                MAVLink protocol with GPS coordinates and formation flight
+                Three.js physics engine with MAVLink protocol and formation flight
               </p>
             </div>
 
-            {/* Connect Button for MAVLink Mode */}
+            {/* Formation Control Mode Selector */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                Formation Control Mode
+              </label>
+              <div className="grid grid-cols-1 gap-2">
+                {/* GCS Coordinated Mode */}
+                <button
+                  onClick={() => setFormationMode(FormationControlMode.GCS_COORDINATED)}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    formationMode === FormationControlMode.GCS_COORDINATED
+                      ? 'border-green-600 bg-green-50'
+                      : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      formationMode === FormationControlMode.GCS_COORDINATED ? 'border-green-600' : 'border-[var(--border-secondary)]'
+                    }`}>
+                      {formationMode === FormationControlMode.GCS_COORDINATED && <div className="w-2 h-2 rounded-full bg-green-600" />}
+                    </div>
+                    <div>
+                      <div className="font-medium text-[var(--text-primary)]">🎯 GCS Coordinated</div>
+                      <div className="text-xs text-[var(--text-secondary)]">Each drone receives individual position setpoints</div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Virtual Leader Mode */}
+                <button
+                  onClick={() => setFormationMode(FormationControlMode.VIRTUAL_LEADER)}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    formationMode === FormationControlMode.VIRTUAL_LEADER
+                      ? 'border-purple-600 bg-purple-50'
+                      : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      formationMode === FormationControlMode.VIRTUAL_LEADER ? 'border-purple-600' : 'border-[var(--border-secondary)]'
+                    }`}>
+                      {formationMode === FormationControlMode.VIRTUAL_LEADER && <div className="w-2 h-2 rounded-full bg-purple-600" />}
+                    </div>
+                    <div>
+                      <div className="font-medium text-[var(--text-primary)]">✨ Virtual Leader</div>
+                      <div className="text-xs text-[var(--text-secondary)]">Smooth synchronized movement with formation offsets</div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] mt-2">
+                {formationMode === FormationControlMode.GCS_COORDINATED
+                  ? '📍 GCS calculates each drone position independently'
+                  : '🎯 Virtual point moves, drones follow with offsets'}
+              </p>
+            </div>
+
+            {/* Connect Button for Three.js Simulator */}
             <div className="pt-4">
               <button
                 onClick={handleConnect}
                 disabled={isConnecting}
                 className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isConnecting ? 'Connecting...' : 'Connect (MAVLink)'}
+                {isConnecting ? 'Starting Simulator...' : 'Start Three.js Simulator'}
               </button>
             </div>
           </>
@@ -488,18 +548,7 @@ export function ConnectionPanel() {
           </>
         )}
 
-        {isUnityWebGLMode && !isConnected && (
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-            <p className="text-sm text-purple-800">
-              🎮 <strong>Unity WebGL Mode</strong>
-            </p>
-            <p className="text-xs text-purple-700 mt-1">
-              Unity simulator will be embedded in the app. Make sure Unity build files are in <code className="bg-purple-100 px-1 rounded">public/unity/Build/</code>
-            </p>
-          </div>
-        )}
-
-        {/* IP Address Input - Only for WebSocket Mode */}
+        {/* IP Address Input - Only for Unity External Server Mode */}
         {isSimMode && !isConnected && (
           <>
             <Input
@@ -547,14 +596,16 @@ export function ConnectionPanel() {
         {isConnected && (
           <div className="bg-success/10 border border-success rounded-lg p-3">
             <p className="text-sm text-success-dark">
-              {isMAVLinkMode ? (
-                <>🚁 <strong>MAVLink Simulation Active</strong> - {mavlinkDroneCount} drones ready</>
+              {isUnityWebGLMode ? (
+                <>🎮 <strong>Unity WebGL Ready</strong> - Simulator loaded</>
+              ) : isMAVLinkSimMode ? (
+                <>🚁 <strong>Three.js Simulator Active</strong> - {mavlinkDroneCount} drones ready</>
+              ) : isRealMAVLinkMode ? (
+                <>🔧 <strong>Real MAVLink Connected</strong> - Live drone telemetry</>
               ) : isTestMode ? (
                 <>🧪 <strong>Test Mode Active</strong> - Blockly workspace ready</>
-              ) : isUnityWebGLMode ? (
-                <>🎮 <strong>Unity WebGL Ready</strong> - Simulator loaded</>
               ) : (
-                <>Connected to <span className="font-mono font-semibold">{ipAddress}:{port}</span></>
+                <>🔌 <strong>Unity Server Connected</strong> - <span className="font-mono font-semibold">{ipAddress}:{port}</span></>
               )}
             </p>
           </div>
