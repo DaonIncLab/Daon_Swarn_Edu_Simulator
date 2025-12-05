@@ -35,6 +35,16 @@ export const NodeType = {
   FUNCTION_DEF: 'function_def',
   /** 함수 호출 */
   FUNCTION_CALL: 'function_call',
+  /** 센서 값 조회 */
+  SENSOR_VALUE: 'sensor_value',
+  /** 수식 계산 */
+  MATH_EXPR: 'math_expr',
+  /** 논리 비교 */
+  LOGIC_COMPARE: 'logic_compare',
+  /** 논리 연산 */
+  LOGIC_OPERATION: 'logic_operation',
+  /** 논리 부정 */
+  LOGIC_NEGATE: 'logic_negate',
 } as const
 
 export type NodeType = typeof NodeType[keyof typeof NodeType]
@@ -89,7 +99,7 @@ export interface ForLoopNode extends BaseNode {
  */
 export interface IfNode extends BaseNode {
   type: 'if'
-  condition: string
+  condition: ConditionNode
   thenBranch: ExecutableNode
 }
 
@@ -98,7 +108,7 @@ export interface IfNode extends BaseNode {
  */
 export interface IfElseNode extends BaseNode {
   type: 'if_else'
-  condition: string
+  condition: ConditionNode
   thenBranch: ExecutableNode
   elseBranch: ExecutableNode
 }
@@ -116,7 +126,7 @@ export interface WaitNode extends BaseNode {
  */
 export interface WhileLoopNode extends BaseNode {
   type: 'while_loop'
-  condition: string
+  condition: ConditionNode
   body: ExecutableNode
   maxIterations?: number // 무한 루프 방지 (기본값: 1000)
 }
@@ -126,7 +136,7 @@ export interface WhileLoopNode extends BaseNode {
  */
 export interface UntilLoopNode extends BaseNode {
   type: 'until_loop'
-  condition: string
+  condition: ConditionNode
   body: ExecutableNode
   maxIterations?: number // 무한 루프 방지 (기본값: 1000)
 }
@@ -137,7 +147,7 @@ export interface UntilLoopNode extends BaseNode {
 export interface VariableSetNode extends BaseNode {
   type: 'variable_set'
   variableName: string
-  value: number | VariableGetNode // 직접 값 또는 다른 변수 참조
+  value: ValueNode // 직접 값, 변수 참조, 센서 값, 수식 등
 }
 
 /**
@@ -164,6 +174,71 @@ export interface FunctionCallNode extends BaseNode {
   type: 'function_call'
   functionName: string
 }
+
+/**
+ * 센서 값 노드
+ */
+export interface SensorValueNode extends BaseNode {
+  type: 'sensor_value'
+  sensorType: 'battery' | 'altitude' | 'elapsed_time'
+  droneId?: number // battery, altitude용 (elapsed_time는 불필요)
+}
+
+/**
+ * 수식 계산 노드
+ */
+export interface MathExprNode extends BaseNode {
+  type: 'math_expr'
+  operator: 'ADD' | 'MINUS' | 'MULTIPLY' | 'DIVIDE'
+  left: ValueNode
+  right: ValueNode
+}
+
+/**
+ * 논리 비교 노드
+ */
+export interface LogicCompareNode extends BaseNode {
+  type: 'logic_compare'
+  operator: 'EQ' | 'NEQ' | 'LT' | 'LTE' | 'GT' | 'GTE'
+  left: ValueNode
+  right: ValueNode
+}
+
+/**
+ * 논리 연산 노드
+ */
+export interface LogicOperationNode extends BaseNode {
+  type: 'logic_operation'
+  operator: 'AND' | 'OR'
+  left: ConditionNode
+  right: ConditionNode
+}
+
+/**
+ * 논리 부정 노드
+ */
+export interface LogicNegateNode extends BaseNode {
+  type: 'logic_negate'
+  operand: ConditionNode
+}
+
+/**
+ * 값 노드 (숫자를 반환하는 노드)
+ */
+export type ValueNode =
+  | number
+  | VariableGetNode
+  | SensorValueNode
+  | MathExprNode
+
+/**
+ * 조건 노드 (boolean을 반환하는 노드)
+ */
+export type ConditionNode =
+  | string // 하드코딩된 조건 문자열 (기존 호환성)
+  | LogicCompareNode
+  | LogicOperationNode
+  | LogicNegateNode
 
 /**
  * 실행 가능한 모든 노드 타입의 유니온

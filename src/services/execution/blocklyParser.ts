@@ -1,5 +1,18 @@
 /**
  * Blockly 워크스페이스를 실행 가능한 노드 트리로 파싱
+ *
+ * 이 파서는 Blockly 워크스페이스를 실행 가능한 노드 트리로 변환합니다.
+ *
+ * 블록 타입:
+ * - Statement Blocks: 독립적으로 실행 가능한 블록 (명령, 제어 흐름, 변수 설정 등)
+ * - Value Blocks: 값을 반환하는 블록 (센서, 변수 조회, 수식, 논리 연산 등)
+ *
+ * Value Blocks는 단독으로 실행되지 않고, 다른 블록의 입력으로만 사용됩니다:
+ * - 센서 블록 (sensor_battery, sensor_altitude, sensor_elapsed_time)
+ * - 논리 블록 (logic_compare, logic_operation, logic_negate)
+ * - 수식 블록 (math_arithmetic)
+ *
+ * 이러한 Value Blocks는 parseSingleBlock()에서 의도적으로 필터링됩니다.
  */
 
 import * as Blockly from 'blockly'
@@ -22,6 +35,13 @@ import type {
   VariableGetNode,
   FunctionDefNode,
   FunctionCallNode,
+  SensorValueNode,
+  MathExprNode,
+  LogicCompareNode,
+  LogicOperationNode,
+  LogicNegateNode,
+  ValueNode,
+  ConditionNode,
   NodeType,
 } from '@/types/execution'
 
@@ -32,6 +52,17 @@ let nodeIdCounter = 0
  */
 function generateNodeId(): string {
   return `node_${++nodeIdCounter}`
+}
+
+/**
+ * 필드 값 검증
+ */
+function validateFieldValue(fieldName: string, value: number, min: number, max: number): number {
+  if (value < min || value > max) {
+    log.warn('BlocklyParser', `${fieldName} value ${value} is out of range [${min}, ${max}]. Clamping to valid range.`)
+    return Math.max(min, Math.min(max, value))
+  }
+  return value
 }
 
 /**
@@ -178,9 +209,10 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
     return parseCommandBlock(block)
   }
 
-  // 센서 블록과 논리 블록은 값 블록이므로 단독으로 파싱하지 않음
-  if (type.startsWith('sensor_') || type.startsWith('logic_')) {
-    log.warn('BlocklyParser', 'Value block cannot be used as statement:', type)
+  // Value Blocks (값 블록): 단독 실행 불가, 다른 블록의 입력으로만 사용
+  // 이들은 parseValueBlock() 또는 parseConditionExpression()에서 파싱됩니다.
+  if (type.startsWith('sensor_') || type.startsWith('logic_') || type === 'math_arithmetic') {
+    log.warn('BlocklyParser', 'Value block cannot be used as standalone statement:', type)
     return null
   }
 
@@ -193,7 +225,7 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
  * 반복 블록 파싱
  */
 function parseRepeatBlock(block: Blockly.Block): RepeatNode | null {
-  const times = block.getFieldValue('TIMES') as number
+  const times = validateFieldValue('TIMES', block.getFieldValue('TIMES') as number, 1, 100)
 
   // statement 입력 (반복문 내부 블록들)
   const statementInput = block.getInput('DO')
@@ -249,7 +281,18 @@ function parseForLoopBlock(block: Blockly.Block): ForLoopNode | null {
  * If 블록 파싱
  */
 function parseIfBlock(block: Blockly.Block): IfNode | null {
-  const condition = block.getFieldValue('CONDITION') as string
+  // CONDITION 입력 확인 (VALUE 블록 지원)
+  const conditionInput = block.getInput('CONDITION')
+  const conditionBlock = conditionInput?.connection?.targetBlock()
+
+  let condition: ConditionNode
+  if (conditionBlock) {
+    // 논리 블록이 연결된 경우
+    condition = parseConditionExpression(conditionBlock)
+  } else {
+    // 드롭다운 필드 사용 (기존 호환성)
+    condition = block.getFieldValue('CONDITION') as string
+  }
 
   const thenInput = block.getInput('DO')
   const thenBlock = thenInput?.connection?.targetBlock()
@@ -273,14 +316,25 @@ function parseIfBlock(block: Blockly.Block): IfNode | null {
  * If-Else 블록 파싱
  */
 function parseIfElseBlock(block: Blockly.Block): IfElseNode | null {
-  const condition = block.getFieldValue('CONDITION') as string
+  // CONDITION 입력 확인 (VALUE 블록 지원)
+  const conditionInput = block.getInput('CONDITION')
+  const conditionBlock = conditionInput?.connection?.targetBlock()
+
+  let condition: ConditionNode
+  if (conditionBlock) {
+    // 논리 블록이 연결된 경우
+    condition = parseConditionExpression(conditionBlock)
+  } else {
+    // 드롭다운 필드 사용 (기존 호환성)
+    condition = block.getFieldValue('CONDITION') as string
+  }
 
   // swarmBlocks.ts에서는 'DO_IF'와 'DO_ELSE'를 사용
-  const thenInput = block.getInput('DO_IF') || block.getInput('DO')
+  const thenInput = block.getInput('DO_IF')
   const thenBlock = thenInput?.connection?.targetBlock()
   const thenBranch = thenBlock ? parseBlock(thenBlock) : null
 
-  const elseInput = block.getInput('DO_ELSE') || block.getInput('ELSE')
+  const elseInput = block.getInput('DO_ELSE')
   const elseBlock = elseInput?.connection?.targetBlock()
   const elseBranch = elseBlock ? parseBlock(elseBlock) : null
 
@@ -307,7 +361,7 @@ function parseIfElseBlock(block: Blockly.Block): IfElseNode | null {
  * 대기 블록 파싱
  */
 function parseWaitBlock(block: Blockly.Block): WaitNode {
-  const duration = block.getFieldValue('DURATION') as number
+  const duration = validateFieldValue('DURATION', block.getFieldValue('DURATION') as number, 0.1, 60)
 
   return {
     id: generateNodeId(),
@@ -320,7 +374,18 @@ function parseWaitBlock(block: Blockly.Block): WaitNode {
  * While 루프 블록 파싱 (Phase 6-A)
  */
 function parseWhileLoopBlock(block: Blockly.Block): WhileLoopNode | null {
-  const condition = block.getFieldValue('CONDITION') as string
+  // CONDITION 입력 확인 (VALUE 블록 지원)
+  const conditionInput = block.getInput('CONDITION')
+  const conditionBlock = conditionInput?.connection?.targetBlock()
+
+  let condition: ConditionNode
+  if (conditionBlock) {
+    // 논리 블록이 연결된 경우
+    condition = parseConditionExpression(conditionBlock)
+  } else {
+    // 필드 사용 (기존 호환성)
+    condition = block.getFieldValue('CONDITION') as string
+  }
 
   const statementInput = block.getInput('DO')
   const statementBlock = statementInput?.connection?.targetBlock()
@@ -345,7 +410,18 @@ function parseWhileLoopBlock(block: Blockly.Block): WhileLoopNode | null {
  * Repeat Until 루프 블록 파싱 (Phase 6-A)
  */
 function parseUntilLoopBlock(block: Blockly.Block): UntilLoopNode | null {
-  const condition = block.getFieldValue('CONDITION') as string
+  // CONDITION 입력 확인 (VALUE 블록 지원)
+  const conditionInput = block.getInput('CONDITION')
+  const conditionBlock = conditionInput?.connection?.targetBlock()
+
+  let condition: ConditionNode
+  if (conditionBlock) {
+    // 논리 블록이 연결된 경우
+    condition = parseConditionExpression(conditionBlock)
+  } else {
+    // 필드 사용 (기존 호환성)
+    condition = block.getFieldValue('CONDITION') as string
+  }
 
   const statementInput = block.getInput('DO')
   const statementBlock = statementInput?.connection?.targetBlock()
@@ -377,18 +453,16 @@ function parseVariableSetBlock(block: Blockly.Block): VariableSetNode | null {
   const valueConnection = valueInput?.connection
   const valueBlock = valueConnection?.targetBlock()
 
-  let value: number | VariableGetNode
+  let value: ValueNode
 
   if (valueBlock) {
-    // 다른 블록으로부터 값을 받는 경우 (예: variables_get)
-    if (valueBlock.type === 'variables_get') {
-      const varGetNode = parseVariableGetBlock(valueBlock)
-      value = varGetNode
-    } else {
-      // 센서 블록이나 수식 블록 등은 현재 미지원
-      log.warn('BlocklyParser', 'Unsupported value block type in variable_set:', valueBlock.type)
+    // 다른 블록으로부터 값을 받는 경우 (variables_get, sensor, math 등)
+    const parsedValue = parseValueBlock(valueBlock)
+    if (parsedValue === null) {
+      log.warn('BlocklyParser', 'Failed to parse value block in variable_set:', valueBlock.type)
       return null
     }
+    value = parsedValue
   } else {
     // 필드로부터 직접 값을 받는 경우
     value = block.getFieldValue('VALUE') as number
@@ -478,7 +552,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
       return {
         action: CommandAction.TAKEOFF_ALL,
         params: {
-          altitude: block.getFieldValue('ALTITUDE') as number
+          altitude: validateFieldValue('ALTITUDE', block.getFieldValue('ALTITUDE') as number, 0, 10)
         }
       }
 
@@ -493,9 +567,9 @@ function blockToCommand(block: Blockly.Block): Command | null {
         action: CommandAction.SET_FORMATION,
         params: {
           type: block.getFieldValue('FORMATION_TYPE') as FormationType,
-          rows: block.getFieldValue('ROWS') as number,
-          cols: block.getFieldValue('COLS') as number,
-          spacing: block.getFieldValue('SPACING') as number
+          rows: validateFieldValue('ROWS', block.getFieldValue('ROWS') as number, 1, 10),
+          cols: validateFieldValue('COLS', block.getFieldValue('COLS') as number, 1, 10),
+          spacing: validateFieldValue('SPACING', block.getFieldValue('SPACING') as number, 0.5, 10)
         }
       }
 
@@ -504,7 +578,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
         action: CommandAction.MOVE_FORMATION,
         params: {
           direction: block.getFieldValue('DIRECTION') as Direction,
-          distance: block.getFieldValue('DISTANCE') as number
+          distance: validateFieldValue('DISTANCE', block.getFieldValue('DISTANCE') as number, 0.5, 20)
         }
       }
 
@@ -512,10 +586,10 @@ function blockToCommand(block: Blockly.Block): Command | null {
       return {
         action: CommandAction.MOVE_DRONE,
         params: {
-          droneId: block.getFieldValue('DRONE_ID') as number,
-          x: block.getFieldValue('X') as number,
-          y: block.getFieldValue('Y') as number,
-          z: block.getFieldValue('Z') as number
+          droneId: validateFieldValue('DRONE_ID', block.getFieldValue('DRONE_ID') as number, 1, 10),
+          x: validateFieldValue('X', block.getFieldValue('X') as number, -10, 10),
+          y: validateFieldValue('Y', block.getFieldValue('Y') as number, -10, 10),
+          z: validateFieldValue('Z', block.getFieldValue('Z') as number, -10, 10)
         }
       }
 
@@ -533,5 +607,185 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     default:
       return null
+  }
+}
+
+/**
+ * 값 블록 파싱 (센서, 변수, 수식 등)
+ */
+function parseValueBlock(block: Blockly.Block): ValueNode | null {
+  const type = block.type
+
+  // 변수 값 가져오기
+  if (type === 'variables_get') {
+    return parseVariableGetBlock(block)
+  }
+
+  // 센서 블록
+  if (type.startsWith('sensor_')) {
+    return parseSensorBlock(block)
+  }
+
+  // 수식 블록
+  if (type === 'math_arithmetic') {
+    return parseMathBlock(block)
+  }
+
+  // 직접 숫자 값 (리터럴)
+  // Note: Blockly에서 number 필드는 블록이 아님
+  log.warn('BlocklyParser', 'Unsupported value block type:', type)
+  return null
+}
+
+/**
+ * 센서 블록 파싱
+ */
+function parseSensorBlock(block: Blockly.Block): SensorValueNode | null {
+  let sensorType: 'battery' | 'altitude' | 'elapsed_time'
+  let droneId: number | undefined
+
+  switch (block.type) {
+    case 'sensor_battery':
+      sensorType = 'battery'
+      droneId = block.getFieldValue('DRONE_ID') as number
+      break
+    case 'sensor_altitude':
+      sensorType = 'altitude'
+      droneId = block.getFieldValue('DRONE_ID') as number
+      break
+    case 'sensor_elapsed_time':
+      sensorType = 'elapsed_time'
+      // elapsed_time은 droneId 불필요
+      break
+    default:
+      log.warn('BlocklyParser', 'Unknown sensor block type:', block.type)
+      return null
+  }
+
+  return {
+    id: generateNodeId(),
+    type: 'sensor_value',
+    sensorType,
+    droneId,
+  }
+}
+
+/**
+ * 수식 블록 파싱
+ */
+function parseMathBlock(block: Blockly.Block): MathExprNode | null {
+  const operator = block.getFieldValue('OP') as 'ADD' | 'MINUS' | 'MULTIPLY' | 'DIVIDE'
+
+  // 좌측 피연산자
+  const aValue = block.getFieldValue('A') as number
+  const left: ValueNode = aValue
+
+  // 우측 피연산자
+  const bValue = block.getFieldValue('B') as number
+  const right: ValueNode = bValue
+
+  return {
+    id: generateNodeId(),
+    type: 'math_expr',
+    operator,
+    left,
+    right,
+  }
+}
+
+/**
+ * 조건 표현식 파싱 (논리 블록)
+ */
+function parseConditionExpression(block: Blockly.Block | null): ConditionNode {
+  if (!block) {
+    // 블록이 없으면 빈 문자열 반환 (기존 호환성)
+    return ''
+  }
+
+  const type = block.type
+
+  // 논리 비교 블록
+  if (type === 'logic_compare') {
+    return parseLogicCompareBlock(block)
+  }
+
+  // 논리 연산 블록
+  if (type === 'logic_operation') {
+    return parseLogicOperationBlock(block)
+  }
+
+  // 논리 부정 블록
+  if (type === 'logic_negate') {
+    return parseLogicNegateBlock(block)
+  }
+
+  // 알 수 없는 블록은 빈 문자열 반환
+  log.warn('BlocklyParser', 'Unsupported condition block type:', type)
+  return ''
+}
+
+/**
+ * 논리 비교 블록 파싱
+ */
+function parseLogicCompareBlock(block: Blockly.Block): LogicCompareNode {
+  const operator = block.getFieldValue('OP') as 'EQ' | 'NEQ' | 'LT' | 'LTE' | 'GT' | 'GTE'
+
+  // 좌측 값
+  const aInput = block.getInput('A')
+  const aBlock = aInput?.connection?.targetBlock()
+  const left: ValueNode = aBlock ? (parseValueBlock(aBlock) || 0) : 0
+
+  // 우측 값
+  const bInput = block.getInput('B')
+  const bBlock = bInput?.connection?.targetBlock()
+  const right: ValueNode = bBlock ? (parseValueBlock(bBlock) || 0) : 0
+
+  return {
+    id: generateNodeId(),
+    type: 'logic_compare',
+    operator,
+    left,
+    right,
+  }
+}
+
+/**
+ * 논리 연산 블록 파싱
+ */
+function parseLogicOperationBlock(block: Blockly.Block): LogicOperationNode {
+  const operator = block.getFieldValue('OP') as 'AND' | 'OR'
+
+  // 좌측 조건
+  const aInput = block.getInput('A')
+  const aBlock = aInput?.connection?.targetBlock()
+  const left: ConditionNode = aBlock ? parseConditionExpression(aBlock) : ''
+
+  // 우측 조건
+  const bInput = block.getInput('B')
+  const bBlock = bInput?.connection?.targetBlock()
+  const right: ConditionNode = bBlock ? parseConditionExpression(bBlock) : ''
+
+  return {
+    id: generateNodeId(),
+    type: 'logic_operation',
+    operator,
+    left,
+    right,
+  }
+}
+
+/**
+ * 논리 부정 블록 파싱
+ */
+function parseLogicNegateBlock(block: Blockly.Block): LogicNegateNode {
+  // NOT 피연산자
+  const boolInput = block.getInput('BOOL')
+  const boolBlock = boolInput?.connection?.targetBlock()
+  const operand: ConditionNode = boolBlock ? parseConditionExpression(boolBlock) : ''
+
+  return {
+    id: generateNodeId(),
+    type: 'logic_negate',
+    operand,
   }
 }
