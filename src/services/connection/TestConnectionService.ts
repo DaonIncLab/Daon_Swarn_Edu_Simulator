@@ -227,6 +227,208 @@ export class TestConnectionService implements IConnectionService {
         // Wait is handled by delay, no action needed
         break
 
+      case CommandAction.ADD_WAYPOINT:
+        this.simulator.addWaypoint((params as any).waypoint)
+        break
+
+      case CommandAction.GOTO_WAYPOINT:
+        this.simulator.gotoWaypoint(
+          (params as any).waypointId,
+          (params as any).speed
+        )
+        break
+
+      case CommandAction.EXECUTE_MISSION:
+        // Note: executeMission is async but we don't await here
+        // The mission runs in background
+        this.simulator.executeMission(
+          (params as any).loop,
+          (params as any).speed
+        )
+        break
+
+      case CommandAction.CLEAR_WAYPOINTS:
+        this.simulator.clearWaypoints()
+        break
+
+      // ============= 새로운 드론 명령들 =============
+      case 'DRONE_TAKEOFF':
+        // 개별 드론 이륙 - 시뮬레이터가 지원하면 구현
+        log.info('DRONE_TAKEOFF', { droneId: (params as any).droneId, altitude: (params as any).altitude })
+        break
+
+      case 'DRONE_LAND':
+        // 개별 드론 착륙
+        log.info('DRONE_LAND', { droneId: (params as any).droneId })
+        break
+
+      case 'DRONE_HOVER':
+        // 호버링
+        log.info('DRONE_HOVER', { droneId: (params as any).droneId })
+        break
+
+      case 'DRONE_EMERGENCY':
+        // 긴급 정지
+        log.warn('DRONE_EMERGENCY', { droneId: (params as any).droneId })
+        break
+
+      case 'DRONE_MOVE_DIRECTION': {
+        // 개별 드론 방향 이동 (상대 좌표)
+        const droneId = (params as any).droneId
+        const direction = (params as any).direction
+        const distance = (params as any).distance
+
+        let dx = 0, dy = 0, dz = 0
+
+        switch (direction) {
+          case 'up':
+            dz = distance
+            break
+          case 'down':
+            dz = -distance
+            break
+          case 'left':
+            dx = -distance
+            break
+          case 'right':
+            dx = distance
+            break
+          case 'forward':
+            dy = distance
+            break
+          case 'backward':
+            dy = -distance
+            break
+        }
+
+        // 현재 위치에서 상대적으로 이동
+        const droneStates = this.simulator.getDroneStates()
+        const droneState = droneStates.find(d => d.id === droneId)
+
+        if (droneState) {
+          const newX = droneState.position.x + dx
+          const newY = droneState.position.y + dy
+          const newZ = droneState.position.z + dz
+
+          log.info('DRONE_MOVE_DIRECTION', { droneId, direction, distance, dx, dy, dz, newPos: { x: newX, y: newY, z: newZ } })
+          this.simulator.executeMoveDrone(droneId, newX, newY, newZ)
+        }
+        break
+      }
+
+      case 'DRONE_MOVE_DIRECTION_ALL': {
+        // 모든 드론 방향 이동 (상대 좌표)
+        const direction = (params as any).direction
+        const distance = (params as any).distance
+
+        let dx = 0, dy = 0, dz = 0
+
+        switch (direction) {
+          case 'up':
+            dz = distance
+            break
+          case 'down':
+            dz = -distance
+            break
+          case 'left':
+            dx = -distance
+            break
+          case 'right':
+            dx = distance
+            break
+          case 'forward':
+            dy = distance
+            break
+          case 'backward':
+            dy = -distance
+            break
+        }
+
+        log.info('DRONE_MOVE_DIRECTION_ALL', { direction, distance, dx, dy, dz })
+
+        // 모든 드론을 현재 위치에서 상대적으로 이동
+        const droneStates = this.simulator.getDroneStates()
+        droneStates.forEach((droneState) => {
+          const newX = droneState.position.x + dx
+          const newY = droneState.position.y + dy
+          const newZ = droneState.position.z + dz
+          this.simulator.executeMoveDrone(droneState.id, newX, newY, newZ)
+        })
+        break
+      }
+
+      case 'DRONE_MOVE_XYZ': {
+        // XYZ 상대 좌표 이동
+        const droneId = (params as any).droneId
+        const dx = (params as any).x
+        const dy = (params as any).y
+        const dz = (params as any).z
+
+        // 현재 위치에서 상대적으로 이동
+        const droneStates = this.simulator.getDroneStates()
+        const droneState = droneStates.find(d => d.id === droneId)
+
+        if (droneState) {
+          const newX = droneState.position.x + dx
+          const newY = droneState.position.y + dy
+          const newZ = droneState.position.z + dz
+
+          log.info('DRONE_MOVE_XYZ', { droneId, dx, dy, dz, newPos: { x: newX, y: newY, z: newZ } })
+          this.simulator.executeMoveDrone(droneId, newX, newY, newZ)
+        }
+        break
+      }
+
+      case 'DRONE_ROTATE':
+        // 회전
+        this.simulator.executeRotateDrone(
+          (params as any).droneId,
+          (params as any).degrees * ((params as any).direction === 'CW' ? 1 : -1)
+        )
+        break
+
+      case 'DRONE_RC_CONTROL':
+        // RC 제어
+        log.info('DRONE_RC_CONTROL', {
+          droneId: (params as any).droneId,
+          roll: (params as any).roll,
+          pitch: (params as any).pitch,
+          yaw: (params as any).yaw,
+          throttle: (params as any).throttle
+        })
+        break
+
+      case 'DRONE_SET_SPEED':
+        // 속도 설정
+        log.info('DRONE_SET_SPEED', {
+          droneId: (params as any).droneId,
+          speed: (params as any).speed
+        })
+        break
+
+      case 'MISSION_ADD_WAYPOINT':
+        this.simulator.addWaypoint((params as any).waypoint)
+        break
+
+      case 'MISSION_GOTO_WAYPOINT':
+        // waypointIndex를 사용하는 경우
+        log.info('MISSION_GOTO_WAYPOINT', {
+          waypointIndex: (params as any).waypointIndex,
+          speed: (params as any).speed
+        })
+        break
+
+      case 'MISSION_EXECUTE':
+        this.simulator.executeMission(
+          (params as any).loop,
+          (params as any).speed || 2
+        )
+        break
+
+      case 'MISSION_CLEAR':
+        this.simulator.clearWaypoints()
+        break
+
       default:
         log.warn('Unknown command action', { action })
     }
@@ -245,8 +447,25 @@ export class TestConnectionService implements IConnectionService {
       case CommandAction.LAND_ALL:
         return 3000 // 3 seconds to land
 
-      case CommandAction.SET_FORMATION:
-        return 2000 // 2 seconds to set formation
+      case CommandAction.SET_FORMATION: {
+        // Calculate delay based on formation size
+        const spacing = (params as any).spacing || 2
+        const rows = (params as any).rows || 1
+        const cols = (params as any).cols || 4
+
+        // Estimate max distance a drone might need to travel
+        // Worst case: drone moves from one corner to opposite corner
+        const maxWidth = (cols - 1) * spacing
+        const maxHeight = (rows - 1) * spacing
+        const maxDistance = Math.sqrt(maxWidth * maxWidth + maxHeight * maxHeight)
+
+        // Drone speed is 2 m/s, add buffer
+        const droneSpeed = 2.0 // m/s
+        const estimatedTime = (maxDistance / droneSpeed) * 1000 // ms
+        const bufferTime = 1000 // 1 second buffer
+
+        return Math.max(2000, estimatedTime + bufferTime) // minimum 2s
+      }
 
       case CommandAction.MOVE_FORMATION:
         const distance = (params as any).distance || 1
@@ -306,6 +525,23 @@ export class TestConnectionService implements IConnectionService {
     // Simulate ping latency (10-50ms random)
     const latency = Math.random() * 40 + 10
     return Promise.resolve(latency)
+  }
+
+  async reset(): Promise<CommandResponse> {
+    log.info('Resetting drone simulator to initial state')
+
+    if (this.simulator) {
+      this.simulator.reset()
+    }
+
+    if (this.listeners.onLog) {
+      this.listeners.onLog('[Test] Drone positions reset to initial state')
+    }
+
+    return {
+      success: true,
+      timestamp: Date.now(),
+    }
   }
 
   cleanup(): void {

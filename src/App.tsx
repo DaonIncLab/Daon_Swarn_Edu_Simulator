@@ -21,7 +21,7 @@ function App() {
   const { currentProject, saveCurrentProject } = useProjectStore();
   const [showMonitoring, setShowMonitoring] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('basic');
+  const [selectedCategory, setSelectedCategory] = useState('flight');
 
   const isConnected = status === ConnectionStatus.CONNECTED;
 

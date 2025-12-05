@@ -17,8 +17,7 @@
 
 import * as Blockly from 'blockly'
 import type { Command } from '@/types/websocket'
-import { CommandAction } from '@/constants/commands'
-import type { FormationType, Direction } from '@/constants/commands'
+import { CommandAction, FormationType, Direction } from '@/constants/commands'
 import { log } from '@/utils/logger'
 import type {
   ExecutableNode,
@@ -156,16 +155,16 @@ function parseBlock(block: Blockly.Block): ExecutableNode | null {
 function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
   const type = block.type
 
-  // 제어 흐름 블록
-  if (type === 'controls_repeat') {
+  // 제어 흐름 블록 (기존 이름)
+  if (type === 'controls_repeat' || type === 'control_repeat') {
     return parseRepeatBlock(block)
   }
 
-  if (type === 'controls_for') {
+  if (type === 'controls_for' || type === 'control_for') {
     return parseForLoopBlock(block)
   }
 
-  if (type === 'controls_while') {
+  if (type === 'controls_while' || type === 'control_while') {
     return parseWhileLoopBlock(block)
   }
 
@@ -173,20 +172,20 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
     return parseUntilLoopBlock(block)
   }
 
-  if (type === 'controls_if_simple') {
+  if (type === 'controls_if_simple' || type === 'control_if') {
     return parseIfBlock(block)
   }
 
-  if (type === 'controls_if_else') {
+  if (type === 'controls_if_else' || type === 'control_if_else') {
     return parseIfElseBlock(block)
   }
 
-  // 변수 블록
-  if (type === 'variables_set') {
+  // 변수 블록 (기존 이름 + 새 이름)
+  if (type === 'variables_set' || type === 'var_set') {
     return parseVariableSetBlock(block)
   }
 
-  if (type === 'variables_get') {
+  if (type === 'variables_get' || type === 'var_get') {
     return parseVariableGetBlock(block)
   }
 
@@ -200,12 +199,12 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
   }
 
   // 대기 블록
-  if (type === 'swarm_wait' || type === 'swarm_wait_all') {
+  if (type === 'swarm_wait' || type === 'swarm_wait_all' || type === 'control_wait') {
     return parseWaitBlock(block)
   }
 
-  // 드론 명령 블록
-  if (type.startsWith('swarm_')) {
+  // 드론 명령 블록 (swarm_ 또는 drone_로 시작)
+  if (type.startsWith('swarm_') || type.startsWith('drone_') || type.startsWith('mission_')) {
     return parseCommandBlock(block)
   }
 
@@ -548,6 +547,155 @@ function parseCommandBlock(block: Blockly.Block): CommandNode | null {
  */
 function blockToCommand(block: Blockly.Block): Command | null {
   switch (block.type) {
+    // ============= 새로운 드론 블록들 =============
+    case 'drone_takeoff':
+      return {
+        action: 'DRONE_TAKEOFF',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          altitude: block.getFieldValue('ALTITUDE') as number
+        }
+      }
+
+    case 'drone_land':
+      return {
+        action: 'DRONE_LAND',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number
+        }
+      }
+
+    case 'drone_takeoff_all':
+      return {
+        action: CommandAction.TAKEOFF_ALL,
+        params: {
+          altitude: block.getFieldValue('ALTITUDE') as number
+        }
+      }
+
+    case 'drone_land_all':
+      return {
+        action: CommandAction.LAND_ALL,
+        params: {}
+      }
+
+    case 'drone_hover':
+      return {
+        action: 'DRONE_HOVER',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number
+        }
+      }
+
+    case 'drone_emergency':
+      return {
+        action: 'DRONE_EMERGENCY',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number
+        }
+      }
+
+    case 'drone_move_direction':
+      return {
+        action: 'DRONE_MOVE_DIRECTION',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          direction: block.getFieldValue('DIRECTION') as string,
+          distance: block.getFieldValue('DISTANCE') as number
+        }
+      }
+
+    case 'drone_move_direction_all':
+      return {
+        action: 'DRONE_MOVE_DIRECTION_ALL',
+        params: {
+          direction: block.getFieldValue('DIRECTION') as string,
+          distance: block.getFieldValue('DISTANCE') as number
+        }
+      }
+
+    case 'drone_move_xyz':
+      return {
+        action: 'DRONE_MOVE_XYZ',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          x: block.getFieldValue('X') as number,
+          y: block.getFieldValue('Y') as number,
+          z: block.getFieldValue('Z') as number,
+          speed: block.getFieldValue('SPEED') as number
+        }
+      }
+
+    case 'drone_rotate':
+      return {
+        action: 'DRONE_ROTATE',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          direction: block.getFieldValue('DIRECTION') as string,
+          degrees: block.getFieldValue('DEGREES') as number
+        }
+      }
+
+    case 'drone_rc_control':
+      return {
+        action: 'DRONE_RC_CONTROL',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          roll: block.getFieldValue('ROLL') as number,
+          pitch: block.getFieldValue('PITCH') as number,
+          yaw: block.getFieldValue('YAW') as number,
+          throttle: block.getFieldValue('THROTTLE') as number
+        }
+      }
+
+    case 'drone_set_speed':
+      return {
+        action: 'DRONE_SET_SPEED',
+        params: {
+          droneId: block.getFieldValue('DRONE_ID') as number,
+          speed: block.getFieldValue('SPEED') as number
+        }
+      }
+
+    case 'mission_add_waypoint':
+      return {
+        action: 'MISSION_ADD_WAYPOINT',
+        params: {
+          waypoint: {
+            id: `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            x: block.getFieldValue('X') as number,
+            y: block.getFieldValue('Y') as number,
+            z: block.getFieldValue('Z') as number,
+            speed: block.getFieldValue('SPEED') as number,
+            holdTime: block.getFieldValue('HOLD_TIME') as number
+          }
+        }
+      }
+
+    case 'mission_goto_waypoint':
+      return {
+        action: 'MISSION_GOTO_WAYPOINT',
+        params: {
+          waypointIndex: block.getFieldValue('WAYPOINT_INDEX') as number,
+          speed: block.getFieldValue('SPEED') as number
+        }
+      }
+
+    case 'mission_execute':
+      return {
+        action: 'MISSION_EXECUTE',
+        params: {
+          loop: block.getFieldValue('LOOP') === 'TRUE'
+        }
+      }
+
+    case 'mission_clear':
+      return {
+        action: 'MISSION_CLEAR',
+        params: {}
+      }
+
+    // ============= 기존 스웜 블록들 (하위 호환성) =============
     case 'swarm_takeoff_all':
       return {
         action: CommandAction.TAKEOFF_ALL,
@@ -562,14 +710,71 @@ function blockToCommand(block: Blockly.Block): Command | null {
         params: {}
       }
 
-    case 'swarm_set_formation':
+    case 'swarm_formation_grid':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.GRID,
+          rows: block.getFieldValue('ROWS') as number,
+          cols: block.getFieldValue('COLS') as number,
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_line':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.LINE,
+          rows: block.getFieldValue('ROWS') as number,
+          cols: block.getFieldValue('COLS') as number,
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_circle':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.CIRCLE,
+          cols: block.getFieldValue('RADIUS') as number, // RADIUS → cols (반지름)
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_vshape':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.V_SHAPE,
+          rows: block.getFieldValue('DEPTH') as number, // DEPTH → rows (깊이)
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_triangle':
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          type: FormationType.TRIANGLE,
+          rows: block.getFieldValue('MAX_ROWS') as number, // MAX_ROWS → rows
+          spacing: block.getFieldValue('SPACING') as number,
+          leaderDroneId: (block.getFieldValue('LEADER_DRONE') as number) - 1
+        }
+      }
+
+    case 'swarm_formation_square':
       return {
         action: CommandAction.SET_FORMATION,
         params: {
           type: block.getFieldValue('FORMATION_TYPE') as FormationType,
-          rows: validateFieldValue('ROWS', block.getFieldValue('ROWS') as number, 1, 10),
-          cols: validateFieldValue('COLS', block.getFieldValue('COLS') as number, 1, 10),
-          spacing: validateFieldValue('SPACING', block.getFieldValue('SPACING') as number, 0.5, 10)
+          rows: block.getFieldValue('ROWS') as number,
+          cols: block.getFieldValue('COLS') as number,
+          spacing: block.getFieldValue('SPACING') as number
         }
       }
 

@@ -8,6 +8,7 @@
  */
 
 import { useState } from 'react'
+import { shallow } from 'zustand/shallow'
 import { Drone3DView } from './Drone3DView'
 import { BatteryChart } from './BatteryChart'
 import { AltitudeChart } from './AltitudeChart'
@@ -111,8 +112,11 @@ function DroneCard({ drone }: { drone: DroneState }) {
  */
 export function TelemetryDashboard() {
   const [activeTab, setActiveTab] = useState<TelemetryTabType>(TelemetryTab.VIEW_3D)
-  const { drones } = useExecutionStore()
-  const { isRecording, clearHistory } = useTelemetryStore()
+
+  // Optimized: Use selectors to subscribe only to needed state
+  const drones = useExecutionStore(state => state.drones, shallow)
+  const isRecording = useTelemetryStore(state => state.isRecording)
+  const clearHistory = useTelemetryStore(state => state.clearHistory)
 
   const tabs = [
     { id: TelemetryTab.VIEW_3D, label: '3D View', icon: '🎮' },

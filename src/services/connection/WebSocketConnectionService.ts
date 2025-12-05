@@ -185,6 +185,27 @@ export class WebSocketConnectionService implements IConnectionService {
   }
 
   /**
+   * 드론 위치 및 상태 초기화
+   */
+  async reset(): Promise<CommandResponse> {
+    if (!this.isConnected()) {
+      return {
+        success: false,
+        error: 'Not connected',
+        timestamp: Date.now(),
+      }
+    }
+
+    // Send reset command to server
+    this.ws!.send(JSON.stringify({ type: 'reset', timestamp: Date.now() }))
+
+    return {
+      success: true,
+      timestamp: Date.now(),
+    }
+  }
+
+  /**
    * 클린업
    */
   cleanup(): void {

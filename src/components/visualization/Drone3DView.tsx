@@ -5,8 +5,8 @@
  * Supports playback mode with flight path visualization
  */
 
-import { useRef, useEffect } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useRef, useEffect, useState, useMemo, memo } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Grid, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { useExecutionStore } from "@/stores/useExecutionStore";
@@ -14,32 +14,34 @@ import { useFlightRecordingStore, PlaybackStatus } from "@/stores/useFlightRecor
 import { FlightPathWithMarker } from "./FlightPathLine";
 import type { DroneState } from "@/types/websocket";
 import type { DroneHistory } from "@/types/telemetry";
+import { getConnectionManager } from "@/services/connection/ConnectionManager";
 
 /**
  * Individual Drone 3D Model
+ * Optimized with React.memo and useFrame for smooth animation
  */
-function Drone3DModel({ drone }: { drone: DroneState }) {
+const Drone3DModel = memo(({ drone }: { drone: DroneState }) => {
   const meshRef = useRef<THREE.Mesh>(null);
 
-  // Update position and rotation
-  useEffect(() => {
-    if (meshRef.current) {
-      meshRef.current.position.set(
-        drone.position.x,
-        drone.position.z,
-        -drone.position.y
-      );
-      meshRef.current.rotation.set(
-        THREE.MathUtils.degToRad(drone.rotation.x),
-        THREE.MathUtils.degToRad(drone.rotation.y),
-        THREE.MathUtils.degToRad(drone.rotation.z)
-      );
-    }
-  }, [drone.position, drone.rotation]);
+  // Optimized: Use useFrame for animation loop updates instead of useEffect
+  useFrame(() => {
+    if (!meshRef.current) return;
 
-  // Status color
-  const getStatusColor = (status: DroneState["status"]) => {
-    switch (status) {
+    meshRef.current.position.set(
+      drone.position.x,
+      drone.position.z,
+      -drone.position.y
+    );
+    meshRef.current.rotation.set(
+      THREE.MathUtils.degToRad(drone.rotation.x),
+      THREE.MathUtils.degToRad(drone.rotation.y),
+      THREE.MathUtils.degToRad(drone.rotation.z)
+    );
+  });
+
+  // Optimized: Memoize status color calculation
+  const statusColor = useMemo(() => {
+    switch (drone.status) {
       case "flying":
         return "#10b981"; // green
       case "hovering":
@@ -51,14 +53,23 @@ function Drone3DModel({ drone }: { drone: DroneState }) {
       default:
         return "#9ca3af"; // light gray
     }
-  };
+  }, [drone.status]);
+
+  // Optimized: Memoize battery color
+  const batteryColor = useMemo(() => {
+    return drone.battery > 60
+      ? "#10b981"
+      : drone.battery > 30
+      ? "#eab308"
+      : "#ef4444";
+  }, [drone.battery]);
 
   return (
     <group>
       {/* Drone body (cone shape) */}
       <mesh ref={meshRef} castShadow>
         <coneGeometry args={[0.3, 0.6, 8]} />
-        <meshStandardMaterial color={getStatusColor(drone.status)} />
+        <meshStandardMaterial color={statusColor} />
       </mesh>
 
       {/* Drone ID Label */}
@@ -69,7 +80,7 @@ function Drone3DModel({ drone }: { drone: DroneState }) {
         anchorX="center"
         anchorY="middle"
       >
-        #{drone.id}
+        #{drone.id + 1}
       </Text>
 
       {/* Battery indicator (small sphere) */}
@@ -78,15 +89,7 @@ function Drone3DModel({ drone }: { drone: DroneState }) {
         castShadow
       >
         <sphereGeometry args={[0.1, 8, 8]} />
-        <meshStandardMaterial
-          color={
-            drone.battery > 60
-              ? "#10b981"
-              : drone.battery > 30
-              ? "#eab308"
-              : "#ef4444"
-          }
-        />
+        <meshStandardMaterial color={batteryColor} />
       </mesh>
 
       {/* Ground shadow (projected circle) */}
@@ -125,7 +128,23 @@ function Drone3DModel({ drone }: { drone: DroneState }) {
         })()}
     </group>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if drone data actually changed
+  const prev = prevProps.drone;
+  const next = nextProps.drone;
+
+  return (
+    prev.id === next.id &&
+    prev.status === next.status &&
+    prev.battery === next.battery &&
+    prev.position.x === next.position.x &&
+    prev.position.y === next.position.y &&
+    prev.position.z === next.position.z &&
+    prev.rotation.x === next.rotation.x &&
+    prev.rotation.y === next.rotation.y &&
+    prev.rotation.z === next.rotation.z
+  );
+});
 
 /**
  * 3D Scene Content
@@ -210,6 +229,7 @@ interface Drone3DViewProps {
 export function Drone3DView({ playbackMode = false, className = "" }: Drone3DViewProps) {
   const { drones } = useExecutionStore();
   const { playback } = useFlightRecordingStore();
+  const [isResetting, setIsResetting] = useState(false);
 
   // Determine what to display
   const isPlaybackActive = playbackMode && playback.recording && playback.status !== PlaybackStatus.IDLE;
@@ -222,6 +242,19 @@ export function Drone3DView({ playbackMode = false, className = "" }: Drone3DVie
     : drones.length;
 
   const showEmpty = !playbackMode && drones.length === 0;
+
+  // Reset handler
+  const handleReset = async () => {
+    setIsResetting(true);
+    try {
+      const connectionManager = getConnectionManager();
+      await connectionManager.reset();
+    } catch (error) {
+      console.error('Failed to reset:', error);
+    } finally {
+      setTimeout(() => setIsResetting(false), 1000);
+    }
+  };
 
   return (
     <div className={`relative w-full h-[600px] bg-gray-900 rounded-lg overflow-hidden ${className}`}>
@@ -248,6 +281,18 @@ export function Drone3DView({ playbackMode = false, className = "" }: Drone3DVie
             currentTime={currentTime}
           />
         </Canvas>
+      )}
+
+      {/* Reset Button */}
+      {!playbackMode && (
+        <button
+          onClick={handleReset}
+          disabled={isResetting}
+          className="absolute top-4 left-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm font-medium px-4 py-2 rounded shadow-lg backdrop-blur-sm transition-colors flex items-center gap-2"
+        >
+          <span>{isResetting ? '🔄' : '↻'}</span>
+          <span>{isResetting ? '초기화 중...' : '위치 초기화'}</span>
+        </button>
       )}
 
       {/* Controls Info */}

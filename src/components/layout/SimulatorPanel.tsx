@@ -2,19 +2,19 @@
  * Simulator Panel Component
  *
  * Right panel that displays:
- * - Unity WebGL simulator (when in Unity WebGL mode)
+ * - Three.js 3D simulator (when in Three.js Simulator mode)
  * - 3D Preview using Three.js (when in Test mode)
- * - Connection info (when in WebSocket mode)
+ * - Connection info (when in Unity External Server mode)
  * - Playback mode for recorded flights
  */
 
 import { useState } from 'react'
 import { useConnectionStore } from '@/stores/useConnectionStore'
 import { ConnectionMode } from '@/constants/connection'
-import { UnitySimulatorPanel } from '@/components/simulator/UnitySimulatorPanel'
 import { Drone3DView } from '@/components/visualization/Drone3DView'
 import { PlaybackControls } from '@/components/visualization/PlaybackControls'
 import { RecordingPanel } from '@/components/visualization/RecordingPanel'
+import { UnitySimulatorPanel } from '@/components/simulator/UnitySimulatorPanel'
 import { useFlightRecordingStore, PlaybackStatus } from '@/stores/useFlightRecordingStore'
 
 interface SimulatorPanelProps {
@@ -44,9 +44,16 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
               </>
             ) : mode === ConnectionMode.UNITY_WEBGL ? (
               <>
-                <h3 className="text-lg font-semibold">Unity 시뮬레이터</h3>
-                <span className="px-2 py-1 bg-blue-600 text-xs font-medium rounded">
+                <h3 className="text-lg font-semibold">Unity WebGL 시뮬레이터</h3>
+                <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
                   WebGL
+                </span>
+              </>
+            ) : mode === ConnectionMode.MAVLINK_SIMULATION ? (
+              <>
+                <h3 className="text-lg font-semibold">Three.js 3D 시뮬레이터</h3>
+                <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
+                  Physics Sim
                 </span>
               </>
             ) : mode === ConnectionMode.TEST ? (
@@ -56,8 +63,20 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
                   Test Mode
                 </span>
               </>
+            ) : mode === ConnectionMode.REAL_DRONE ? (
+              <>
+                <h3 className="text-lg font-semibold">실제 드론 연결</h3>
+                <span className="px-2 py-1 bg-orange-600 text-xs font-medium rounded">
+                  Live
+                </span>
+              </>
             ) : (
-              <h3 className="text-lg font-semibold">시뮬레이터</h3>
+              <>
+                <h3 className="text-lg font-semibold">외부 Unity 서버</h3>
+                <span className="px-2 py-1 bg-blue-600 text-xs font-medium rounded">
+                  External
+                </span>
+              </>
             )}
           </div>
 
@@ -88,10 +107,10 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
           <PlaybackControls />
         </div>
       ) : mode === ConnectionMode.UNITY_WEBGL ? (
-        // Unity WebGL Embedded Simulator
+        // Unity WebGL Embed Mode
         <UnitySimulatorPanel />
-      ) : mode === ConnectionMode.TEST ? (
-        // 3D Preview for Test Mode
+      ) : mode === ConnectionMode.MAVLINK_SIMULATION || mode === ConnectionMode.REAL_DRONE || mode === ConnectionMode.TEST ? (
+        // Three.js 3D Simulator / Test Mode / Real Drone
         <div className="h-full flex flex-col">
           {/* 3D View */}
           <div className="flex-1">
@@ -104,12 +123,18 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
               카메라: 마우스 드래그 / 휠 줌
             </span>
             <span className="text-gray-400">
-              Three.js • React Three Fiber
+              {mode === ConnectionMode.MAVLINK_SIMULATION ? (
+                <>Three.js Physics Simulator • MAVLink Protocol</>
+              ) : mode === ConnectionMode.REAL_DRONE ? (
+                <>Three.js Visualization • Real Drone Telemetry</>
+              ) : (
+                <>Three.js • React Three Fiber</>
+              )}
             </span>
           </div>
         </div>
       ) : (
-        // WebSocket Mode - External Unity Info
+        // Unity External Server Mode - Connection Info
         <div className="h-full flex items-center justify-center p-6">
           <div className="text-center max-w-md">
             <div className="text-gray-500 mb-6">
@@ -131,7 +156,7 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
               외부 Unity 시뮬레이터
             </h3>
             <p className="text-gray-400 mb-6 text-sm">
-              WebSocket 모드에서는 Unity가 별도 창에서 실행됩니다
+              Unity External Server 모드에서는 Unity가 별도 창에서 실행됩니다
             </p>
 
             {/* Info Card */}
@@ -147,10 +172,10 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
               </ol>
             </div>
 
-            <div className="mt-6 bg-blue-900/30 border border-blue-700/50 rounded-lg p-3 text-left">
-              <p className="text-xs text-blue-300">
+            <div className="mt-6 bg-green-900/30 border border-green-700/50 rounded-lg p-3 text-left">
+              <p className="text-xs text-green-300">
                 💡 <strong>Tip:</strong> 브라우저에서 바로 시뮬레이터를 보려면{' '}
-                <strong>Unity WebGL</strong> 모드를 사용하세요
+                <strong>Unity WebGL</strong> 또는 <strong>Three.js Simulator</strong> 모드를 사용하세요
               </p>
             </div>
           </div>

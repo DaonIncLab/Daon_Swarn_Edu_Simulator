@@ -40,6 +40,12 @@ export const CommandAction = {
   // 동기화
   SYNC_ALL: 'sync_all',
   WAIT_ALL: 'wait_all',
+
+  // 웨이포인트 미션
+  ADD_WAYPOINT: 'add_waypoint',
+  GOTO_WAYPOINT: 'goto_waypoint',
+  EXECUTE_MISSION: 'execute_mission',
+  CLEAR_WAYPOINTS: 'clear_waypoints',
 } as const
 
 export type CommandAction = typeof CommandAction[keyof typeof CommandAction]

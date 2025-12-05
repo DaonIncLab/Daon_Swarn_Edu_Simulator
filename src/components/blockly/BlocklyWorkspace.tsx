@@ -14,7 +14,7 @@ interface BlocklyWorkspaceProps {
   selectedCategory?: string
 }
 
-export function BlocklyWorkspace({ className, selectedCategory = 'basic' }: BlocklyWorkspaceProps) {
+export function BlocklyWorkspace({ className, selectedCategory = 'flight' }: BlocklyWorkspaceProps) {
   const blocklyDiv = useRef<HTMLDivElement>(null)
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null)
 
@@ -152,23 +152,20 @@ export function BlocklyWorkspace({ className, selectedCategory = 'basic' }: Bloc
  * 초기 예시 블록 추가
  */
 function addInitialBlocks(workspace: Blockly.WorkspaceSvg) {
-  // 예시: 이륙 -> 대형 설정 -> 이동 -> 착륙
+  // 예시: 모든 드론 이륙 -> 이동 -> 착륙
   const xml = Blockly.utils.xml.textToDom(`
     <xml xmlns="https://developers.google.com/blockly/xml">
-      <block type="swarm_takeoff_all" x="50" y="50">
+      <block type="drone_takeoff_all" x="50" y="50">
         <field name="ALTITUDE">2</field>
         <next>
-          <block type="swarm_set_formation">
-            <field name="FORMATION_TYPE">grid</field>
-            <field name="ROWS">2</field>
-            <field name="COLS">5</field>
-            <field name="SPACING">2</field>
+          <block type="control_wait">
+            <field name="DURATION">2</field>
             <next>
-              <block type="swarm_move_formation">
+              <block type="drone_move_direction_all">
                 <field name="DIRECTION">forward</field>
                 <field name="DISTANCE">3</field>
                 <next>
-                  <block type="swarm_land_all"></block>
+                  <block type="drone_land_all"></block>
                 </next>
               </block>
             </next>

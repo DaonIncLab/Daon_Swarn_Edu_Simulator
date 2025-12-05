@@ -13,9 +13,9 @@ export const ConnectionMode = {
   SIMULATION: 'simulation',
   /** Unity WebGL 임베드 모드 (클라이언트 내장) */
   UNITY_WEBGL: 'unity_webgl',
-  /** 실제 드론 MAVLink 연동 (2차 목표) */
+  /** 실제 드론 MAVLink 연동 */
   REAL_DRONE: 'real_drone',
-  /** MAVLink 시뮬레이션 모드 */
+  /** Three.js 3D 시뮬레이터 (MAVLink 프로토콜) */
   MAVLINK_SIMULATION: 'mavlink_simulation',
   /** 테스트/더미 모드 */
   TEST: 'test',
@@ -29,7 +29,7 @@ export type ConnectionMode = typeof ConnectionMode[keyof typeof ConnectionMode]
 export interface ConnectionConfig {
   mode: ConnectionMode
 
-  // WebSocket 설정 (시뮬레이션 모드)
+  // WebSocket 설정 (Unity 외부 서버 모드)
   websocket?: {
     ipAddress: string
     port: number
@@ -43,7 +43,7 @@ export interface ConnectionConfig {
     codeUrl: string
   }
 
-  // MAVLink 설정 (실제 드론 모드 또는 시뮬레이션)
+  // MAVLink 설정 (실제 드론 또는 Three.js 시뮬레이션)
   mavlink?: {
     connectionType: 'simulation' | 'serial' | 'udp' | 'tcp'
     transportType?: 'udp' | 'serial' | 'tcp' // For real connections

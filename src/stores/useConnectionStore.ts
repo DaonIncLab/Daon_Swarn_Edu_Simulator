@@ -10,6 +10,7 @@ import {
   type ConnectionConfig,
   type TelemetryData,
 } from '@/services/connection'
+import { FormationControlMode } from '@/services/connection/MAVLinkConnectionService'
 import { wsService } from '@/services/websocket'
 import { log } from '@/utils/logger'
 
@@ -34,6 +35,9 @@ interface ConnectionStore {
   mavlinkSerialDevice: string
   mavlinkBaudRate: number
 
+  // Formation control settings
+  formationMode: FormationControlMode
+
   // Actions
   setMode: (mode: ConnectionMode) => void
   setIpAddress: (ip: string) => void
@@ -45,6 +49,7 @@ interface ConnectionStore {
   setMavlinkPort: (port: number) => void
   setMavlinkSerialDevice: (device: string) => void
   setMavlinkBaudRate: (baudRate: number) => void
+  setFormationMode: (mode: FormationControlMode) => void
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   setStatus: (status: ConnectionStatus) => void
@@ -60,13 +65,13 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
   return {
     // Initial state
     status: ConnectionStatus.DISCONNECTED,
-    mode: ConnectionMode.SIMULATION, // 기본값: 시뮬레이션 모드
+    mode: ConnectionMode.UNITY_WEBGL, // 기본값: Unity WebGL 시뮬레이터
     ipAddress: '',
     port: DEFAULT_WS_PORT,
     error: null,
     latestTelemetry: null,
     testModeDroneCount: 4,
-    mavlinkDroneCount: 4, // MAVLink 기본 드론 수
+    mavlinkDroneCount: 4, // MAVLink 시뮬레이터 기본 드론 수
 
     // Real MAVLink connection initial state
     mavlinkTransportType: 'udp',
@@ -74,6 +79,9 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
     mavlinkPort: 14550,
     mavlinkSerialDevice: 'COM3',
     mavlinkBaudRate: 57600,
+
+    // Formation control initial state
+    formationMode: FormationControlMode.GCS_COORDINATED, // 기본값: GCS 중앙제어
 
     // Actions
     setMode: (mode) => set({ mode }),
@@ -95,6 +103,19 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
     setMavlinkSerialDevice: (device) => set({ mavlinkSerialDevice: device }),
 
     setMavlinkBaudRate: (baudRate) => set({ mavlinkBaudRate: baudRate }),
+
+    setFormationMode: (mode) => {
+      set({ formationMode: mode })
+
+      // Update the MAVLink service if connected
+      const service = manager.getService()
+      if (service && 'setFormationMode' in service) {
+        // Type assertion since we know MAVLinkConnectionService has this method
+        (service as any).setFormationMode(mode)
+      }
+
+      log.info('ConnectionStore', `Formation mode set to: ${mode}`)
+    },
 
     connect: async () => {
       const {
@@ -135,6 +156,10 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
 
         // 모드별 설정
         switch (mode) {
+          case ConnectionMode.UNITY_WEBGL:
+            // Unity WebGL 임베드 모드 - 설정 불필요
+            break
+
           case ConnectionMode.SIMULATION:
             if (!ipAddress) {
               set({ error: 'Please enter IP address' })

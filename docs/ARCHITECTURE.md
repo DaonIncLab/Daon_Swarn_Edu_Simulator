@@ -1,8 +1,8 @@
 # 🏗️ Drone Swarm GCS - Architecture Documentation
 
-> **Version**: 1.0.0
-> **Last Updated**: 2025-01-13
-> **Status**: Active Development
+> **Version**: 2.0.0
+> **Last Updated**: 2025-11-25
+> **Status**: Phase 2 Complete
 
 ---
 
@@ -40,9 +40,12 @@
 - ✅ **Visual Programming**: Blockly-based drag-and-drop programming
 - ✅ **Real-time Telemetry**: 3D visualization, charts, and drone status
 - ✅ **Flight Recording**: Record and replay flight paths
-- ✅ **Multiple Connection Modes**: WebSocket (Unity), Unity WebGL, Test Mode
+- ✅ **Multiple Connection Modes**: WebSocket, Unity WebGL, Test, MAVLink
 - ✅ **Project Management**: Save/load Blockly workspaces
-- ⏳ **MAVLink Support**: Real drone control (planned for Phase 2)
+- ✅ **MAVLink Support**: Real drone control via UDP/Serial
+- ✅ **i18n**: Multi-language support (Korean/English)
+- ✅ **Theme System**: Light/dark mode with 70+ CSS variables
+- ✅ **Waypoint Mission**: Waypoint-based mission planning
 
 ### 1.4 System Requirements
 - **Browser**: Chrome 90+, Firefox 88+, Safari 14+
@@ -98,7 +101,7 @@
 - `WebSocketConnectionService`: Unity standalone simulator
 - `UnityWebGLConnectionService`: Embedded Unity WebGL
 - `TestConnectionService`: Dummy data for testing
-- `MAVLinkConnectionService`: Real drone control (stub)
+- `MAVLinkConnectionService`: Real drone control via MAVLink protocol
 
 **Benefits**:
 - Easy addition of new connection types
@@ -192,7 +195,8 @@ drone-swarm-gcs/
 │   │   │   ├── WebSocketConnectionService.ts
 │   │   │   ├── UnityWebGLConnectionService.ts
 │   │   │   ├── TestConnectionService.ts
-│   │   │   └── MAVLinkConnectionService.ts (stub)
+│   │   │   ├── MAVLinkConnectionService.ts
+│   │   │   └── MAVLinkSimulator.ts
 │   │   ├── execution/       # Interpreter pattern
 │   │   │   ├── blocklyParser.ts          # Blockly → AST
 │   │   │   ├── interpreter.ts            # AST executor
@@ -1341,31 +1345,32 @@ html, body {
 - ✅ **Theme System**: Light/dark mode with 70+ CSS variables
 - ✅ **Performance Optimizations**: Caching, memory management
 
-### Phase 2 (Planned)
-- ✈️ **MAVLink Support**: Real drone control via Serial/UDP/TCP
-- 🧪 **Testing Infrastructure**: Vitest, React Testing Library, Playwright
-- 📚 **API Documentation**: Complete API docs
+### Phase 2 (Completed ✅)
+- ✅ **MAVLink Support**: Real drone control via Serial/UDP
+- ✅ **Multi-language**: i18n support (Korean/English)
+- ✅ **Advanced Formations**: TRIANGLE, SQUARE, DIAMOND patterns
+- ✅ **Waypoint Mission**: Waypoint-based mission planning system
 
-### Phase 3 (Long-term)
-- 🚀 **Performance**: 3D rendering memoization, Web Workers
-- 💾 **Auto-save**: Automatic project saving
-- 📴 **Offline Mode**: PWA with service workers
-- 🌐 **Multi-language**: i18n support (English/Korean)
-- 🎥 **Video Recording**: Record 3D view as video
-- 📊 **Analytics**: Usage analytics & telemetry export
-- 🎨 **Custom Themes**: Theme creator with import/export
+### Phase 3 (Current)
+- ⏳ **WebSocket-UDP Bridge**: Real drone connection server
+- ⏳ **ArduPilot SITL**: Software-in-the-loop testing
+- ⏳ **Testing Infrastructure**: Vitest, React Testing Library (80% coverage)
+- ⏳ **PWA Support**: Offline capability with service workers
+- ⏳ **Cloud Sync**: Multi-device project synchronization
 
 ---
 
 ## 📚 Additional Resources
 
 - [CODING_RULES.md](./CODING_RULES.md): Development standards & best practices
-- [docs/API.md](./docs/API.md): Detailed API documentation
-- [docs/DIAGRAMS.md](./docs/DIAGRAMS.md): Architecture diagrams
-- [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md): Contribution guidelines
+- [API.md](./API.md): Detailed API documentation
+- [DIAGRAMS.md](./DIAGRAMS.md): Architecture diagrams
+- [CONTRIBUTING.md](./CONTRIBUTING.md): Contribution guidelines
+- [DEBUG_GUIDE.md](./DEBUG_GUIDE.md): Debugging guide
+- [DEVELOPMENT_DIARY_30DAYS.md](./DEVELOPMENT_DIARY_30DAYS.md): Development diary
 
 ---
 
 **Questions or feedback?** Open an issue on GitHub or contact the development team.
 
-**Last Updated**: 2025-01-14 by Claude Code 🤖
+**Last Updated**: 2025-11-21 🤖

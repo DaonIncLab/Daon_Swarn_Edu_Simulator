@@ -50,6 +50,35 @@ export interface WaitParams {
   duration: number
 }
 
+// 웨이포인트 타입
+export interface Waypoint {
+  id: string
+  name?: string
+  x: number
+  y: number
+  z: number
+  speed?: number
+  holdTime?: number // 웨이포인트에서 대기 시간 (초)
+}
+
+export interface AddWaypointParams {
+  waypoint: Waypoint
+}
+
+export interface GotoWaypointParams {
+  waypointId: string
+  speed?: number
+}
+
+export interface ExecuteMissionParams {
+  loop?: boolean // 미션 반복 여부
+  speed?: number // 전체 미션 속도
+}
+
+export interface ClearWaypointsParams {
+  // 빈 파라미터
+}
+
 // 명령어 타입
 export type CommandParams =
   | TakeoffAllParams
@@ -59,6 +88,10 @@ export type CommandParams =
   | MoveDroneParams
   | RotateDroneParams
   | WaitParams
+  | AddWaypointParams
+  | GotoWaypointParams
+  | ExecuteMissionParams
+  | ClearWaypointsParams
   | Record<string, never> // 빈 객체
 
 export interface Command {
