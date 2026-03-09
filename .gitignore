@@ -27,3 +27,4 @@ dist-ssr
 public/unity/Build/
 public/unity/TemplateData/
 public/unity/index.html
+public/unity/StreamingAssets/
