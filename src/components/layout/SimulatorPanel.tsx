@@ -8,29 +8,33 @@
  * - Playback mode for recorded flights
  */
 
-import { useState } from 'react'
-import { useConnectionStore } from '@/stores/useConnectionStore'
-import { ConnectionMode } from '@/constants/connection'
-import { Drone3DView } from '@/components/visualization/Drone3DView'
-import { PlaybackControls } from '@/components/visualization/PlaybackControls'
-import { RecordingPanel } from '@/components/visualization/RecordingPanel'
-import { UnitySimulatorPanel } from '@/components/simulator/UnitySimulatorPanel'
-import { useFlightRecordingStore, PlaybackStatus } from '@/stores/useFlightRecordingStore'
+import { useState } from "react";
+import { useConnectionStore } from "@/stores/useConnectionStore";
+import { ConnectionMode } from "@/constants/connection";
+import { Drone3DView } from "@/components/visualization/Drone3DView";
+import { PlaybackControls } from "@/components/visualization/PlaybackControls";
+import { RecordingPanel } from "@/components/visualization/RecordingPanel";
+import { UnitySimulatorPanel } from "@/components/simulator/UnitySimulatorPanel";
+import {
+  useFlightRecordingStore,
+  PlaybackStatus,
+} from "@/stores/useFlightRecordingStore";
 
 interface SimulatorPanelProps {
-  className?: string
+  className?: string;
 }
 
-export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
-  const { mode } = useConnectionStore()
-  const { playback } = useFlightRecordingStore()
-  const [showRecordingPanel, setShowRecordingPanel] = useState(false)
+export function SimulatorPanel({ className = "" }: SimulatorPanelProps) {
+  const { mode } = useConnectionStore();
+  const { playback } = useFlightRecordingStore();
+  const [showRecordingPanel, setShowRecordingPanel] = useState(false);
 
   // Check if playback is active
-  const isPlaybackActive = playback.recording && playback.status !== PlaybackStatus.IDLE
+  const isPlaybackActive =
+    playback.recording && playback.status !== PlaybackStatus.IDLE;
 
   return (
-    <div className={`flex flex-col bg-gray-900 ${className}`}>
+    <div className={`h-full min-h-0 flex flex-col bg-gray-900 ${className}`}>
       {/* Header with View Toggle */}
       <div className="px-6 py-3 bg-gray-800 text-white border-b border-gray-700 flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -44,14 +48,18 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
               </>
             ) : mode === ConnectionMode.UNITY_WEBGL ? (
               <>
-                <h3 className="text-lg font-semibold">Unity WebGL 시뮬레이터</h3>
+                <h3 className="text-lg font-semibold">
+                  Unity WebGL 시뮬레이터
+                </h3>
                 <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
                   WebGL
                 </span>
               </>
             ) : mode === ConnectionMode.MAVLINK_SIMULATION ? (
               <>
-                <h3 className="text-lg font-semibold">Three.js 3D 시뮬레이터</h3>
+                <h3 className="text-lg font-semibold">
+                  Three.js 3D 시뮬레이터
+                </h3>
                 <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
                   Physics Sim
                 </span>
@@ -85,11 +93,11 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
             onClick={() => setShowRecordingPanel(!showRecordingPanel)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               showRecordingPanel
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-gray-700 hover:bg-gray-600 text-gray-200"
             }`}
           >
-            {showRecordingPanel ? '📹 녹화 관리 닫기' : '📹 녹화 관리'}
+            {showRecordingPanel ? "📹 녹화 관리 닫기" : "📹 녹화 관리"}
           </button>
         </div>
       </div>
@@ -100,28 +108,28 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
         <RecordingPanel />
       ) : isPlaybackActive ? (
         // Playback Mode
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1">
-            <Drone3DView playbackMode={true} />
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0">
+            <Drone3DView playbackMode={true} className="h-full" />
           </div>
           <PlaybackControls />
         </div>
       ) : mode === ConnectionMode.UNITY_WEBGL ? (
         // Unity WebGL Embed Mode
         <UnitySimulatorPanel />
-      ) : mode === ConnectionMode.MAVLINK_SIMULATION || mode === ConnectionMode.REAL_DRONE || mode === ConnectionMode.TEST ? (
+      ) : mode === ConnectionMode.MAVLINK_SIMULATION ||
+        mode === ConnectionMode.REAL_DRONE ||
+        mode === ConnectionMode.TEST ? (
         // Three.js 3D Simulator / Test Mode / Real Drone
-        <div className="h-full flex flex-col">
+        <div className="h-full min-h-0 flex flex-col">
           {/* 3D View */}
-          <div className="flex-1">
-            <Drone3DView />
+          <div className="flex-1 min-h-0">
+            <Drone3DView className="h-full" />
           </div>
 
           {/* Footer */}
           <div className="px-4 py-2 bg-gray-800 text-white border-t border-gray-700 flex items-center justify-between text-xs flex-shrink-0">
-            <span className="text-gray-400">
-              카메라: 마우스 드래그 / 휠 줌
-            </span>
+            <span className="text-gray-400">카메라: 마우스 드래그 / 휠 줌</span>
             <span className="text-gray-400">
               {mode === ConnectionMode.MAVLINK_SIMULATION ? (
                 <>Three.js Physics Simulator • MAVLink Protocol</>
@@ -174,13 +182,14 @@ export function SimulatorPanel({ className = '' }: SimulatorPanelProps) {
 
             <div className="mt-6 bg-green-900/30 border border-green-700/50 rounded-lg p-3 text-left">
               <p className="text-xs text-green-300">
-                💡 <strong>Tip:</strong> 브라우저에서 바로 시뮬레이터를 보려면{' '}
-                <strong>Unity WebGL</strong> 또는 <strong>Three.js Simulator</strong> 모드를 사용하세요
+                💡 <strong>Tip:</strong> 브라우저에서 바로 시뮬레이터를 보려면{" "}
+                <strong>Unity WebGL</strong> 또는{" "}
+                <strong>Three.js Simulator</strong> 모드를 사용하세요
               </p>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

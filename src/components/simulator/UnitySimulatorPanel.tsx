@@ -4,55 +4,59 @@
  * Unity WebGL 모드일 때 시뮬레이터를 표시하는 패널
  */
 
-import { useEffect } from 'react'
-import { UnityWebGLEmbed } from './UnityWebGLEmbed'
-import { useUnityBridge } from '@/hooks/useUnityBridge'
-import { useConnectionStore } from '@/stores/useConnectionStore'
-import { getConnectionManager } from '@/services/connection'
-import type { UnityWebGLConnectionService } from '@/services/connection/UnityWebGLConnectionService'
-import { log } from '@/utils/logger'
+import { useUnityBridge } from "@/hooks/useUnityBridge";
+import { getConnectionManager } from "@/services/connection";
+import type { UnityWebGLConnectionService } from "@/services/connection/UnityWebGLConnectionService";
+import { useConnectionStore } from "@/stores/useConnectionStore";
+import { log } from "@/utils/logger";
+import { UnityWebGLEmbed } from "./UnityWebGLEmbed";
 
 // Unity 빌드 설정 (실제 빌드 파일 경로)
 const UNITY_BUILD_CONFIG = {
-  loaderUrl: '/unity/Build/DroneSwarmSim.loader.js',
-  dataUrl: '/unity/Build/DroneSwarmSim.data',
-  frameworkUrl: '/unity/Build/DroneSwarmSim.framework.js',
-  codeUrl: '/unity/Build/DroneSwarmSim.wasm',
-}
+  loaderUrl: "/unity/Build/DroneSwarmSim.loader.js",
+  dataUrl: "/unity/Build/DroneSwarmSim.data",
+  frameworkUrl: "/unity/Build/DroneSwarmSim.framework.js",
+  codeUrl: "/unity/Build/DroneSwarmSim.wasm",
+};
 
 export function UnitySimulatorPanel() {
-  const { setStatus, setError } = useConnectionStore()
+  const { setStatus, setError } = useConnectionStore();
 
   // Unity 브릿지 초기화
   const unityBridge = useUnityBridge({
     buildConfig: UNITY_BUILD_CONFIG,
     onMessage: (message) => {
-      log.debug("Message from Unity", { context: "UnitySimulatorPanel", message })
+      log.debug("Message from Unity", {
+        context: "UnitySimulatorPanel",
+        message,
+      });
 
       // Unity 메시지를 ConnectionService로 전달
-      const manager = getConnectionManager()
-      const service = (manager as any).currentService as UnityWebGLConnectionService | null
+      const manager = getConnectionManager();
+      const service = (manager as any)
+        .currentService as UnityWebGLConnectionService | null;
 
-      if (service && 'handleUnityMessage' in service) {
-        service.handleUnityMessage(message)
+      if (service && "handleUnityMessage" in service) {
+        service.handleUnityMessage(message);
       }
     },
     onReady: () => {
-      log.info("Unity WebGL ready", { context: "UnitySimulatorPanel" })
+      log.info("Unity WebGL ready", { context: "UnitySimulatorPanel" });
 
       // Unity 브릿지를 ConnectionService에 주입
-      const manager = getConnectionManager()
-      const service = (manager as any).currentService as UnityWebGLConnectionService | null
+      const manager = getConnectionManager();
+      const service = (manager as any)
+        .currentService as UnityWebGLConnectionService | null;
 
-      if (service && 'setUnityBridge' in service) {
-        service.setUnityBridge(unityBridge)
+      if (service && "setUnityBridge" in service) {
+        service.setUnityBridge(unityBridge);
       }
     },
     onError: (error) => {
-      log.error("Unity error", { context: "UnitySimulatorPanel", error })
-      setError(error)
+      log.error("Unity error", { context: "UnitySimulatorPanel", error });
+      setError(error);
     },
-  })
+  });
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
@@ -61,7 +65,7 @@ export function UnitySimulatorPanel() {
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold">Unity Simulator</h3>
           <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
-            {unityBridge.isReady ? '준비됨' : '로딩 중...'}
+            {unityBridge.isReady ? "준비됨" : "로딩 중..."}
           </span>
         </div>
 
@@ -91,12 +95,16 @@ export function UnitySimulatorPanel() {
             <div className="text-center">
               <div className="text-white mb-4">
                 <div className="text-4xl mb-2">🎮</div>
-                <div className="text-lg font-semibold">Unity 시뮬레이터 로딩 중...</div>
+                <div className="text-lg font-semibold">
+                  Unity 시뮬레이터 로딩 중...
+                </div>
               </div>
               <div className="w-64 bg-gray-700 rounded-full h-2">
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.round(unityBridge.loadingProgress * 100)}%` }}
+                  style={{
+                    width: `${Math.round(unityBridge.loadingProgress * 100)}%`,
+                  }}
                 />
               </div>
               <div className="text-gray-400 text-sm mt-2">
@@ -119,5 +127,5 @@ export function UnitySimulatorPanel() {
         </div>
       </div>
     </div>
-  )
+  );
 }

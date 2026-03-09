@@ -5,38 +5,39 @@
  * 로딩 상태 UI를 제공합니다.
  */
 
-import { Unity } from 'react-unity-webgl'
-import type { UnityProvider } from 'react-unity-webgl'
+import { Unity } from "react-unity-webgl";
+import type { UnityProvider } from "react-unity-webgl/distribution/types/unity-provider";
 
 interface UnityWebGLEmbedProps {
-  unityProvider: UnityProvider
-  isReady: boolean
-  loadingProgress: number
-  width?: string
-  height?: string
+  unityProvider: UnityProvider;
+  isReady: boolean;
+  loadingProgress: number;
+  width?: string;
+  height?: string;
 }
 
 export function UnityWebGLEmbed({
   unityProvider,
   isReady,
   loadingProgress,
-  width = '100%',
-  height = '600px',
+  width = "100%",
+  height = "600px",
 }: UnityWebGLEmbedProps) {
-  const progressPercent = Math.round(loadingProgress * 100)
+  const progressPercent = Math.round(loadingProgress * 100);
 
   return (
     <div className="relative w-full" style={{ height }}>
       {/* Unity Canvas */}
-      <div className={`w-full h-full ${!isReady ? 'hidden' : ''}`}>
+      <div className={`w-full h-full ${!isReady ? "hidden" : ""}`}>
         <Unity
           unityProvider={unityProvider}
           style={{
             width,
-            height,
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
+            height: "95%",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
           }}
+          tabIndex={0}
         />
       </div>
 
@@ -78,7 +79,8 @@ export function UnityWebGLEmbed({
 
           {/* Loading Message */}
           <p className="text-xs text-gray-500 mt-4">
-            Unity WebGL을 로드하는 중입니다. 처음 실행 시 시간이 걸릴 수 있습니다.
+            Unity WebGL을 로드하는 중입니다. 처음 실행 시 시간이 걸릴 수
+            있습니다.
           </p>
         </div>
       )}
@@ -90,5 +92,5 @@ export function UnityWebGLEmbed({
         </div>
       )}
     </div>
-  )
+  );
 }

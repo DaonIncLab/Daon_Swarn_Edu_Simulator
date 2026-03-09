@@ -6,41 +6,39 @@
  * - Blockly block categories
  */
 
-import { useState } from 'react'
-
 export interface Category {
-  id: string
-  name: string
-  icon?: string
-  colour: string
+  id: string;
+  name: string;
+  icon?: string;
+  colour: string;
 }
 
 // MAVLink Drone SDK 기반 블록 카테고리
+// eslint-disable-next-line react-refresh/only-export-components
 export const blockCategories: Category[] = [
-  { id: 'flight', name: '🚁 비행 제어', colour: '230' },
-  { id: 'movement', name: '➡️ 이동', colour: '160' },
-  { id: 'rc', name: '🎮 RC 제어', colour: '290' },
-  { id: 'sensors', name: '📊 센서', colour: '120' },
-  { id: 'mission', name: '🗺️ 미션', colour: '60' },
-  { id: 'settings', name: '⚙️ 설정', colour: '330' },
-  { id: 'sync', name: '⏱️ 대기', colour: '120' },
-  { id: 'control', name: '🔁 제어 흐름', colour: '210' },
-  { id: 'variables', name: '📦 변수', colour: '330' },
-  { id: 'logic', name: '🔍 논리', colour: '210' },
-]
+  { id: "flight", name: "🚁 비행 제어", colour: "230" },
+  { id: "movement", name: "➡️ 이동", colour: "160" },
+  { id: "rc", name: "🎮 RC 제어", colour: "290" },
+  { id: "sensors", name: "📊 센서", colour: "120" },
+  { id: "mission", name: "🗺️ 미션", colour: "60" },
+  { id: "settings", name: "⚙️ 설정", colour: "330" },
+  { id: "sync", name: "⏱️ 대기", colour: "120" },
+  { id: "control", name: "🔁 제어 흐름", colour: "210" },
+  { id: "variables", name: "📦 변수", colour: "330" },
+];
 
 interface NavigationPanelProps {
-  className?: string
-  selectedCategory: string
-  onCategorySelect: (categoryId: string) => void
-  onOpenProject: () => void
-  onOpenSettings: () => void
-  onOpenMonitoring: () => void
-  isConnected: boolean
+  className?: string;
+  selectedCategory: string;
+  onCategorySelect: (categoryId: string) => void;
+  onOpenProject: () => void;
+  onOpenSettings: () => void;
+  onOpenMonitoring: () => void;
+  isConnected: boolean;
 }
 
 export function NavigationPanel({
-  className = '',
+  className = "",
   selectedCategory,
   onCategorySelect,
   onOpenProject,
@@ -49,10 +47,14 @@ export function NavigationPanel({
   isConnected,
 }: NavigationPanelProps) {
   return (
-    <div className={`flex flex-col bg-[var(--bg-tertiary)] border-r border-[var(--border-primary)] ${className}`}>
+    <div
+      className={`flex flex-col bg-[var(--bg-tertiary)] border-r border-[var(--border-primary)] ${className}`}
+    >
       {/* Header */}
       <div className="px-4 py-3 border-b border-[var(--border-primary)] flex-shrink-0">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">메뉴</h2>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+          메뉴
+        </h2>
       </div>
 
       {/* Quick Actions */}
@@ -100,8 +102,8 @@ export function NavigationPanel({
                 onClick={() => onCategorySelect(category.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all ${
                   selectedCategory === category.id
-                    ? 'bg-[var(--nav-active-bg)] text-[var(--nav-active-text)] font-semibold border-l-4 border-[var(--nav-active-border)]'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                    ? "bg-[var(--nav-active-bg)] text-[var(--nav-active-text)] font-semibold border-l-4 border-[var(--nav-active-border)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                 }`}
                 title={category.name}
               >
@@ -129,5 +131,5 @@ export function NavigationPanel({
         </p>
       </div>
     </div>
-  )
+  );
 }
