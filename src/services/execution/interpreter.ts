@@ -3,41 +3,43 @@
  * ExecutableNode 트리를 실제로 실행하는 엔진
  */
 
-import type { IConnectionService } from '@/services/connection'
-import type { DroneState, Command, CommandResponse } from '@/types/websocket'
+import {
+  UnityWebGLConnectionService,
+  type IConnectionService,
+} from "@/services/connection";
 import type {
   ExecutableNode,
-  ExecutionContext,
-  ExecutionState,
   ExecutionResult,
-  NodeType,
-} from '@/types/execution'
-import { evaluateCondition } from './conditionEvaluator'
-import { log } from '@/utils/logger'
+  ExecutionState,
+} from "@/types/execution";
+import type { CommandResponse, DroneState } from "@/types/websocket";
+import { log } from "@/utils/logger";
+import { evaluateCondition } from "./conditionEvaluator";
 
 /**
  * 실행 상태 변경 리스너
  */
-export type ExecutionStateListener = (state: ExecutionState) => void
+export type ExecutionStateListener = (state: ExecutionState) => void;
 
 /**
  * 실행 인터프리터
  */
 export class Interpreter {
-  private connectionService: IConnectionService
-  private droneStates: DroneState[]
-  private state: ExecutionState
-  private stateListener: ExecutionStateListener | null = null
-  private shouldStop: boolean = false
-  private isPaused: boolean = false
-  private resumePromise: Promise<void> | null = null
-  private resumeResolver: (() => void) | null = null
+  private connectionService: IConnectionService;
+  private droneStates: DroneState[];
+  private state: ExecutionState;
+  private stateListener: ExecutionStateListener | null = null;
+  private shouldStop: boolean = false;
+  private isPaused: boolean = false;
+  private resumePromise: Promise<void> | null = null;
+  private resumeResolver: (() => void) | null = null;
+  private size: number;
 
   constructor(connectionService: IConnectionService) {
-    this.connectionService = connectionService
-    this.droneStates = []
+    this.connectionService = connectionService;
+    this.droneStates = [];
     this.state = {
-      status: 'idle',
+      status: "idle",
       currentNodeId: null,
       currentNodePath: [],
       error: null,
@@ -46,45 +48,45 @@ export class Interpreter {
         functions: new Map(),
         callStack: [],
       },
-    }
+    };
   }
 
   /**
    * 드론 상태 업데이트 (텔레메트리 데이터)
    */
   updateDroneStates(states: DroneState[]): void {
-    this.droneStates = states
+    this.droneStates = states;
   }
 
   /**
    * 상태 변경 리스너 등록
    */
   setStateListener(listener: ExecutionStateListener): void {
-    this.stateListener = listener
+    this.stateListener = listener;
   }
 
   /**
    * 상태 업데이트 및 리스너 호출
    */
   private updateState(update: Partial<ExecutionState>): void {
-    this.state = { ...this.state, ...update }
-    this.stateListener?.(this.state)
+    this.state = { ...this.state, ...update };
+    this.stateListener?.(this.state);
   }
 
   /**
    * 트리 실행
    */
   async execute(tree: ExecutableNode): Promise<ExecutionResult> {
-    log.info('Interpreter', 'Starting execution', tree)
+    log.info("Interpreter", "Starting execution", tree);
 
     // Reset execution flags
-    this.shouldStop = false
-    this.isPaused = false
-    this.resumePromise = null
-    this.resumeResolver = null
+    this.shouldStop = false;
+    this.isPaused = false;
+    this.resumePromise = null;
+    this.resumeResolver = null;
 
     this.updateState({
-      status: 'running',
+      status: "running",
       currentNodeId: null,
       currentNodePath: [],
       error: null,
@@ -94,25 +96,29 @@ export class Interpreter {
         callStack: [],
         executionStartTime: Date.now(),
       },
-    })
+    });
 
-    let executedNodes = 0
+    let executedNodes = 0;
 
     try {
-      executedNodes = await this.executeNode(tree, [0])
+      executedNodes = await this.executeNode(tree, [0]);
 
       if (this.shouldStop) {
-        this.updateState({ status: 'idle' })
-        return { success: false, error: 'Execution stopped by user', executedNodes }
+        this.updateState({ status: "idle" });
+        return {
+          success: false,
+          error: "Execution stopped by user",
+          executedNodes,
+        };
       }
 
-      this.updateState({ status: 'completed', currentNodeId: null })
-      return { success: true, executedNodes }
+      this.updateState({ status: "completed", currentNodeId: null });
+      return { success: true, executedNodes };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-      log.error('Interpreter', 'Execution error:', error)
-      this.updateState({ status: 'error', error: errorMsg })
-      return { success: false, error: errorMsg, executedNodes }
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      log.error("Interpreter", "Execution error:", error);
+      this.updateState({ status: "error", error: errorMsg });
+      return { success: false, error: errorMsg, executedNodes };
     }
   }
 
@@ -120,51 +126,51 @@ export class Interpreter {
    * 실행 중단
    */
   stop(): void {
-    log.info('Interpreter', 'Stopping execution')
-    this.shouldStop = true
-    this.updateState({ status: 'idle' })
+    log.info("Interpreter", "Stopping execution");
+    this.shouldStop = true;
+    this.updateState({ status: "idle" });
   }
 
   /**
    * 일시정지
    */
   pause(): void {
-    if (this.state.status !== 'running') {
-      log.warn('Interpreter', 'Cannot pause: not running')
-      return
+    if (this.state.status !== "running") {
+      log.warn("Interpreter", "Cannot pause: not running");
+      return;
     }
 
-    log.info('Interpreter', 'Pausing execution')
-    this.isPaused = true
+    log.info("Interpreter", "Pausing execution");
+    this.isPaused = true;
 
     // Create a new promise that will be resolved when resume() is called
     this.resumePromise = new Promise((resolve) => {
-      this.resumeResolver = resolve
-    })
+      this.resumeResolver = resolve;
+    });
 
-    this.updateState({ status: 'paused' })
+    this.updateState({ status: "paused" });
   }
 
   /**
    * 재개
    */
   resume(): void {
-    if (this.state.status !== 'paused') {
-      log.warn('Interpreter', 'Cannot resume: not paused')
-      return
+    if (this.state.status !== "paused") {
+      log.warn("Interpreter", "Cannot resume: not paused");
+      return;
     }
 
-    log.info('Interpreter', 'Resuming execution')
-    this.isPaused = false
+    log.info("Interpreter", "Resuming execution");
+    this.isPaused = false;
 
     // Resolve the pause promise to unblock execution
     if (this.resumeResolver) {
-      this.resumeResolver()
-      this.resumeResolver = null
-      this.resumePromise = null
+      this.resumeResolver();
+      this.resumeResolver = null;
+      this.resumePromise = null;
     }
 
-    this.updateState({ status: 'running' })
+    this.updateState({ status: "running" });
   }
 
   /**
@@ -172,228 +178,265 @@ export class Interpreter {
    */
   private async checkPause(): Promise<void> {
     if (this.isPaused && this.resumePromise) {
-      await this.resumePromise
+      await this.resumePromise;
     }
   }
 
   /**
    * 개별 노드 실행 (재귀적)
    */
-  private async executeNode(node: ExecutableNode, path: number[]): Promise<number> {
+  private async executeNode(
+    node: ExecutableNode,
+    path: number[],
+  ): Promise<number> {
     // Check for stop signal
     if (this.shouldStop) {
-      return 0
+      return 0;
+    }
+    // Check for pause and wait if paused
+    await this.checkPause();
+
+    this.updateState({ currentNodeId: node.id, currentNodePath: path });
+
+    log.debug("Interpreter", `Executing node ${node.id} (type: ${node.type})`);
+
+    if (node.type == "sequence") {
+      this.size = node.children.length;
     }
 
-    // Check for pause and wait if paused
-    await this.checkPause()
-
-    this.updateState({ currentNodeId: node.id, currentNodePath: path })
-
-    log.debug('Interpreter', `Executing node ${node.id} (type: ${node.type})`)
-
-    let executedCount = 1 // 현재 노드 포함
+    let executedCount = 1; // 현재 노드 포함
 
     switch (node.type) {
-      case 'command':
-        await this.executeCommand(node)
-        break
+      case "command":
+        await this.executeCommand(
+          node,
+          this.size,
+          Number(node.id.substring(5)),
+        );
+        break;
 
-      case 'sequence':
-        executedCount = await this.executeSequence(node, path)
-        break
+      case "sequence":
+        executedCount = await this.executeSequence(node, path);
+        break;
 
-      case 'repeat':
-        executedCount = await this.executeRepeat(node, path)
-        break
+      case "repeat":
+        executedCount = await this.executeRepeat(node, path);
+        break;
 
-      case 'for_loop':
-        executedCount = await this.executeForLoop(node, path)
-        break
+      case "for_loop":
+        executedCount = await this.executeForLoop(node, path);
+        break;
 
-      case 'while_loop':
-        executedCount = await this.executeWhileLoop(node, path)
-        break
+      case "while_loop":
+        executedCount = await this.executeWhileLoop(node, path);
+        break;
 
-      case 'until_loop':
-        executedCount = await this.executeUntilLoop(node, path)
-        break
+      case "until_loop":
+        executedCount = await this.executeUntilLoop(node, path);
+        break;
 
-      case 'if':
-        executedCount = await this.executeIf(node, path)
-        break
+      case "if":
+        executedCount = await this.executeIf(node, path);
+        break;
 
-      case 'if_else':
-        executedCount = await this.executeIfElse(node, path)
-        break
+      case "if_else":
+        executedCount = await this.executeIfElse(node, path);
+        break;
 
-      case 'wait':
-        await this.executeWait(node)
-        break
+      case "wait":
+        await this.executeWait(node);
+        break;
 
-      case 'variable_set':
-        await this.executeVariableSet(node)
-        break
+      case "variable_set":
+        await this.executeVariableSet(node);
+        break;
 
-      case 'variable_get':
+      case "variable_get":
         // Variable get is a value node, shouldn't be executed as statement
-        log.warn('Interpreter', 'Variable get node used as statement')
-        break
+        log.warn("Interpreter", "Variable get node used as statement");
+        break;
 
-      case 'function_def':
-        await this.executeFunctionDef(node)
-        break
+      case "function_def":
+        await this.executeFunctionDef(node);
+        break;
 
-      case 'function_call':
-        executedCount = await this.executeFunctionCall(node, path)
-        break
+      case "function_call":
+        executedCount = await this.executeFunctionCall(node, path);
+        break;
 
       default:
-        log.warn('Interpreter', 'Unknown node type:', (node as any).type)
+        log.warn("Interpreter", "Unknown node type:", (node as any).type);
     }
 
-    return executedCount
+    return executedCount;
   }
 
   /**
    * 명령 노드 실행
    */
-  private async executeCommand(node: any): Promise<void> {
-    log.debug('Interpreter', 'Executing command:', node.command.action)
+  private async executeCommand(
+    node: any,
+    size?: number,
+    index?: number,
+  ): Promise<void> {
+    log.debug("Interpreter", "Executing command:", node.command.action);
 
-    const response: CommandResponse = await this.connectionService.sendCommand(node.command)
+    const response: CommandResponse = await this.connectionService.sendCommand(
+      node.command,
+      size,
+      index,
+    );
 
     if (!response.success) {
-      throw new Error(`Command failed: ${response.error || 'Unknown error'}`)
+      throw new Error(`Command failed: ${response.error || "Unknown error"}`);
     }
 
     // 명령 완료 대기 (Unity 응답 시뮬레이션 - 실제로는 Unity에서 완료 신호를 받아야 함)
-    await this.delay(100)
+    await this.delay(100);
   }
 
   /**
    * 시퀀스 노드 실행
    */
   private async executeSequence(node: any, path: number[]): Promise<number> {
-    let totalExecuted = 0
+    let totalExecuted = 0;
 
     for (let i = 0; i < node.children.length; i++) {
-      if (this.shouldStop) break
+      if (this.shouldStop) break;
 
-      const child = node.children[i]
-      const childPath = [...path, i]
-      const executed = await this.executeNode(child, childPath)
-      totalExecuted += executed
+      const child = node.children[i];
+      const childPath = [...path, i];
+      const executed = await this.executeNode(child, childPath);
+      totalExecuted += executed;
     }
 
-    return totalExecuted
+    return totalExecuted;
   }
 
   /**
    * 반복 노드 실행
    */
   private async executeRepeat(node: any, path: number[]): Promise<number> {
-    log.debug('Interpreter', `Repeating ${node.times} times`)
+    log.debug("Interpreter", `Repeating ${node.times} times`);
 
-    let totalExecuted = 0
+    let totalExecuted = 0;
 
     for (let i = 0; i < node.times; i++) {
-      if (this.shouldStop) break
+      if (this.shouldStop) break;
 
-      log.debug('Interpreter', `Repeat iteration ${i + 1}/${node.times}`)
+      log.debug("Interpreter", `Repeat iteration ${i + 1}/${node.times}`);
 
       // 컨텍스트에 반복 횟수 저장
-      const oldRepeatCount = this.state.context.currentRepeatCount
-      this.state.context.currentRepeatCount = i + 1
+      const oldRepeatCount = this.state.context.currentRepeatCount;
+      this.state.context.currentRepeatCount = i + 1;
 
-      const childPath = [...path, i]
-      const executed = await this.executeNode(node.body, childPath)
-      totalExecuted += executed
+      const childPath = [...path, i];
+      const executed = await this.executeNode(node.body, childPath);
+      totalExecuted += executed;
 
       // 복원
-      this.state.context.currentRepeatCount = oldRepeatCount
+      this.state.context.currentRepeatCount = oldRepeatCount;
     }
 
-    return totalExecuted
+    return totalExecuted;
   }
 
   /**
    * For 루프 노드 실행
    */
   private async executeForLoop(node: any, path: number[]): Promise<number> {
-    log.debug('Interpreter', `For loop: ${node.variable} from ${node.from} to ${node.to} by ${node.by}`)
+    log.debug(
+      "Interpreter",
+      `For loop: ${node.variable} from ${node.from} to ${node.to} by ${node.by}`,
+    );
 
-    let totalExecuted = 0
-    const { variable, from, to, by } = node
+    let totalExecuted = 0;
+    const { variable, from, to, by } = node;
 
-    const isIncrementing = by > 0
-    let loopIndex = 0
+    const isIncrementing = by > 0;
+    let loopIndex = 0;
 
     for (let i = from; isIncrementing ? i <= to : i >= to; i += by) {
-      if (this.shouldStop) break
+      if (this.shouldStop) break;
 
-      log.debug('Interpreter', `Loop variable ${variable} = ${i}`)
+      log.debug("Interpreter", `Loop variable ${variable} = ${i}`);
 
       // 변수를 컨텍스트에 설정
-      this.state.context.variables.set(variable, i)
-      this.state.context.currentLoopVariable = { name: variable, value: i }
+      this.state.context.variables.set(variable, i);
+      this.state.context.currentLoopVariable = { name: variable, value: i };
 
-      const childPath = [...path, loopIndex]
-      const executed = await this.executeNode(node.body, childPath)
-      totalExecuted += executed
+      const childPath = [...path, loopIndex];
+      const executed = await this.executeNode(node.body, childPath);
+      totalExecuted += executed;
 
-      loopIndex++
+      loopIndex++;
     }
 
     // 변수 정리
-    this.state.context.variables.delete(variable)
-    this.state.context.currentLoopVariable = undefined
+    this.state.context.variables.delete(variable);
+    this.state.context.currentLoopVariable = undefined;
 
-    return totalExecuted
+    return totalExecuted;
   }
 
   /**
    * If 노드 실행
    */
   private async executeIf(node: any, path: number[]): Promise<number> {
-    log.debug('Interpreter', `Evaluating condition: ${node.condition}`)
+    log.debug("Interpreter", `Evaluating condition: ${node.condition}`);
 
-    const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
+    const conditionResult = evaluateCondition(
+      node.condition,
+      this.droneStates,
+      this.state.context,
+    );
 
     if (conditionResult.error) {
-      log.warn('Interpreter', 'Condition evaluation error:', conditionResult.error)
+      log.warn(
+        "Interpreter",
+        "Condition evaluation error:",
+        conditionResult.error,
+      );
     }
 
-    log.debug('Interpreter', `Condition result: ${conditionResult.result}`)
+    log.debug("Interpreter", `Condition result: ${conditionResult.result}`);
 
     if (conditionResult.result) {
-      const childPath = [...path, 0]
-      return await this.executeNode(node.thenBranch, childPath)
+      const childPath = [...path, 0];
+      return await this.executeNode(node.thenBranch, childPath);
     }
 
-    return 0
+    return 0;
   }
 
   /**
    * If-Else 노드 실행
    */
   private async executeIfElse(node: any, path: number[]): Promise<number> {
-    log.debug('Interpreter', `Evaluating condition: ${node.condition}`)
+    log.debug("Interpreter", `Evaluating condition: ${node.condition}`);
 
-    const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
+    const conditionResult = evaluateCondition(
+      node.condition,
+      this.droneStates,
+      this.state.context,
+    );
 
     if (conditionResult.error) {
-      log.warn('Interpreter', 'Condition evaluation error:', conditionResult.error)
+      log.warn(
+        "Interpreter",
+        "Condition evaluation error:",
+        conditionResult.error,
+      );
     }
 
-    log.debug('Interpreter', `Condition result: ${conditionResult.result}`)
+    log.debug("Interpreter", `Condition result: ${conditionResult.result}`);
 
     if (conditionResult.result) {
-      const childPath = [...path, 0]
-      return await this.executeNode(node.thenBranch, childPath)
+      const childPath = [...path, 0];
+      return await this.executeNode(node.thenBranch, childPath);
     } else {
-      const childPath = [...path, 1]
-      return await this.executeNode(node.elseBranch, childPath)
+      const childPath = [...path, 1];
+      return await this.executeNode(node.elseBranch, childPath);
     }
   }
 
@@ -401,142 +444,194 @@ export class Interpreter {
    * 대기 노드 실행
    */
   private async executeWait(node: any): Promise<void> {
-    log.debug('Interpreter', `Waiting ${node.duration} seconds`)
-    await this.delay(node.duration * 1000)
+    if (this.connectionService instanceof UnityWebGLConnectionService) {
+      await this.executeCommand(
+        {
+          id: node,
+          type: "command",
+          command: {
+            action: "wait",
+            params: { duration: node.duration },
+          },
+        },
+        this.size,
+        Number(node.id.substring(5)),
+      );
+
+      return;
+    }
+    log.debug("Interpreter", `Waiting ${node.duration} seconds`);
+    await this.delay(node.duration * 1000);
   }
 
   /**
    * While 루프 노드 실행 (Phase 6-A)
    */
   private async executeWhileLoop(node: any, path: number[]): Promise<number> {
-    log.debug('Interpreter', `While loop: ${node.condition} (max ${node.maxIterations} iterations)`)
+    log.debug(
+      "Interpreter",
+      `While loop: ${node.condition} (max ${node.maxIterations} iterations)`,
+    );
 
-    let totalExecuted = 0
-    let iteration = 0
-    const maxIterations = node.maxIterations || 1000
+    let totalExecuted = 0;
+    let iteration = 0;
+    const maxIterations = node.maxIterations || 1000;
 
     while (iteration < maxIterations) {
-      if (this.shouldStop) break
+      if (this.shouldStop) break;
 
       // 조건 평가
-      const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
+      const conditionResult = evaluateCondition(
+        node.condition,
+        this.droneStates,
+        this.state.context,
+      );
 
       if (conditionResult.error) {
-        log.warn('Interpreter', 'While condition error:', conditionResult.error)
-        break
+        log.warn(
+          "Interpreter",
+          "While condition error:",
+          conditionResult.error,
+        );
+        break;
       }
 
       if (!conditionResult.result) {
-        log.debug('Interpreter', 'While condition false, exiting loop')
-        break
+        log.debug("Interpreter", "While condition false, exiting loop");
+        break;
       }
 
-      log.debug('Interpreter', `While iteration ${iteration + 1}`)
+      log.debug("Interpreter", `While iteration ${iteration + 1}`);
 
-      const childPath = [...path, iteration]
-      const executed = await this.executeNode(node.body, childPath)
-      totalExecuted += executed
+      const childPath = [...path, iteration];
+      const executed = await this.executeNode(node.body, childPath);
+      totalExecuted += executed;
 
-      iteration++
+      iteration++;
     }
 
     if (iteration >= maxIterations) {
-      log.warn('Interpreter', `While loop reached max iterations (${maxIterations})`)
+      log.warn(
+        "Interpreter",
+        `While loop reached max iterations (${maxIterations})`,
+      );
     }
 
-    return totalExecuted
+    return totalExecuted;
   }
 
   /**
    * Repeat Until 루프 노드 실행 (Phase 6-A)
    */
   private async executeUntilLoop(node: any, path: number[]): Promise<number> {
-    log.debug('Interpreter', `Repeat Until loop: ${node.condition} (max ${node.maxIterations} iterations)`)
+    log.debug(
+      "Interpreter",
+      `Repeat Until loop: ${node.condition} (max ${node.maxIterations} iterations)`,
+    );
 
-    let totalExecuted = 0
-    let iteration = 0
-    const maxIterations = node.maxIterations || 1000
+    let totalExecuted = 0;
+    let iteration = 0;
+    const maxIterations = node.maxIterations || 1000;
 
     while (iteration < maxIterations) {
-      if (this.shouldStop) break
+      if (this.shouldStop) break;
 
-      log.debug('Interpreter', `Until iteration ${iteration + 1}`)
+      log.debug("Interpreter", `Until iteration ${iteration + 1}`);
 
       // 먼저 본문 실행
-      const childPath = [...path, iteration]
-      const executed = await this.executeNode(node.body, childPath)
-      totalExecuted += executed
+      const childPath = [...path, iteration];
+      const executed = await this.executeNode(node.body, childPath);
+      totalExecuted += executed;
 
       // 조건 평가 (참이면 종료)
-      const conditionResult = evaluateCondition(node.condition, this.droneStates, this.state.context)
+      const conditionResult = evaluateCondition(
+        node.condition,
+        this.droneStates,
+        this.state.context,
+      );
 
       if (conditionResult.error) {
-        log.warn('Interpreter', 'Until condition error:', conditionResult.error)
-        break
+        log.warn(
+          "Interpreter",
+          "Until condition error:",
+          conditionResult.error,
+        );
+        break;
       }
 
       if (conditionResult.result) {
-        log.debug('Interpreter', 'Until condition true, exiting loop')
-        break
+        log.debug("Interpreter", "Until condition true, exiting loop");
+        break;
       }
 
-      iteration++
+      iteration++;
     }
 
     if (iteration >= maxIterations) {
-      log.warn('Interpreter', `Until loop reached max iterations (${maxIterations})`)
+      log.warn(
+        "Interpreter",
+        `Until loop reached max iterations (${maxIterations})`,
+      );
     }
 
-    return totalExecuted
+    return totalExecuted;
   }
 
   /**
    * 변수 설정 노드 실행 (Phase 6-A)
    */
   private async executeVariableSet(node: any): Promise<void> {
-    log.debug('Interpreter', `Setting variable ${node.variableName} = ${node.value}`)
-    this.state.context.variables.set(node.variableName, node.value)
+    log.debug(
+      "Interpreter",
+      `Setting variable ${node.variableName} = ${node.value}`,
+    );
+    this.state.context.variables.set(node.variableName, node.value);
   }
 
   /**
    * 함수 정의 노드 실행 (Phase 6-A)
    */
   private async executeFunctionDef(node: any): Promise<void> {
-    log.debug('Interpreter', `Defining function: ${node.functionName}`)
-    this.state.context.functions.set(node.functionName, node.body)
+    log.debug("Interpreter", `Defining function: ${node.functionName}`);
+    this.state.context.functions.set(node.functionName, node.body);
   }
 
   /**
    * 함수 호출 노드 실행 (Phase 6-A)
    */
-  private async executeFunctionCall(node: any, path: number[]): Promise<number> {
-    const functionName = node.functionName
-    log.debug('Interpreter', `Calling function: ${functionName}`)
+  private async executeFunctionCall(
+    node: any,
+    path: number[],
+  ): Promise<number> {
+    const functionName = node.functionName;
+    log.debug("Interpreter", `Calling function: ${functionName}`);
 
     // 함수 존재 확인
-    const functionBody = this.state.context.functions.get(functionName)
+    const functionBody = this.state.context.functions.get(functionName);
     if (!functionBody) {
-      throw new Error(`Function '${functionName}' is not defined`)
+      throw new Error(`Function '${functionName}' is not defined`);
     }
 
     // 재귀 호출 방지 (최대 깊이 10)
-    const MAX_CALL_DEPTH = 10
+    const MAX_CALL_DEPTH = 10;
     if (this.state.context.callStack.length >= MAX_CALL_DEPTH) {
-      throw new Error(`Maximum function call depth (${MAX_CALL_DEPTH}) exceeded`)
+      throw new Error(
+        `Maximum function call depth (${MAX_CALL_DEPTH}) exceeded`,
+      );
     }
 
     // 호출 스택에 추가
-    this.state.context.callStack.push(functionName)
+    this.state.context.callStack.push(functionName);
 
     try {
       // 함수 본문 실행
-      const childPath = [...path, 0]
-      const executed = await this.executeNode(functionBody, childPath)
+      const childPath = [...path, 0];
+      const executed = await this.executeNode(functionBody, childPath);
 
-      return executed
+      return executed;
     } finally {
       // 호출 스택에서 제거
-      this.state.context.callStack.pop()
+      this.state.context.callStack.pop();
     }
   }
 
@@ -544,13 +639,13 @@ export class Interpreter {
    * 지연 유틸리티
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * 현재 상태 가져오기
    */
   getState(): ExecutionState {
-    return this.state
+    return this.state;
   }
 }
