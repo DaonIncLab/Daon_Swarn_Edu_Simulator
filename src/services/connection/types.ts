@@ -2,104 +2,111 @@
  * 연결 서비스 공통 타입 정의
  */
 
-import type { ConnectionStatus } from '@/constants/connection'
-import type { Command } from '@/types/blockly'
+import type { ConnectionStatus } from "@/constants/connection";
 
 /**
  * 연결 모드
  */
 export const ConnectionMode = {
   /** Unity WebSocket 시뮬레이션 (별도 서버) */
-  SIMULATION: 'simulation',
+  SIMULATION: "simulation",
   /** Unity WebGL 임베드 모드 (클라이언트 내장) */
-  UNITY_WEBGL: 'unity_webgl',
+  UNITY_WEBGL: "unity_webgl",
   /** 실제 드론 MAVLink 연동 */
-  REAL_DRONE: 'real_drone',
+  REAL_DRONE: "real_drone",
   /** Three.js 3D 시뮬레이터 (MAVLink 프로토콜) */
-  MAVLINK_SIMULATION: 'mavlink_simulation',
+  MAVLINK_SIMULATION: "mavlink_simulation",
   /** 테스트/더미 모드 */
-  TEST: 'test',
-} as const
+  TEST: "test",
+} as const;
 
-export type ConnectionMode = typeof ConnectionMode[keyof typeof ConnectionMode]
+export type ConnectionMode =
+  (typeof ConnectionMode)[keyof typeof ConnectionMode];
 
 /**
  * 연결 설정
  */
 export interface ConnectionConfig {
-  mode: ConnectionMode
+  mode: ConnectionMode;
 
   // WebSocket 설정 (Unity 외부 서버 모드)
   websocket?: {
-    ipAddress: string
-    port: number
-  }
+    ipAddress: string;
+    port: number;
+  };
 
   // Unity WebGL 설정 (임베드 모드)
   unityWebGL?: {
-    loaderUrl: string
-    dataUrl: string
-    frameworkUrl: string
-    codeUrl: string
-  }
+    loaderUrl: string;
+    dataUrl: string;
+    frameworkUrl: string;
+    codeUrl: string;
+  };
 
   // MAVLink 설정 (실제 드론 또는 Three.js 시뮬레이션)
   mavlink?: {
-    connectionType: 'simulation' | 'serial' | 'udp' | 'tcp'
-    transportType?: 'udp' | 'serial' | 'tcp' // For real connections
-    droneCount?: number // For simulation mode
-    device?: string // For serial: COM3, /dev/ttyUSB0 등
-    baudRate?: number // For serial (default: 57600)
-    host?: string // For UDP/TCP (default: localhost)
-    port?: number // For UDP/TCP (default UDP: 14550, TCP: 5760)
-  }
+    connectionType: "simulation" | "serial" | "udp" | "tcp";
+    transportType?: "udp" | "serial" | "tcp"; // For real connections
+    droneCount?: number; // For simulation mode
+    device?: string; // For serial: COM3, /dev/ttyUSB0 등
+    baudRate?: number; // For serial (default: 57600)
+    host?: string; // For UDP/TCP (default: localhost)
+    port?: number; // For UDP/TCP (default UDP: 14550, TCP: 5760)
+  };
 
   // Test 모드 설정
   test?: {
-    droneCount?: number
-  }
+    droneCount?: number;
+  };
 }
 
 /**
  * 수신 메시지 타입
  */
 export interface ReceivedMessage {
-  type: 'telemetry' | 'ack' | 'error' | 'command_finish' | 'log'
-  timestamp: number
-  data: unknown
+  type:
+    | "init"
+    | "telemetry"
+    | "ack"
+    | "error"
+    | "command_finish"
+    | "log"
+    | "complete";
+  timestamp: number;
+  data: unknown;
 }
 
 /**
  * 텔레메트리 데이터
  */
 export interface TelemetryData {
-  droneId?: string
-  position?: { x: number; y: number; z: number }
-  altitude?: number
-  velocity?: { vx: number; vy: number; vz: number }
-  battery?: number
-  flightMode?: string
-  isArmed?: boolean
-  timestamp: number
+  droneId?: string | number;
+  position?: { x: number; y: number; z: number };
+  altitude?: number;
+  velocity?: { vx: number; vy: number; vz: number };
+  battery?: number;
+  flightMode?: string;
+  isArmed?: boolean;
+  timestamp: number;
 }
 
 /**
  * 명령 응답
  */
 export interface CommandResponse {
-  success: boolean
-  commandId?: string
-  error?: string
-  timestamp: number
+  success: boolean;
+  commandId?: string;
+  error?: string;
+  timestamp: number;
 }
 
 /**
  * 연결 이벤트 리스너
  */
 export interface ConnectionEventListeners {
-  onStatusChange?: (status: ConnectionStatus) => void
-  onMessage?: (message: ReceivedMessage) => void
-  onTelemetry?: (data: TelemetryData) => void
-  onError?: (error: string) => void
-  onLog?: (log: string) => void
+  onStatusChange?: (status: ConnectionStatus) => void;
+  onMessage?: (message: ReceivedMessage) => void;
+  onTelemetry?: (data: TelemetryData) => void;
+  onError?: (error: string) => void;
+  onLog?: (log: string) => void;
 }
