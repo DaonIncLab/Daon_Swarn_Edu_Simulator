@@ -64,6 +64,10 @@ export class MAVLinkConverter {
         // Formation commands handled by convertFormationCommand()
         return []
 
+      case CommandAction.SET_COLOR:
+        // LED color is handled at service/simulator layer when supported.
+        return []
+
       case CommandAction.WAIT:
         // Wait is handled by GCS timing, not sent to drone
         return []

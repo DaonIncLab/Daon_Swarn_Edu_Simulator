@@ -190,7 +190,7 @@ export class TestConnectionService implements IConnectionService {
 
       case CommandAction.SET_FORMATION:
         this.simulator.executeSetFormation(
-          (params as any).type,
+          (params as any).type || (params as any).formationType,
           {
             rows: (params as any).rows,
             cols: (params as any).cols,
@@ -198,6 +198,15 @@ export class TestConnectionService implements IConnectionService {
             radius: (params as any).radius,
           }
         )
+        break
+
+      case CommandAction.SET_COLOR:
+        // Color command is acknowledged in test mode, but simulator has no LED model yet.
+        log.info('SET_COLOR', {
+          r: (params as any).r,
+          g: (params as any).g,
+          b: (params as any).b,
+        })
         break
 
       case CommandAction.MOVE_FORMATION:

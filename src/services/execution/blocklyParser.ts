@@ -15,34 +15,32 @@
  * 이러한 Value Blocks는 parseSingleBlock()에서 의도적으로 필터링됩니다.
  */
 
-import * as Blockly from "blockly";
-import type { Command } from "@/types/websocket";
-import { CommandAction, FormationType, Direction } from "@/constants/commands";
-import { log } from "@/utils/logger";
+import { CommandAction, Direction, FormationType } from "@/constants/commands";
 import type {
-  ExecutableNode,
   CommandNode,
-  SequenceNode,
-  RepeatNode,
-  ForLoopNode,
-  WhileLoopNode,
-  UntilLoopNode,
-  IfNode,
-  IfElseNode,
-  WaitNode,
-  VariableSetNode,
-  VariableGetNode,
-  FunctionDefNode,
-  FunctionCallNode,
-  SensorValueNode,
-  MathExprNode,
-  LogicCompareNode,
-  LogicOperationNode,
-  LogicNegateNode,
-  ValueNode,
   ConditionNode,
-  NodeType,
+  ExecutableNode,
+  ForLoopNode,
+  FunctionCallNode,
+  FunctionDefNode,
+  IfElseNode,
+  IfNode,
+  LogicCompareNode,
+  LogicNegateNode,
+  LogicOperationNode,
+  MathExprNode,
+  RepeatNode,
+  SensorValueNode,
+  UntilLoopNode,
+  ValueNode,
+  VariableGetNode,
+  VariableSetNode,
+  WaitNode,
+  WhileLoopNode,
 } from "@/types/execution";
+import type { Command } from "@/types/websocket";
+import { log } from "@/utils/logger";
+import * as Blockly from "blockly";
 
 let nodeIdCounter = 0;
 
@@ -217,11 +215,12 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
     return parseWaitBlock(block);
   }
 
-  // 드론 명령 블록 (swarm_ 또는 drone_로 시작)
+  // 드론 명령 블록 (swarm_, drone_, mission_, group_ 시작)
   if (
     type.startsWith("swarm_") ||
     type.startsWith("drone_") ||
-    type.startsWith("mission_")
+    type.startsWith("mission_") ||
+    type.startsWith("group_")
   ) {
     return parseCommandBlock(block);
   }
@@ -590,7 +589,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
     // ============= 새로운 드론 블록들 =============
     case "drone_takeoff":
       return {
-        action: "DRONE_TAKEOFF",
+        action: CommandAction.TAKEOFF,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           altitude: block.getFieldValue("ALTITUDE") as number,
@@ -599,7 +598,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_land":
       return {
-        action: "DRONE_LAND",
+        action: CommandAction.LAND,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
         },
@@ -621,7 +620,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_hover":
       return {
-        action: "DRONE_HOVER",
+        action: CommandAction.HOVER,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
         },
@@ -629,7 +628,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_emergency":
       return {
-        action: "DRONE_EMERGENCY",
+        action: CommandAction.EMERGENCY,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
         },
@@ -637,7 +636,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_move_direction":
       return {
-        action: "DRONE_MOVE_DIRECTION",
+        action: CommandAction.MOVE_DIRECTION,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           direction: block.getFieldValue("DIRECTION") as string,
@@ -647,7 +646,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_move_direction_all":
       return {
-        action: "DRONE_MOVE_DIRECTION_ALL",
+        action: CommandAction.MOVE_DIRECTION_ALL,
         params: {
           direction: block.getFieldValue("DIRECTION") as string,
           distance: block.getFieldValue("DISTANCE") as number,
@@ -656,7 +655,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_move_xyz":
       return {
-        action: "DRONE_MOVE_XYZ",
+        action: CommandAction.MOVE_XYZ,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           x: block.getFieldValue("X") as number,
@@ -668,7 +667,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_rotate":
       return {
-        action: "DRONE_ROTATE",
+        action: CommandAction.ROTATE,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           direction: block.getFieldValue("DIRECTION") as string,
@@ -678,7 +677,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_rc_control":
       return {
-        action: "DRONE_RC_CONTROL",
+        action: CommandAction.RC_CONTROL,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           roll: block.getFieldValue("ROLL") as number,
@@ -690,7 +689,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_set_speed":
       return {
-        action: "DRONE_SET_SPEED",
+        action: CommandAction.SET_SPEED,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           speed: block.getFieldValue("SPEED") as number,
@@ -699,7 +698,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "mission_add_waypoint":
       return {
-        action: "MISSION_ADD_WAYPOINT",
+        action: CommandAction.MISSION_ADD_WAYPOINT,
         params: {
           waypoint: {
             id: `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -714,7 +713,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "mission_goto_waypoint":
       return {
-        action: "MISSION_GOTO_WAYPOINT",
+        action: CommandAction.MISSION_GOTO_WAYPOINT,
         params: {
           waypointIndex: block.getFieldValue("WAYPOINT_INDEX") as number,
           speed: block.getFieldValue("SPEED") as number,
@@ -723,7 +722,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "mission_execute":
       return {
-        action: "MISSION_EXECUTE",
+        action: CommandAction.MISSION_EXECUTE,
         params: {
           loop: block.getFieldValue("LOOP") === "TRUE",
         },
@@ -731,9 +730,33 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "mission_clear":
       return {
-        action: "MISSION_CLEAR",
+        action: CommandAction.MISSION_CLEAR,
         params: {},
       };
+
+    //  추가
+    case "group_formation":
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          formation: block.getFieldValue("FORMATION"),
+        },
+      };
+
+    case "group_led_color": {
+      const hex = (block.getFieldValue("COLOUR") as string) || "#ff0000";
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return {
+        action: CommandAction.SET_LED_COLOR,
+        params: {
+          r: r,
+          g: g,
+          b: b,
+        },
+      };
+    }
 
     // ============= 기존 스웜 블록들 (하위 호환성) =============
     case "swarm_takeoff_all":

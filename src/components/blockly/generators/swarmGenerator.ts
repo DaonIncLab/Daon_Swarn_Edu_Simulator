@@ -4,6 +4,7 @@
 
 import * as Blockly from "blockly";
 import type { Command } from "@/types/websocket";
+import { CommandAction } from "@/constants/commands";
 
 // JSON 생성기 정의
 export const droneJsonGenerator = new Blockly.Generator("DroneJSON");
@@ -134,7 +135,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_takeoff":
       return {
-        action: "DRONE_TAKEOFF",
+        action: CommandAction.TAKEOFF,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           altitude: block.getFieldValue("ALTITUDE") as number,
@@ -143,7 +144,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_land":
       return {
-        action: "DRONE_LAND",
+        action: CommandAction.LAND,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
         },
@@ -151,7 +152,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_takeoff_all":
       return {
-        action: "DRONE_TAKEOFF_ALL",
+        action: CommandAction.TAKEOFF_ALL,
         params: {
           altitude: block.getFieldValue("ALTITUDE") as number,
         },
@@ -159,13 +160,13 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_land_all":
       return {
-        action: "DRONE_LAND_ALL",
+        action: CommandAction.LAND_ALL,
         params: {},
       };
 
     case "drone_hover":
       return {
-        action: "DRONE_HOVER",
+        action: CommandAction.HOVER,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
         },
@@ -173,7 +174,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_emergency":
       return {
-        action: "DRONE_EMERGENCY",
+        action: CommandAction.EMERGENCY,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
         },
@@ -185,7 +186,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_move_direction":
       return {
-        action: "DRONE_MOVE_DIRECTION",
+        action: CommandAction.MOVE_DIRECTION,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           direction: block.getFieldValue("DIRECTION") as string,
@@ -195,7 +196,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_move_xyz":
       return {
-        action: "DRONE_MOVE_XYZ",
+        action: CommandAction.MOVE_XYZ,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           x: block.getFieldValue("X") as number,
@@ -207,7 +208,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_rotate":
       return {
-        action: "DRONE_ROTATE",
+        action: CommandAction.ROTATE,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           direction: block.getFieldValue("DIRECTION") as string,
@@ -216,12 +217,39 @@ function blockToCommand(block: Blockly.Block): Command | null {
       };
 
     // =============================================================================
-    // 3. RC Control (수동 제어)
+    // 3. Group (그룹)
+    // =============================================================================
+
+    case "group_formation":
+      return {
+        action: CommandAction.SET_FORMATION,
+        params: {
+          formation: block.getFieldValue("FORMATION"),
+        },
+      };
+
+    case "group_led_color": {
+      const hex = (block.getFieldValue("COLOUR") as string) || "#ff0000";
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return {
+        action: CommandAction.SET_LED_COLOR,
+        params: {
+          r: r,
+          g: g,
+          b: b,
+        },
+      };
+    }
+
+    // =============================================================================
+    // 4. RC Control (수동 제어)
     // =============================================================================
 
     case "drone_rc_control":
       return {
-        action: "DRONE_RC_CONTROL",
+        action: CommandAction.RC_CONTROL,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           roll: block.getFieldValue("ROLL") as number,
@@ -232,18 +260,18 @@ function blockToCommand(block: Blockly.Block): Command | null {
       };
 
     // =============================================================================
-    // 4. Telemetry (센서) - Value blocks는 별도 처리
+    // 5. Telemetry (센서) - Value blocks는 별도 처리
     // =============================================================================
 
     // sensor_battery, sensor_altitude 등은 getValueInput에서 처리됨
 
     // =============================================================================
-    // 5. Mission (미션)
+    // 6. Mission (미션)
     // =============================================================================
 
     case "mission_add_waypoint":
       return {
-        action: "MISSION_ADD_WAYPOINT",
+        action: CommandAction.MISSION_ADD_WAYPOINT,
         params: {
           waypoint: {
             id: `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -258,7 +286,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "mission_goto_waypoint":
       return {
-        action: "MISSION_GOTO_WAYPOINT",
+        action: CommandAction.MISSION_GOTO_WAYPOINT,
         params: {
           waypointIndex: block.getFieldValue("WAYPOINT_INDEX") as number,
           speed: block.getFieldValue("SPEED") as number,
@@ -267,7 +295,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "mission_execute":
       return {
-        action: "MISSION_EXECUTE",
+        action: CommandAction.MISSION_EXECUTE,
         params: {
           loop: block.getFieldValue("LOOP") === "TRUE",
         },
@@ -275,17 +303,17 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "mission_clear":
       return {
-        action: "MISSION_CLEAR",
+        action: CommandAction.MISSION_CLEAR,
         params: {},
       };
 
     // =============================================================================
-    // 6. Settings (설정)
+    // 7. Settings (설정)
     // =============================================================================
 
     case "drone_set_speed":
       return {
-        action: "DRONE_SET_SPEED",
+        action: CommandAction.SET_SPEED,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           speed: block.getFieldValue("SPEED") as number,
@@ -293,7 +321,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
       };
 
     // =============================================================================
-    // 7. Sync & Wait (동기화 & 대기)
+    // 8. Sync & Wait (동기화 & 대기)
     // =============================================================================
 
     case "control_wait":
@@ -305,7 +333,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
       };
 
     // =============================================================================
-    // 8. Control Flow (제어 흐름)
+    // 9. Control Flow (제어 흐름)
     // =============================================================================
 
     case "control_repeat":
@@ -358,7 +386,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
       };
 
     // =============================================================================
-    // 9. Variables & Math (변수 & 수식)
+    // 10. Variables & Math (변수 & 수식)
     // =============================================================================
 
     case "var_set":
@@ -378,42 +406,6 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     // logic_compare, logic_operation, logic_negate, logic_boolean은 getValueInput에서 처리됨
 
-    // unity webgl
-    case "unity_execute_all":
-      return {
-        action: "UNITY_EXECUTE_ALL",
-        params: {
-          intent: "0",
-          items: [],
-        },
-      };
-
-    case "unity_add_drone":
-      return {
-        action: "UNITY_ADD_DRONE",
-        params: {
-          intent: 1,
-          items: [],
-        },
-      };
-
-    case "unity_delete_drone":
-      return {
-        action: "UNITY_DELETE_DRONE",
-        params: {
-          intent: 2,
-          items: [],
-        },
-      };
-
-    case "unity_change_camera":
-      return {
-        action: "UNITY_CHANGE_CAMERA",
-        params: {
-          intent: 5,
-          items: [],
-        },
-      };
     default:
       return null;
   }

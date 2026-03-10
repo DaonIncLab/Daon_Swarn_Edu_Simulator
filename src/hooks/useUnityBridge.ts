@@ -193,7 +193,6 @@ export function useUnityBridge({
   const executeCommands = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (commands: any[], isLast: boolean) => {
-      console.log(isLast);
       if (isLast) {
         return sendToUnity({
           type: "execute_script",

@@ -114,6 +114,19 @@ const categoryBlocks = {
     { kind: "block", type: "logic_negate" },
     { kind: "block", type: "logic_boolean", fields: { BOOL: "TRUE" } },
   ],
+
+  group: [
+    {
+      kind: "block",
+      type: "group_formation",
+      fields: { FORMATION: "triangle" },
+    },
+    {
+      kind: "block",
+      type: "group_led_color",
+      fields: { COLOUR: "#ff0000" },
+    },
+  ],
 };
 
 /**
@@ -137,6 +150,7 @@ export const toolboxConfig = {
 export const categories = [
   { id: "flight", name: "🚁 비행 제어", colour: "230" },
   { id: "movement", name: "➡️ 이동", colour: "160" },
+  { id: "group", name: " 🔂 그룹", colour: "250" },
   { id: "rc", name: "🎮 RC 제어", colour: "290" },
   { id: "sensors", name: "📊 센서", colour: "120" },
   { id: "mission", name: "🗺️ 미션", colour: "60" },

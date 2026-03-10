@@ -5,6 +5,7 @@
 
 import * as Blockly from "blockly";
 import { log } from "@/utils/logger";
+import { FieldColourHsvSliders } from "@blockly/field-colour-hsv-sliders";
 
 // =============================================================================
 // 1. Flight Control (비행 제어)
@@ -775,6 +776,49 @@ Blockly.Blocks["logic_boolean"] = {
     this.setOutput(true, "Boolean");
     this.setColour(210);
     this.setTooltip("참 또는 거짓 값");
+    this.setHelpUrl("");
+  },
+};
+
+/**
+ * 그룹
+ */
+Blockly.Blocks["group_formation"] = {
+  init: function () {
+    this.appendDummyInput().appendField("➡️ 모든 드론");
+    this.appendDummyInput()
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["🔺 삼각", "triangle"],
+          ["🟧 사각", "square"],
+          ["⭐️ 별", "star"],
+          ["➡️ 화살표", "arrow"],
+          ["격자", "grid"],
+          ["브이", "v_shape"],
+        ]),
+        "FORMATION",
+      )
+      .appendField("대형");
+    this.appendDummyInput().appendField("비행");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(250);
+    this.setTooltip("모든 드론이 해당 대형으로 비행합니다.\nMAVLink: ?");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["group_led_color"] = {
+  init: function () {
+    this.appendDummyInput().appendField("➡️ 모든 드론");
+    this.appendDummyInput().appendField("LED").appendField("색상");
+    this.appendDummyInput()
+      .appendField(new FieldColourHsvSliders("#ff0000"), "COLOUR")
+      .appendField("변경");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(250);
+    this.setTooltip("모든 드론이 LED를 해당 색상으로 변경합니다.\nMAVLink: ?");
     this.setHelpUrl("");
   },
 };
