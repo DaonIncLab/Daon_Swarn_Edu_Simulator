@@ -116,7 +116,7 @@ export const convertBlockToUnityMessage = (
     case "set_led_color":
       missionItems.push({
         droneId: broadcastId,
-        commnad: "ledcolor",
+        command: "ledcolor",
         distance: 0,
         hasColor: true,
         r: params.r,

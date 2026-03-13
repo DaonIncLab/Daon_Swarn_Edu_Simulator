@@ -18,7 +18,7 @@ export interface Category {
 export const blockCategories: Category[] = [
   { id: "flight", name: "🚁 비행 제어", colour: "230" },
   { id: "movement", name: "➡️ 이동", colour: "160" },
-  { id: "group", name: " 🔂 그룹", colour: "250" },
+  { id: "group", name: "🤝 그룹", colour: "250" },
   { id: "rc", name: "🎮 RC 제어", colour: "290" },
   { id: "sensors", name: "📊 센서", colour: "120" },
   { id: "mission", name: "🗺️ 미션", colour: "60" },

@@ -785,7 +785,7 @@ Blockly.Blocks["logic_boolean"] = {
  */
 Blockly.Blocks["group_formation"] = {
   init: function () {
-    this.appendDummyInput().appendField("➡️ 모든 드론");
+    this.appendDummyInput().appendField("🤝 모든 드론");
     this.appendDummyInput()
       .appendField(
         new Blockly.FieldDropdown([
@@ -793,8 +793,8 @@ Blockly.Blocks["group_formation"] = {
           ["🟧 사각", "square"],
           ["⭐️ 별", "star"],
           ["➡️ 화살표", "arrow"],
-          ["격자", "grid"],
-          ["브이", "v_shape"],
+          ["🧩 격자", "grid"],
+          ["✅ 브이", "v_shape"],
         ]),
         "FORMATION",
       )
@@ -810,7 +810,7 @@ Blockly.Blocks["group_formation"] = {
 
 Blockly.Blocks["group_led_color"] = {
   init: function () {
-    this.appendDummyInput().appendField("➡️ 모든 드론");
+    this.appendDummyInput().appendField("🤝 모든 드론");
     this.appendDummyInput().appendField("LED").appendField("색상");
     this.appendDummyInput()
       .appendField(new FieldColourHsvSliders("#ff0000"), "COLOUR")

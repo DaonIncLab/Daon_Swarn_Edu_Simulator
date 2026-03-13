@@ -44,13 +44,6 @@ export function useUnityBridge({
   const genRequestId = () =>
     crypto.randomUUID?.() ?? `${Date.now()}-${nextIdRef.current++}`;
 
-  // const addDroneCount = () => {
-  //   droneCountRef.current += 1;
-  // };
-  // const deleteDroneCount = () => {
-  //   droneCountRef.current = Math.max(1, droneCountRef.current - 1);
-  // };
-
   const appendMissionItems = useCallback((newItems: unknown[]) => {
     if (!newItems || newItems.length === 0) return;
     itemsRef.current = [...itemsRef.current, ...newItems];
@@ -95,13 +88,15 @@ export function useUnityBridge({
       }
 
       try {
-        if (!message.data) {
-          onError?.("Failed to send message: Message Data Not Found");
-        }
+        if (message.type == "execute_script") {
+          if (!message.data) {
+            onError?.("Failed to send message: Message Data Not Found");
+          }
 
-        const { action, params } = message.data.commands[0];
-        appendMissionItems(convertBlockToUnityMessage(action, params));
-        message.data = [...itemsRef.current];
+          const { action, params } = message.data.commands[0];
+          appendMissionItems(convertBlockToUnityMessage(action, params));
+          message.data = [...itemsRef.current];
+        }
 
         if (!message.requestId) {
           onError?.("Failed to send message: RequestId Not Found");
@@ -217,7 +212,7 @@ export function useUnityBridge({
       type: "emergency_stop",
       data: {},
       timestamp: Date.now(),
-      requestId: "",
+      requestId: genRequestId(),
     });
   }, [sendToUnity]);
 
