@@ -8,6 +8,7 @@ export const convertBlockToUnityMessage = (
     droneId?: number;
     altitude?: number;
     duration?: number;
+    degrees?: number;
     x?: number;
     y?: number;
     z?: number;
@@ -24,7 +25,7 @@ export const convertBlockToUnityMessage = (
     case "takeoff":
       missionItems.push({
         droneId: params.droneId! - 1,
-        command: "up",
+        command: "takeoff",
         distance: params.altitude,
       });
       break;
@@ -32,8 +33,8 @@ export const convertBlockToUnityMessage = (
     case "land":
       missionItems.push({
         droneId: params.droneId! - 1,
-        command: "down",
-        distance: params.distance,
+        command: "land",
+        distance: 0,
       });
       break;
 
@@ -49,7 +50,7 @@ export const convertBlockToUnityMessage = (
       missionItems.push({
         droneId: params.droneId! - 1,
         command: params.direction == "CW" ? "rightrotate" : "leftrotate",
-        distance: params.distance,
+        distance: params.degrees,
       });
       break;
 
@@ -73,7 +74,7 @@ export const convertBlockToUnityMessage = (
       missionItems.push({
         droneId: broadcastId,
         command: "land",
-        distance: params.distance,
+        distance: 0,
       });
       break;
 
@@ -101,7 +102,7 @@ export const convertBlockToUnityMessage = (
       });
       break;
 
-    case "move_xyz":
+    case "move_drone":
       missionItems.push({
         droneId: params.droneId! - 1,
         command: "moveto",
