@@ -508,31 +508,31 @@ export function ConnectionPanel() {
             {mavlinkTransportType === "udp" && (
               <>
                 <Input
-                  label={t("connection.mavlink.udp.host")}
+                  label="Target Host"
                   type="text"
                   value={mavlinkHost}
                   onChange={(e) => setMavlinkHost(e.target.value)}
-                  placeholder={t("connection.mavlink.udp.hostPlaceholder")}
+                  placeholder="127.0.0.1"
                 />
                 <Input
-                  label={t("connection.mavlink.udp.port")}
+                  label="Target Port"
                   type="number"
                   value={mavlinkPort.toString()}
                   onChange={(e) =>
                     setMavlinkPort(parseInt(e.target.value) || 14550)
                   }
-                  placeholder={t("connection.mavlink.udp.portPlaceholder")}
-                  helperText={t("connection.mavlink.udp.portDefault")}
+                  placeholder="14550"
+                  helperText="UDP target port for SITL or real drone"
                 />
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800 font-medium">
                     💡 {t("connection.mavlink.info.udpTitle")}
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
-                    {t("connection.mavlink.info.udpDescription")}
+                    Target endpoint used by the fixed WebSocket bridge.
                   </p>
                   <p className="text-xs text-blue-600 mt-2 font-medium">
-                    ⚠️ {t("connection.mavlink.info.requiresBridge")}
+                    ⚠️ Bridge endpoint is fixed in code: ws://localhost:15550/mavlink
                   </p>
                 </div>
               </>

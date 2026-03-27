@@ -30,8 +30,8 @@ interface ConnectionStore {
 
   // Real MAVLink connection settings
   mavlinkTransportType: 'udp' | 'serial'
-  mavlinkHost: string
-  mavlinkPort: number
+  mavlinkHost: string // UDP target host
+  mavlinkPort: number // UDP target port
   mavlinkSerialDevice: string
   mavlinkBaudRate: number
 
@@ -75,8 +75,8 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
 
     // Real MAVLink connection initial state
     mavlinkTransportType: 'udp',
-    mavlinkHost: 'localhost',
-    mavlinkPort: 14550,
+    mavlinkHost: 'localhost', // UDP target host
+    mavlinkPort: 14550, // UDP target port
     mavlinkSerialDevice: 'COM3',
     mavlinkBaudRate: 57600,
 
