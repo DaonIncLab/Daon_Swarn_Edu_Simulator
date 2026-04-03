@@ -32,6 +32,16 @@ export class CoordinateConverter {
   }
 
   /**
+   * Reset the home position reference.
+   */
+  resetHome(): void {
+    this.homeLatitude = 0
+    this.homeLongitude = 0
+    this.homeAltitude = 0
+    this.isHomeSet = false
+  }
+
+  /**
    * Check if home position is set
    */
   hasHome(): boolean {

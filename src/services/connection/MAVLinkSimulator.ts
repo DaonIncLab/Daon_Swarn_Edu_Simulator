@@ -10,6 +10,7 @@ import { DroneSimulator } from './DroneSimulator'
 import { MAVLinkConverter } from '@/services/mavlink/MAVLinkConverter'
 import { MAV_CMD } from '@/services/mavlink/MAVLinkCommands'
 import type { CommandLongParams } from '@/services/mavlink/MAVLinkCommands'
+import type { MissionItemIntMessage } from '@/types/mavlink'
 import { log } from '@/utils/logger'
 
 /**
@@ -302,6 +303,49 @@ export class MAVLinkSimulator {
    */
   emergencyStop(): void {
     this.droneSimulator.emergencyStop()
+  }
+
+  async executeMissionItems(items: MissionItemIntMessage[]): Promise<void> {
+    this.droneSimulator.clearWaypoints()
+
+    let takeoffAltitude: number | null = null
+    let shouldLand = false
+
+    for (const item of items) {
+      switch (item.command) {
+        case MAV_CMD.NAV_TAKEOFF:
+          takeoffAltitude = item.z || 2
+          break
+        case MAV_CMD.NAV_WAYPOINT:
+          this.droneSimulator.addWaypoint({
+            id: `mission_${item.seq}`,
+            name: `mission_${item.seq}`,
+            x: item.x,
+            y: item.y,
+            z: item.z,
+            holdTime: item.param1,
+          })
+          break
+        case MAV_CMD.NAV_LAND:
+          shouldLand = true
+          break
+        default:
+          log.warn('Unsupported mission item in simulator', {
+            command: item.command,
+          })
+      }
+    }
+
+    if (takeoffAltitude !== null) {
+      this.droneSimulator.executeTakeoffAll(takeoffAltitude)
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+    }
+
+    await this.droneSimulator.executeMission(false)
+
+    if (shouldLand) {
+      this.droneSimulator.executeLandAll()
+    }
   }
 
   /**

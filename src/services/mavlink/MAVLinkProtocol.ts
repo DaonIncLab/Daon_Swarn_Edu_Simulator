@@ -5,14 +5,14 @@
  * Reference: https://mavlink.io/en/guide/serialization.html
  */
 
-import type { MAVLinkPacket } from '@/types/mavlink'
-import { MAVLinkProtocolError, MAVLinkCRCError } from './MAVLinkError'
-import { log } from '@/utils/logger'
+import type { MAVLinkPacket } from "@/types/mavlink";
+import { MAVLinkProtocolError, MAVLinkCRCError } from "./MAVLinkError";
+import { log } from "@/utils/logger";
 
 /**
  * MAVLink v2 Magic Number
  */
-export const MAVLINK_V2_MAGIC = 0xFD
+export const MAVLINK_V2_MAGIC = 0xfd;
 
 /**
  * Message IDs for common messages
@@ -202,7 +202,7 @@ export const MAV_MSG_ID = {
   SUPPORTED_TUNES: 401,
   WHEEL_DISTANCE: 9000,
   WINCH_STATUS: 9005,
-} as const
+} as const;
 
 /**
  * CRC Extra values for message validation
@@ -225,32 +225,33 @@ export const CRC_EXTRA: Record<number, number> = {
   [MAV_MSG_ID.MISSION_COUNT]: 221,
   [MAV_MSG_ID.MISSION_ITEM_INT]: 38,
   [MAV_MSG_ID.MISSION_REQUEST]: 230,
+  [MAV_MSG_ID.MISSION_REQUEST_INT]: 196,
   [MAV_MSG_ID.MISSION_CURRENT]: 28,
   [MAV_MSG_ID.MISSION_ACK]: 153,
-}
+};
 
 /**
  * CRC-16/MCRF4XX (X.25) calculation
  */
 export function crcCalculate(buffer: Uint8Array): number {
-  let crc = 0xFFFF
+  let crc = 0xffff;
 
   for (const byte of buffer) {
-    let tmp = byte ^ (crc & 0xFF)
-    tmp ^= (tmp << 4) & 0xFF
-    crc = ((crc >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4)) & 0xFFFF
+    let tmp = byte ^ (crc & 0xff);
+    tmp ^= (tmp << 4) & 0xff;
+    crc = ((crc >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4)) & 0xffff;
   }
 
-  return crc
+  return crc;
 }
 
 /**
  * Accumulate CRC with extra byte
  */
 export function crcAccumulate(byte: number, crc: number): number {
-  let tmp = byte ^ (crc & 0xFF)
-  tmp ^= (tmp << 4) & 0xFF
-  return ((crc >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4)) & 0xFFFF
+  let tmp = byte ^ (crc & 0xff);
+  tmp ^= (tmp << 4) & 0xff;
+  return ((crc >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4)) & 0xffff;
 }
 
 /**
@@ -261,70 +262,70 @@ export function createMAVLinkPacket(
   payload: Uint8Array,
   sysId: number = 1,
   compId: number = 1,
-  seq: number = 0
+  seq: number = 0,
 ): MAVLinkPacket {
   const packet: MAVLinkPacket = {
     magic: MAVLINK_V2_MAGIC,
     len: payload.length,
     incompat_flags: 0,
     compat_flags: 0,
-    seq: seq & 0xFF,
+    seq: seq & 0xff,
     sysid: sysId,
     compid: compId,
     msgid: msgId,
     payload,
     checksum: 0,
-  }
+  };
 
   // Calculate checksum
-  const header = new Uint8Array(10)
-  header[0] = packet.magic
-  header[1] = packet.len
-  header[2] = packet.incompat_flags
-  header[3] = packet.compat_flags
-  header[4] = packet.seq
-  header[5] = packet.sysid
-  header[6] = packet.compid
-  header[7] = msgId & 0xFF
-  header[8] = (msgId >> 8) & 0xFF
-  header[9] = (msgId >> 16) & 0xFF
+  const header = new Uint8Array(10);
+  header[0] = packet.magic;
+  header[1] = packet.len;
+  header[2] = packet.incompat_flags;
+  header[3] = packet.compat_flags;
+  header[4] = packet.seq;
+  header[5] = packet.sysid;
+  header[6] = packet.compid;
+  header[7] = msgId & 0xff;
+  header[8] = (msgId >> 8) & 0xff;
+  header[9] = (msgId >> 16) & 0xff;
 
-  const checksumData = new Uint8Array(9 + payload.length + 1)
-  checksumData.set(header.slice(1, 10), 0) // Skip magic byte, copy header bytes 1-9
-  checksumData.set(payload, 9) // Copy payload after header
+  const checksumData = new Uint8Array(9 + payload.length + 1);
+  checksumData.set(header.slice(1, 10), 0); // Skip magic byte, copy header bytes 1-9
+  checksumData.set(payload, 9); // Copy payload after header
 
   // Add CRC_EXTRA if available
-  const crcExtra = CRC_EXTRA[msgId] ?? 0
-  checksumData[9 + payload.length] = crcExtra
+  const crcExtra = CRC_EXTRA[msgId] ?? 0;
+  checksumData[9 + payload.length] = crcExtra;
 
-  packet.checksum = crcCalculate(checksumData)
+  packet.checksum = crcCalculate(checksumData);
 
-  return packet
+  return packet;
 }
 
 /**
  * Serialize MAVLink packet to buffer
  */
 export function serializePacket(packet: MAVLinkPacket): Uint8Array {
-  const buffer = new Uint8Array(10 + packet.len + 2) // header + payload + checksum
+  const buffer = new Uint8Array(10 + packet.len + 2); // header + payload + checksum
 
-  buffer[0] = packet.magic
-  buffer[1] = packet.len
-  buffer[2] = packet.incompat_flags
-  buffer[3] = packet.compat_flags
-  buffer[4] = packet.seq
-  buffer[5] = packet.sysid
-  buffer[6] = packet.compid
-  buffer[7] = packet.msgid & 0xFF
-  buffer[8] = (packet.msgid >> 8) & 0xFF
-  buffer[9] = (packet.msgid >> 16) & 0xFF
+  buffer[0] = packet.magic;
+  buffer[1] = packet.len;
+  buffer[2] = packet.incompat_flags;
+  buffer[3] = packet.compat_flags;
+  buffer[4] = packet.seq;
+  buffer[5] = packet.sysid;
+  buffer[6] = packet.compid;
+  buffer[7] = packet.msgid & 0xff;
+  buffer[8] = (packet.msgid >> 8) & 0xff;
+  buffer[9] = (packet.msgid >> 16) & 0xff;
 
-  buffer.set(packet.payload, 10)
+  buffer.set(packet.payload, 10);
 
-  buffer[10 + packet.len] = packet.checksum & 0xFF
-  buffer[10 + packet.len + 1] = (packet.checksum >> 8) & 0xFF
+  buffer[10 + packet.len] = packet.checksum & 0xff;
+  buffer[10 + packet.len + 1] = (packet.checksum >> 8) & 0xff;
 
-  return buffer
+  return buffer;
 }
 
 /**
@@ -332,54 +333,58 @@ export function serializePacket(packet: MAVLinkPacket): Uint8Array {
  * @throws {MAVLinkProtocolError} If packet format is invalid
  * @throws {MAVLinkCRCError} If CRC validation fails
  */
-export function parsePacket(buffer: Uint8Array, validateCrc: boolean = true): MAVLinkPacket | null {
+export function parsePacket(
+  buffer: Uint8Array,
+  validateCrc: boolean = true,
+): MAVLinkPacket | null {
   // Validate minimum packet size
   if (buffer.length < 12) {
-    throw new MAVLinkProtocolError(
-      'Buffer too short for MAVLink packet',
-      { bufferLength: buffer.length, minimumLength: 12 }
-    )
+    throw new MAVLinkProtocolError("Buffer too short for MAVLink packet", {
+      bufferLength: buffer.length,
+      minimumLength: 12,
+    });
   }
 
   // Validate magic byte
   if (buffer[0] !== MAVLINK_V2_MAGIC) {
-    throw new MAVLinkProtocolError(
-      'Invalid MAVLink v2 magic byte',
-      { expected: MAVLINK_V2_MAGIC, received: buffer[0] }
-    )
+    throw new MAVLinkProtocolError("Invalid MAVLink v2 magic byte", {
+      expected: MAVLINK_V2_MAGIC,
+      received: buffer[0],
+    });
   }
 
-  const len = buffer[1]
+  const len = buffer[1];
 
   // Validate complete packet length
   if (buffer.length < 12 + len) {
-    throw new MAVLinkProtocolError(
-      'Incomplete packet',
-      { bufferLength: buffer.length, expectedLength: 12 + len, payloadLength: len }
-    )
+    throw new MAVLinkProtocolError("Incomplete packet", {
+      bufferLength: buffer.length,
+      expectedLength: 12 + len,
+      payloadLength: len,
+    });
   }
 
-  const msgid = buffer[7] | (buffer[8] << 8) | (buffer[9] << 16)
-  const receivedChecksum = buffer[10 + len] | (buffer[10 + len + 1] << 8)
+  const msgid = buffer[7] | (buffer[8] << 8) | (buffer[9] << 16);
+  const receivedChecksum = buffer[10 + len] | (buffer[10 + len + 1] << 8);
 
   // Validate CRC if requested
   if (validateCrc) {
     // checksumData = header (9 bytes) + payload (len bytes) + crc_extra (1 byte)
-    const checksumData = new Uint8Array(9 + len + 1)
-    checksumData.set(buffer.slice(1, 10), 0) // Skip magic byte, copy header (bytes 1-9)
-    checksumData.set(buffer.slice(10, 10 + len), 9) // Copy payload
+    const checksumData = new Uint8Array(9 + len + 1);
+    checksumData.set(buffer.slice(1, 10), 0); // Skip magic byte, copy header (bytes 1-9)
+    checksumData.set(buffer.slice(10, 10 + len), 9); // Copy payload
 
     // Add CRC_EXTRA if available
-    const crcExtra = CRC_EXTRA[msgid]
+    const crcExtra = CRC_EXTRA[msgid];
     if (crcExtra !== undefined) {
-      checksumData[9 + len] = crcExtra
-      const calculatedCrc = crcCalculate(checksumData)
+      checksumData[9 + len] = crcExtra;
+      const calculatedCrc = crcCalculate(checksumData);
 
       if (calculatedCrc !== receivedChecksum) {
-        throw new MAVLinkCRCError(calculatedCrc, receivedChecksum, msgid)
+        throw new MAVLinkCRCError(calculatedCrc, receivedChecksum, msgid);
       }
     } else {
-      log.warn('MAVLinkProtocol', 'No CRC_EXTRA for message, skipping validation', msgid)
+      // log.warn('MAVLinkProtocol', 'No CRC_EXTRA for message, skipping validation', msgid)
     }
   }
 
@@ -394,21 +399,24 @@ export function parsePacket(buffer: Uint8Array, validateCrc: boolean = true): MA
     msgid,
     payload: buffer.slice(10, 10 + len),
     checksum: receivedChecksum,
-  }
+  };
 
-  return packet
+  return packet;
 }
 
 /**
  * Safe version of parsePacket that doesn't throw
  * Returns null on any error
  */
-export function parsePacketSafe(buffer: Uint8Array, validateCrc: boolean = true): MAVLinkPacket | null {
+export function parsePacketSafe(
+  buffer: Uint8Array,
+  validateCrc: boolean = true,
+): MAVLinkPacket | null {
   try {
-    return parsePacket(buffer, validateCrc)
+    return parsePacket(buffer, validateCrc);
   } catch (error) {
-    log.error('Failed to parse packet', { error })
-    return null
+    log.error("Failed to parse packet", { error });
+    return null;
   }
 }
 
@@ -416,14 +424,14 @@ export function parsePacketSafe(buffer: Uint8Array, validateCrc: boolean = true)
  * Helper: Pack uint8
  */
 export function packUint8(value: number): Uint8Array {
-  return new Uint8Array([value & 0xFF])
+  return new Uint8Array([value & 0xff]);
 }
 
 /**
  * Helper: Pack uint16 (little-endian)
  */
 export function packUint16(value: number): Uint8Array {
-  return new Uint8Array([value & 0xFF, (value >> 8) & 0xFF])
+  return new Uint8Array([value & 0xff, (value >> 8) & 0xff]);
 }
 
 /**
@@ -431,10 +439,10 @@ export function packUint16(value: number): Uint8Array {
  */
 export function packInt16(value: number): Uint8Array {
   // Clamp to int16 range [-32768, 32767]
-  const int16 = Math.max(-32768, Math.min(32767, Math.round(value)))
+  const int16 = Math.max(-32768, Math.min(32767, Math.round(value)));
   // Convert to unsigned (two's complement for negative values)
-  const unsigned = int16 < 0 ? 0x10000 + int16 : int16
-  return new Uint8Array([unsigned & 0xFF, (unsigned >> 8) & 0xFF])
+  const unsigned = int16 < 0 ? 0x10000 + int16 : int16;
+  return new Uint8Array([unsigned & 0xff, (unsigned >> 8) & 0xff]);
 }
 
 /**
@@ -442,51 +450,51 @@ export function packInt16(value: number): Uint8Array {
  */
 export function packUint32(value: number): Uint8Array {
   return new Uint8Array([
-    value & 0xFF,
-    (value >> 8) & 0xFF,
-    (value >> 16) & 0xFF,
-    (value >> 24) & 0xFF,
-  ])
+    value & 0xff,
+    (value >> 8) & 0xff,
+    (value >> 16) & 0xff,
+    (value >> 24) & 0xff,
+  ]);
 }
 
 /**
  * Helper: Pack int32 (little-endian)
  */
 export function packInt32(value: number): Uint8Array {
-  return packUint32(value >>> 0)
+  return packUint32(value >>> 0);
 }
 
 /**
  * Helper: Pack float (little-endian)
  */
 export function packFloat(value: number): Uint8Array {
-  const buffer = new ArrayBuffer(4)
-  const view = new DataView(buffer)
-  view.setFloat32(0, value, true) // true = little-endian
-  return new Uint8Array(buffer)
+  const buffer = new ArrayBuffer(4);
+  const view = new DataView(buffer);
+  view.setFloat32(0, value, true); // true = little-endian
+  return new Uint8Array(buffer);
 }
 
 /**
  * Helper: Unpack uint8
  */
 export function unpackUint8(buffer: Uint8Array, offset: number): number {
-  return buffer[offset]
+  return buffer[offset];
 }
 
 /**
  * Helper: Unpack uint16 (little-endian)
  */
 export function unpackUint16(buffer: Uint8Array, offset: number): number {
-  return buffer[offset] | (buffer[offset + 1] << 8)
+  return buffer[offset] | (buffer[offset + 1] << 8);
 }
 
 /**
  * Helper: Unpack int16 (little-endian, signed)
  */
 export function unpackInt16(buffer: Uint8Array, offset: number): number {
-  const unsigned = buffer[offset] | (buffer[offset + 1] << 8)
+  const unsigned = buffer[offset] | (buffer[offset + 1] << 8);
   // Convert from unsigned to signed (two's complement)
-  return unsigned > 0x7FFF ? unsigned - 0x10000 : unsigned
+  return unsigned > 0x7fff ? unsigned - 0x10000 : unsigned;
 }
 
 /**
@@ -494,11 +502,12 @@ export function unpackInt16(buffer: Uint8Array, offset: number): number {
  */
 export function unpackUint32(buffer: Uint8Array, offset: number): number {
   return (
-    buffer[offset] |
-    (buffer[offset + 1] << 8) |
-    (buffer[offset + 2] << 16) |
-    (buffer[offset + 3] << 24)
-  ) >>> 0
+    (buffer[offset] |
+      (buffer[offset + 1] << 8) |
+      (buffer[offset + 2] << 16) |
+      (buffer[offset + 3] << 24)) >>>
+    0
+  );
 }
 
 /**
@@ -510,13 +519,13 @@ export function unpackInt32(buffer: Uint8Array, offset: number): number {
     (buffer[offset + 1] << 8) |
     (buffer[offset + 2] << 16) |
     (buffer[offset + 3] << 24)
-  )
+  );
 }
 
 /**
  * Helper: Unpack float (little-endian)
  */
 export function unpackFloat(buffer: Uint8Array, offset: number): number {
-  const view = new DataView(buffer.buffer, buffer.byteOffset + offset, 4)
-  return view.getFloat32(0, true) // true = little-endian
+  const view = new DataView(buffer.buffer, buffer.byteOffset + offset, 4);
+  return view.getFloat32(0, true); // true = little-endian
 }

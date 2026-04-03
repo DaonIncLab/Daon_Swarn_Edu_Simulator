@@ -26,6 +26,7 @@ import {
   unpackInt32,
   unpackFloat,
 } from '@/services/mavlink/MAVLinkProtocol'
+import { parseGlobalPositionInt } from '@/services/mavlink/MAVLinkMessages'
 import { MAVLinkProtocolError, MAVLinkCRCError } from '@/services/mavlink/MAVLinkError'
 
 describe('MAVLink Protocol - Pack/Unpack Functions', () => {
@@ -401,5 +402,48 @@ describe('MAVLink Protocol - Real-world Scenarios', () => {
     expect(packets[255].seq).toBe(255)
     expect(packets[256].seq).toBe(0)
     expect(packets[257].seq).toBe(1)
+  })
+
+  test('parses truncated GLOBAL_POSITION_INT without throwing', () => {
+    const payload = new Uint8Array(26)
+
+    payload.set(packUint32(15000), 0)
+    payload.set(packInt32(377749000), 4)
+    payload.set(packInt32(-1224194000), 8)
+    payload.set(packInt32(100000), 12)
+    payload.set(packInt32(50000), 16)
+    payload.set(packInt16(250), 20)
+    payload.set(packInt16(-125), 22)
+    payload.set(packInt16(0), 24)
+
+    const message = parseGlobalPositionInt(payload)
+
+    expect(message.time_boot_ms).toBe(15000)
+    expect(message.lat).toBe(377749000)
+    expect(message.lon).toBe(-1224194000)
+    expect(message.alt).toBe(100000)
+    expect(message.relative_alt).toBe(50000)
+    expect(message.vx).toBe(250)
+    expect(message.vy).toBe(-125)
+    expect(message.vz).toBe(0)
+    expect(message.hdg).toBe(0)
+  })
+
+  test('treats missing trailing velocity fields in GLOBAL_POSITION_INT as zero', () => {
+    const payload = new Uint8Array(22)
+
+    payload.set(packUint32(15000), 0)
+    payload.set(packInt32(377749000), 4)
+    payload.set(packInt32(-1224194000), 8)
+    payload.set(packInt32(100000), 12)
+    payload.set(packInt32(50000), 16)
+    payload.set(packInt16(0), 20)
+
+    const message = parseGlobalPositionInt(payload)
+
+    expect(message.vx).toBe(0)
+    expect(message.vy).toBe(0)
+    expect(message.vz).toBe(0)
+    expect(message.hdg).toBe(0)
   })
 })

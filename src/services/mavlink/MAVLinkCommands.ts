@@ -81,9 +81,11 @@ export const MAV_CMD = {
   DO_SET_SYSTEM_MODE: 176,
   /** Reposition vehicle to a specific position */
   DO_REPOSITION: 192,
-} as const
+  /** Start mission execution */
+  MISSION_START: 300,
+} as const;
 
-export type MAV_CMD = typeof MAV_CMD[keyof typeof MAV_CMD]
+export type MAV_CMD = (typeof MAV_CMD)[keyof typeof MAV_CMD];
 
 /**
  * MAV_CMD Parameter Descriptions
@@ -92,111 +94,111 @@ export type MAV_CMD = typeof MAV_CMD[keyof typeof MAV_CMD]
  */
 export const MAV_CMD_PARAMS = {
   [MAV_CMD.NAV_WAYPOINT]: {
-    param1: 'Hold time (s)',
-    param2: 'Acceptance radius (m)',
-    param3: 'Pass radius (m)',
-    param4: 'Yaw angle (deg)',
-    param5: 'Latitude',
-    param6: 'Longitude',
-    param7: 'Altitude',
+    param1: "Hold time (s)",
+    param2: "Acceptance radius (m)",
+    param3: "Pass radius (m)",
+    param4: "Yaw angle (deg)",
+    param5: "Latitude",
+    param6: "Longitude",
+    param7: "Altitude",
   },
 
   [MAV_CMD.NAV_TAKEOFF]: {
-    param1: 'Pitch (deg)',
-    param2: 'Empty',
-    param3: 'Empty',
-    param4: 'Yaw angle (deg)',
-    param5: 'Latitude',
-    param6: 'Longitude',
-    param7: 'Altitude',
+    param1: "Pitch (deg)",
+    param2: "Empty",
+    param3: "Empty",
+    param4: "Yaw angle (deg)",
+    param5: "Latitude",
+    param6: "Longitude",
+    param7: "Altitude",
   },
 
   [MAV_CMD.NAV_LAND]: {
-    param1: 'Abort altitude (m)',
-    param2: 'Landing mode',
-    param3: 'Empty',
-    param4: 'Yaw angle (deg)',
-    param5: 'Latitude',
-    param6: 'Longitude',
-    param7: 'Altitude',
+    param1: "Abort altitude (m)",
+    param2: "Landing mode",
+    param3: "Empty",
+    param4: "Yaw angle (deg)",
+    param5: "Latitude",
+    param6: "Longitude",
+    param7: "Altitude",
   },
 
   [MAV_CMD.NAV_LOITER_UNLIM]: {
-    param1: 'Empty',
-    param2: 'Empty',
-    param3: 'Radius (m)',
-    param4: 'Yaw angle (deg)',
-    param5: 'Latitude',
-    param6: 'Longitude',
-    param7: 'Altitude',
+    param1: "Empty",
+    param2: "Empty",
+    param3: "Radius (m)",
+    param4: "Yaw angle (deg)",
+    param5: "Latitude",
+    param6: "Longitude",
+    param7: "Altitude",
   },
 
   [MAV_CMD.DO_SET_MODE]: {
-    param1: 'Mode (MAV_MODE)',
-    param2: 'Custom mode',
-    param3: 'Custom sub mode',
-    param4: 'Empty',
-    param5: 'Empty',
-    param6: 'Empty',
-    param7: 'Empty',
+    param1: "Mode (MAV_MODE)",
+    param2: "Custom mode",
+    param3: "Custom sub mode",
+    param4: "Empty",
+    param5: "Empty",
+    param6: "Empty",
+    param7: "Empty",
   },
 
   [MAV_CMD.DO_CHANGE_SPEED]: {
-    param1: 'Speed type (0=Airspeed, 1=Ground)',
-    param2: 'Speed (m/s)',
-    param3: 'Throttle (%)',
-    param4: 'Absolute/Relative (0/1)',
-    param5: 'Empty',
-    param6: 'Empty',
-    param7: 'Empty',
+    param1: "Speed type (0=Airspeed, 1=Ground)",
+    param2: "Speed (m/s)",
+    param3: "Throttle (%)",
+    param4: "Absolute/Relative (0/1)",
+    param5: "Empty",
+    param6: "Empty",
+    param7: "Empty",
   },
 
   [MAV_CMD.COMPONENT_ARM_DISARM]: {
-    param1: '1 to arm, 0 to disarm',
-    param2: 'Force (21196 to force)',
-    param3: 'Empty',
-    param4: 'Empty',
-    param5: 'Empty',
-    param6: 'Empty',
-    param7: 'Empty',
+    param1: "1 to arm, 0 to disarm",
+    param2: "Force (21196 to force)",
+    param3: "Empty",
+    param4: "Empty",
+    param5: "Empty",
+    param6: "Empty",
+    param7: "Empty",
   },
 
   [MAV_CMD.DO_FLIGHTTERMINATION]: {
-    param1: '1 to terminate, 0 to restore',
-    param2: 'Empty',
-    param3: 'Empty',
-    param4: 'Empty',
-    param5: 'Empty',
-    param6: 'Empty',
-    param7: 'Empty',
+    param1: "1 to terminate, 0 to restore",
+    param2: "Empty",
+    param3: "Empty",
+    param4: "Empty",
+    param5: "Empty",
+    param6: "Empty",
+    param7: "Empty",
   },
 
   [MAV_CMD.DO_SET_HOME]: {
-    param1: '1=use current, 0=use specified',
-    param2: 'Empty',
-    param3: 'Empty',
-    param4: 'Yaw angle (deg)',
-    param5: 'Latitude',
-    param6: 'Longitude',
-    param7: 'Altitude',
+    param1: "1=use current, 0=use specified",
+    param2: "Empty",
+    param3: "Empty",
+    param4: "Yaw angle (deg)",
+    param5: "Latitude",
+    param6: "Longitude",
+    param7: "Altitude",
   },
-}
+};
 
 /**
  * Helper function to create COMMAND_LONG message
  */
 export interface CommandLongParams {
-  command: MAV_CMD
-  param1?: number
-  param2?: number
-  param3?: number
-  param4?: number
-  param5?: number
-  param6?: number
-  param7?: number
-  target_system?: number
-  target_component?: number
-  confirmation?: number
+  command: MAV_CMD;
+  param1?: number;
+  param2?: number;
+  param3?: number;
+  param4?: number;
+  param5?: number;
+  param6?: number;
+  param7?: number;
+  target_system?: number;
+  target_component?: number;
+  confirmation?: number;
 }
 
 /**
@@ -216,7 +218,7 @@ export function createCommandLong(params: CommandLongParams) {
     param5: params.param5 ?? 0,
     param6: params.param6 ?? 0,
     param7: params.param7 ?? 0,
-  }
+  };
 }
 
 /**
@@ -228,41 +230,44 @@ export const MISSION_FRAME = {
   MISSION: 2,
   GLOBAL_RELATIVE_ALT: 3,
   LOCAL_ENU: 4,
-} as const
+  GLOBAL_INT: 5,
+  GLOBAL_RELATIVE_ALT_INT: 6,
+} as const;
 
 /**
- * Helper function to create MISSION_ITEM message
+ * Helper function to create MISSION_ITEM_INT message
  */
-export interface MissionItemParams {
-  seq: number
-  command: MAV_CMD
-  x: number
-  y: number
-  z: number
-  frame?: number
-  param1?: number
-  param2?: number
-  param3?: number
-  param4?: number
-  current?: number
-  autocontinue?: number
-  target_system?: number
-  target_component?: number
+export interface MissionItemIntParams {
+  seq: number;
+  command: MAV_CMD;
+  x: number;
+  y: number;
+  z: number;
+  frame?: number;
+  param1?: number;
+  param2?: number;
+  param3?: number;
+  param4?: number;
+  current?: number;
+  autocontinue?: number;
+  target_system?: number;
+  target_component?: number;
 }
 
 /**
- * Create a MISSION_ITEM message with default parameters
+ * Create a MISSION_ITEM_INT message with default parameters
  */
-export function createMissionItem(params: MissionItemParams) {
+export function createMissionItemInt(params: MissionItemIntParams) {
   return {
-    msgid: 39, // MISSION_ITEM
+    msgid: 73, // MISSION_ITEM_INT
     target_system: params.target_system ?? 0,
     target_component: params.target_component ?? 0,
     seq: params.seq,
     frame: params.frame ?? MISSION_FRAME.GLOBAL_RELATIVE_ALT,
-    command: params.command,
+    mission_type: 0, // MAV_MISSION_TYPE_MISSION
     current: params.current ?? 0,
     autocontinue: params.autocontinue ?? 1,
+    command: params.command,
     param1: params.param1 ?? 0,
     param2: params.param2 ?? 0,
     param3: params.param3 ?? 0,
@@ -270,6 +275,5 @@ export function createMissionItem(params: MissionItemParams) {
     x: params.x,
     y: params.y,
     z: params.z,
-    mission_type: 0, // MAV_MISSION_TYPE_MISSION
-  }
+  };
 }

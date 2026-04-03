@@ -10,37 +10,37 @@
  */
 export interface MAVLinkPacket {
   /** Protocol magic marker (0xFD for MAVLink v2) */
-  magic: number
+  magic: number;
   /** Length of payload (0-255 bytes) */
-  len: number
+  len: number;
   /** Incompatibility flags (must be understood) */
-  incompat_flags: number
+  incompat_flags: number;
   /** Compatibility flags (can be ignored) */
-  compat_flags: number
+  compat_flags: number;
   /** Packet sequence number */
-  seq: number
+  seq: number;
   /** System ID (sender) */
-  sysid: number
+  sysid: number;
   /** Component ID (sender) */
-  compid: number
+  compid: number;
   /** Message ID (24-bit in MAVLink v2) */
-  msgid: number
+  msgid: number;
   /** Payload bytes */
-  payload: Uint8Array
+  payload: Uint8Array;
   /** CRC-16/MCRF4XX checksum */
-  checksum: number
+  checksum: number;
   /** Optional signature for tamper-proof links */
-  signature?: Uint8Array
+  signature?: Uint8Array;
 }
 
 /**
  * MAVLink Message (generic)
  */
 export interface MAVLinkMessage {
-  msgid: number
-  sysid: number
-  compid: number
-  payload: Record<string, any>
+  msgid: number;
+  sysid: number;
+  compid: number;
+  payload: Record<string, any>;
 }
 
 /**
@@ -48,13 +48,13 @@ export interface MAVLinkMessage {
  * Sent at 1Hz to indicate system presence
  */
 export interface HeartbeatMessage {
-  msgid: 0
-  type: number // MAV_TYPE
-  autopilot: number // MAV_AUTOPILOT
-  base_mode: number // MAV_MODE_FLAG
-  custom_mode: number
-  system_status: number // MAV_STATE
-  mavlink_version: number
+  msgid: 0;
+  type: number; // MAV_TYPE
+  autopilot: number; // MAV_AUTOPILOT
+  base_mode: number; // MAV_MODE_FLAG
+  custom_mode: number;
+  system_status: number; // MAV_STATE
+  mavlink_version: number;
 }
 
 /**
@@ -62,20 +62,20 @@ export interface HeartbeatMessage {
  * System status including battery, sensors
  */
 export interface SysStatusMessage {
-  msgid: 1
-  onboard_control_sensors_present: number
-  onboard_control_sensors_enabled: number
-  onboard_control_sensors_health: number
-  load: number
-  voltage_battery: number // mV
-  current_battery: number // cA (centi-Amps)
-  battery_remaining: number // % (0-100)
-  drop_rate_comm: number
-  errors_comm: number
-  errors_count1: number
-  errors_count2: number
-  errors_count3: number
-  errors_count4: number
+  msgid: 1;
+  onboard_control_sensors_present: number;
+  onboard_control_sensors_enabled: number;
+  onboard_control_sensors_health: number;
+  load: number;
+  voltage_battery: number; // mV
+  current_battery: number; // cA (centi-Amps)
+  battery_remaining: number; // % (0-100)
+  drop_rate_comm: number;
+  errors_comm: number;
+  errors_count1: number;
+  errors_count2: number;
+  errors_count3: number;
+  errors_count4: number;
 }
 
 /**
@@ -83,16 +83,16 @@ export interface SysStatusMessage {
  * Fused global position (GPS + IMU)
  */
 export interface GlobalPositionIntMessage {
-  msgid: 33
-  time_boot_ms: number
-  lat: number // Latitude in degrees * 1E7
-  lon: number // Longitude in degrees * 1E7
-  alt: number // Altitude (MSL) in mm
-  relative_alt: number // Altitude above ground in mm
-  vx: number // Ground X speed (cm/s)
-  vy: number // Ground Y speed (cm/s)
-  vz: number // Ground Z speed (cm/s)
-  hdg: number // Vehicle heading (cdeg)
+  msgid: 33;
+  time_boot_ms: number;
+  lat: number; // Latitude in degrees * 1E7
+  lon: number; // Longitude in degrees * 1E7
+  alt: number; // Altitude (MSL) in mm
+  relative_alt: number; // Altitude above ground in mm
+  vx: number; // Ground X speed (cm/s)
+  vy: number; // Ground Y speed (cm/s)
+  vz: number; // Ground Z speed (cm/s)
+  hdg: number; // Vehicle heading (cdeg)
 }
 
 /**
@@ -100,18 +100,18 @@ export interface GlobalPositionIntMessage {
  * Send a command with up to 7 parameters
  */
 export interface CommandLongMessage {
-  msgid: 76
-  target_system: number
-  target_component: number
-  command: number // MAV_CMD
-  confirmation: number
-  param1: number
-  param2: number
-  param3: number
-  param4: number
-  param5: number // x position or latitude
-  param6: number // y position or longitude
-  param7: number // z position or altitude
+  msgid: 76;
+  target_system: number;
+  target_component: number;
+  command: number; // MAV_CMD
+  confirmation: number;
+  param1: number;
+  param2: number;
+  param3: number;
+  param4: number;
+  param5: number; // x position or latitude
+  param6: number; // y position or longitude
+  param7: number; // z position or altitude
 }
 
 /**
@@ -119,36 +119,80 @@ export interface CommandLongMessage {
  * Report status of a command
  */
 export interface CommandAckMessage {
-  msgid: 77
-  command: number // MAV_CMD that was executed
-  result: number // MAV_RESULT
-  progress: number // 0-100% or 255 if not applicable
-  result_param2: number
-  target_system: number
-  target_component: number
+  msgid: 77;
+  command: number; // MAV_CMD that was executed
+  result: number; // MAV_RESULT
+  progress: number; // 0-100% or 255 if not applicable
+  result_param2: number;
+  target_system: number;
+  target_component: number;
 }
 
 /**
- * MISSION_ITEM Message (#39)
- * Message encoding a mission item
+ * MISSION_ITEM_INT Message (#73)
+ * Message encoding a mission item using integer coordinates
  */
-export interface MissionItemMessage {
-  msgid: 39
-  target_system: number
-  target_component: number
-  seq: number // Waypoint sequence number
-  frame: number // MAV_FRAME
-  command: number // MAV_CMD
-  current: number // false:0, true:1
-  autocontinue: number // Autocontinue to next waypoint
-  param1: number
-  param2: number
-  param3: number
-  param4: number
-  x: number // Latitude/X position
-  y: number // Longitude/Y position
-  z: number // Altitude/Z position
-  mission_type: number // MAV_MISSION_TYPE
+export interface MissionItemIntMessage {
+  msgid: 73;
+  target_system: number;
+  target_component: number;
+  seq: number; // Waypoint sequence number
+  frame: number; // MAV_FRAME
+  command: number; // MAV_CMD
+  current: number; // false:0, true:1
+  autocontinue: number; // Autocontinue to next waypoint
+  param1: number;
+  param2: number;
+  param3: number;
+  param4: number;
+  x: number; // Latitude/X position (int-scaled if global frame)
+  y: number; // Longitude/Y position (int-scaled if global frame)
+  z: number; // Altitude/Z position
+  mission_type: number; // MAV_MISSION_TYPE
+}
+
+export interface MissionCountMessage {
+  msgid: 44;
+  count: number;
+  target_system: number;
+  target_component: number;
+  mission_type: number;
+}
+
+export interface MissionRequestIntMessage {
+  msgid: 51;
+  seq: number;
+  target_system: number;
+  target_component: number;
+  mission_type: number;
+}
+
+export interface MissionRequestMessage {
+  msgid: 40;
+  seq: number;
+  target_system: number;
+  target_component: number;
+}
+
+export interface MissionAckMessage {
+  msgid: 47;
+  target_system: number;
+  target_component: number;
+  type: number;
+  mission_type: number;
+}
+
+export interface MissionCurrentMessage {
+  msgid: 42;
+  seq: number;
+  mission_state: number;
+  mission_mode: number;
+  mission_id: number;
+}
+
+export interface MissionItemReachedMessage {
+  msgid: 46;
+  seq: number;
 }
 
 /**
@@ -185,7 +229,7 @@ export const MAV_TYPE = {
   ADSB: 27,
   PARAFOIL: 28,
   DODECAROTOR: 29,
-} as const
+} as const;
 
 /**
  * MAV_AUTOPILOT enum
@@ -211,7 +255,7 @@ export const MAV_AUTOPILOT = {
   ASLUAV: 17,
   SMARTAP: 18,
   AIRRAILS: 19,
-} as const
+} as const;
 
 /**
  * MAV_STATE enum
@@ -226,7 +270,7 @@ export const MAV_STATE = {
   EMERGENCY: 6,
   POWEROFF: 7,
   FLIGHT_TERMINATION: 8,
-} as const
+} as const;
 
 /**
  * MAV_MODE_FLAG enum (bitmask)
@@ -240,7 +284,7 @@ export const MAV_MODE_FLAG = {
   AUTO_ENABLED: 4,
   TEST_ENABLED: 2,
   CUSTOM_MODE_ENABLED: 1,
-} as const
+} as const;
 
 /**
  * MAV_RESULT enum
@@ -253,7 +297,7 @@ export const MAV_RESULT = {
   FAILED: 4,
   IN_PROGRESS: 5,
   CANCELLED: 6,
-} as const
+} as const;
 
 /**
  * MAV_FRAME enum
@@ -274,4 +318,4 @@ export const MAV_FRAME = {
   BODY_FRD: 12,
   LOCAL_FRD: 20,
   LOCAL_FLU: 21,
-} as const
+} as const;

@@ -200,9 +200,10 @@ export class TestConnectionService implements IConnectionService {
         )
         break
 
+      case CommandAction.SET_LED_COLOR:
       case CommandAction.SET_COLOR:
         // Color command is acknowledged in test mode, but simulator has no LED model yet.
-        log.info('SET_COLOR', {
+        log.info('SET_LED_COLOR', {
           r: (params as any).r,
           g: (params as any).g,
           b: (params as any).b,
