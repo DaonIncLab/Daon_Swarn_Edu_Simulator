@@ -20,7 +20,7 @@ const UNITY_BUILD_CONFIG = {
 };
 
 export function UnitySimulatorPanel() {
-  const { setStatus, setError } = useConnectionStore();
+  const { setError } = useConnectionStore();
 
   // Unity 브릿지 초기화
   const unityBridge = useUnityBridge({
@@ -60,26 +60,6 @@ export function UnitySimulatorPanel() {
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 bg-gray-800 text-white flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold">Unity Simulator</h3>
-          <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
-            {unityBridge.isReady ? "준비됨" : "로딩 중..."}
-          </span>
-        </div>
-
-        {/* Emergency Stop Button */}
-        {unityBridge.isReady && (
-          <button
-            onClick={() => unityBridge.emergencyStop()}
-            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors"
-          >
-            🛑 긴급 정지
-          </button>
-        )}
-      </div>
-
       {/* Unity WebGL Embed - Full Height */}
       <div className="flex-1 relative">
         <UnityWebGLEmbed

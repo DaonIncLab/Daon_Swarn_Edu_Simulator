@@ -8,28 +8,28 @@ import { MonitoringPanel } from "@/components/layout/MonitoringPanel";
 import { SettingsPanel } from "@/components/layout/SettingsPanel";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ErrorFallback } from "@/components/common/ErrorFallback";
+import type { BlocklyCategoryId } from "@/components/blockly/toolbox";
 import { useConnectionStore } from "@/stores/useConnectionStore";
 import { useProjectStore } from "@/stores/useProjectStore";
-import { ConnectionStatus, ConnectionMode } from "@/constants/connection";
+import { ConnectionStatus } from "@/constants/connection";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { initializeProjectStorage } from "@/services/storage";
 import { log } from "@/utils/logger";
+import type { SettingsStep } from "@/components/layout/SettingsPanel";
 
 function App() {
   const { t } = useTranslation();
-  const { status, mode } = useConnectionStore();
+  const { status } = useConnectionStore();
   const { currentProject, saveCurrentProject } = useProjectStore();
   const [showMonitoring, setShowMonitoring] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("flight");
+  const [settingsInitialStep, setSettingsInitialStep] =
+    useState<SettingsStep>("project");
+  const [selectedCategory, setSelectedCategory] =
+    useState<BlocklyCategoryId>("flight");
 
   const isConnected = status === ConnectionStatus.CONNECTED;
-  // Unity WebGL은 '연결 완료' 전에(= CONNECTING) WebGL 로더가 먼저 떠야 함
-  // 단, 사용자가 Disconnect 하면 다시 시작(연결 필요) 화면으로 돌아가야 하므로 DISCONNECTED에서는 숨긴다.
-  const shouldShowWorkspace =
-    isConnected ||
-    (mode === ConnectionMode.UNITY_WEBGL &&
-      status === ConnectionStatus.CONNECTING);
+  const hasProject = Boolean(currentProject);
 
   // Initialize project storage
   useEffect(() => {
@@ -66,7 +66,10 @@ function App() {
     {
       key: ",",
       ctrl: true,
-      handler: () => setShowSettings(true),
+      handler: () => {
+        setSettingsInitialStep(hasProject ? "connection" : "project");
+        setShowSettings(true);
+      },
       description: t("common.openSettings"),
     },
   ]);
@@ -74,6 +77,16 @@ function App() {
   const guideSteps = t("common.guideSteps", {
     returnObjects: true,
   }) as string[];
+
+  const openProjectFlow = () => {
+    setSettingsInitialStep("project");
+    setShowSettings(true);
+  };
+
+  const openConnectionSettings = () => {
+    setSettingsInitialStep(hasProject ? "connection" : "project");
+    setShowSettings(true);
+  };
 
   return (
     <ErrorBoundary>
@@ -91,13 +104,14 @@ function App() {
           )}
         >
           <Header
+            onOpenProject={openProjectFlow}
             onOpenMonitoring={() => setShowMonitoring(true)}
-            onOpenSettings={() => setShowSettings(true)}
+            onOpenConnectionSettings={openConnectionSettings}
           />
         </ErrorBoundary>
 
         {/* Main Work Area - 3 Column Layout */}
-        {shouldShowWorkspace ? (
+        {hasProject ? (
           <div className="flex-1 flex overflow-hidden w-full">
             {/* Left: Navigation Panel (15%) */}
             <ErrorBoundary
@@ -117,10 +131,6 @@ function App() {
                 className="w-[15%] min-w-[200px] max-w-[250px]"
                 selectedCategory={selectedCategory}
                 onCategorySelect={setSelectedCategory}
-                onOpenProject={() => setShowSettings(true)}
-                onOpenSettings={() => setShowSettings(true)}
-                onOpenMonitoring={() => setShowMonitoring(true)}
-                isConnected={isConnected}
               />
             </ErrorBoundary>
 
@@ -158,12 +168,14 @@ function App() {
               )}
             >
               <div className="flex-1 min-w-0 flex flex-col">
-                <SimulatorPanel />
+                <SimulatorPanel
+                  onOpenConnectionSettings={openConnectionSettings}
+                />
               </div>
             </ErrorBoundary>
           </div>
         ) : (
-          // Not Connected State
+          // Project Start State
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center max-w-md px-6">
               <div className="text-[var(--text-tertiary)] mb-6">
@@ -182,17 +194,19 @@ function App() {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-3">
-                {t("common.connectionRequired")}
+                {t("common.projectRequired")}
               </h2>
               <p className="text-[var(--text-secondary)] mb-6">
-                {t("common.connectionInstructions")}
+                {t("common.projectInstructions")}
               </p>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-              >
-                ⚙️ {t("common.openConnectionSettings")}
-              </button>
+              <div className="flex justify-center">
+                <button
+                  onClick={openProjectFlow}
+                  className="w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium tracking-[0.2em]"
+                >
+                  📁 {t("header.project")}
+                </button>
+              </div>
 
               {/* Instructions */}
               <div className="mt-8 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg p-4 text-left">
@@ -242,6 +256,7 @@ function App() {
           <SettingsPanel
             isOpen={showSettings}
             onClose={() => setShowSettings(false)}
+            initialStep={settingsInitialStep}
           />
         </ErrorBoundary>
       </div>

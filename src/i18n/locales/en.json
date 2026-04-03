@@ -18,15 +18,16 @@
     "saveProject": "Save Project",
     "openMonitoring": "Open Monitoring",
     "openSettings": "Open Settings",
+    "projectRequired": "A Project Is Required to Start",
+    "projectInstructions": "Create or open a project and you will move to connection setup automatically",
     "connectionRequired": "Connection Required to Start",
     "connectionInstructions": "Connect to Unity simulator or enable test mode",
     "openConnectionSettings": "Open Connection Settings",
     "startGuide": "Getting Started",
     "guideSteps": [
-      "Run Unity Control Server (or enable Test Mode)",
-      "Check the IP address displayed in Unity",
-      "Enter the IP address in Connection Settings",
-      "Click the \"Connect\" button",
+      "Create a project or open an existing one",
+      "Choose the simulator mode in Connection Settings",
+      "Enter any required connection details and connect",
       "Start coding with Blockly!"
     ]
   },
@@ -34,8 +35,10 @@
     "title": "Drone Swarm Control System",
     "newProject": "New Project",
     "openProject": "Open Project",
+    "project": "Project",
     "monitoring": "Monitoring",
-    "settings": "Settings"
+    "settings": "Settings",
+    "connectionSettings": "Connection Settings"
   },
   "navigation": {
     "connection": "Connection",
@@ -173,9 +176,9 @@
     "confirmClear": "Are you sure you want to delete all blocks?",
     "templates": {
       "basic": "Basic Flight",
-      "formation": "Formation Flight",
-      "pattern": "Pattern Flight",
-      "advanced": "Advanced Control"
+      "repeat": "Repeat Flow",
+      "coordinate": "Coordinate Movement",
+      "blank": "Blank Project"
     }
   },
   "drone": {

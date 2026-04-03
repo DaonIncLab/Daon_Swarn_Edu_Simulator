@@ -6,7 +6,11 @@ import { NewProjectModal } from './NewProjectModal'
 import { ProjectListModal } from './ProjectListModal'
 import { log } from '@/utils/logger'
 
-export function ProjectPanel() {
+interface ProjectPanelProps {
+  onProjectReady?: () => void
+}
+
+export function ProjectPanel({ onProjectReady }: ProjectPanelProps) {
   const { currentProject, saveCurrentProject, exportProjectToFile, isLoading } = useProjectStore()
   const { hasUnsavedChanges } = useBlocklyStore()
   const [showNewModal, setShowNewModal] = useState(false)
@@ -74,6 +78,7 @@ export function ProjectPanel() {
             fullWidth
             onClick={() => setShowNewModal(true)}
             disabled={isLoading}
+            className="hover:-translate-y-0.5 hover:shadow-md"
           >
             📄 새 프로젝트
           </Button>
@@ -83,6 +88,7 @@ export function ProjectPanel() {
             fullWidth
             onClick={() => setShowListModal(true)}
             disabled={isLoading}
+            className="border border-primary-500 bg-primary-50 text-primary-700 hover:-translate-y-0.5 hover:shadow-md hover:bg-primary-200 hover:text-primary-900"
           >
             📂 프로젝트 열기
           </Button>
@@ -115,11 +121,13 @@ export function ProjectPanel() {
       <NewProjectModal
         isOpen={showNewModal}
         onClose={() => setShowNewModal(false)}
+        onCreated={onProjectReady}
       />
 
       <ProjectListModal
         isOpen={showListModal}
         onClose={() => setShowListModal(false)}
+        onLoaded={onProjectReady}
       />
     </>
   )

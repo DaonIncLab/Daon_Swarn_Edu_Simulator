@@ -7,6 +7,8 @@ import type { Project, ProjectMetadata, CreateProjectOptions } from '@/types/pro
 import { getProjectStorage } from '@/services/storage'
 import { workspaceToXml, xmlToWorkspace, createEmptyWorkspaceXml, getTemplateXml } from '@/utils/blocklyXml'
 import { useBlocklyStore } from './useBlocklyStore'
+import { useConnectionStore } from './useConnectionStore'
+import { ConnectionStatus } from '@/constants/connection'
 import { log } from '@/utils/logger'
 
 /**
@@ -30,6 +32,23 @@ interface ProjectStore {
   refreshProjectList: () => Promise<void>
   setCurrentProject: (project: Project | null) => void
   clearError: () => void
+}
+
+async function disconnectBeforeProjectSwitch(nextProjectId: string): Promise<void> {
+  const { currentProject } = useProjectStore.getState()
+  const { status, disconnect } = useConnectionStore.getState()
+
+  const isSwitchingProject =
+    currentProject !== null && currentProject.id !== nextProjectId
+  const hasActiveConnection =
+    status === ConnectionStatus.CONNECTED || status === ConnectionStatus.CONNECTING
+
+  if (!isSwitchingProject || !hasActiveConnection) {
+    return
+  }
+
+  log.info('ProjectStore', `Disconnecting active connection before switching project to ${nextProjectId}`)
+  await disconnect()
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -62,6 +81,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
+
+      await disconnectBeforeProjectSwitch(project.id)
 
       // 저장
       await storage.saveProject(project)
@@ -123,11 +144,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       // 저장
       await storage.saveProject(updatedProject)
 
-      // 상태 업데이트
-      set({ currentProject: updatedProject })
-
       // Blockly 저장 플래그 리셋
       useBlocklyStore.getState().setHasUnsavedChanges(false)
+
+      // 상태 업데이트
+      set({ currentProject: updatedProject })
 
       // 프로젝트 목록 새로고침
       await get().refreshProjectList()
@@ -137,6 +158,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const errorMsg = error instanceof Error ? error.message : 'Failed to save project'
       log.error('ProjectStore', 'Save project failed:', error)
       set({ error: errorMsg })
+      throw error instanceof Error ? error : new Error(errorMsg)
     } finally {
       set({ isLoading: false })
     }
@@ -158,14 +180,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         throw new Error(`Project not found: ${id}`)
       }
 
-      // Blockly 워크스페이스에 로드
-      const workspace = useBlocklyStore.getState().workspace
-
-      if (!workspace) {
-        throw new Error('Blockly workspace not initialized')
-      }
-
-      xmlToWorkspace(project.workspaceXml, workspace)
+      await disconnectBeforeProjectSwitch(project.id)
 
       // 현재 프로젝트로 설정
       set({ currentProject: project })

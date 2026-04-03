@@ -9,9 +9,10 @@ import { validateProjectName } from '@/utils/validation'
 interface ProjectListModalProps {
   isOpen: boolean
   onClose: () => void
+  onLoaded?: () => void
 }
 
-export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
+export function ProjectListModal({ isOpen, onClose, onLoaded }: ProjectListModalProps) {
   const { t } = useTranslation()
   const { projects, loadProject, deleteProject, renameProject, refreshProjectList, isLoading } = useProjectStore()
   const [searchQuery, setSearchQuery] = useState('')
@@ -35,6 +36,7 @@ export function ProjectListModal({ isOpen, onClose }: ProjectListModalProps) {
   const handleLoad = async (id: string) => {
     try {
       await loadProject(id)
+      onLoaded?.()
       onClose()
     } catch (error) {
       log.error("Failed to load project", { context: "ProjectListModal", error })

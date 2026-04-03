@@ -18,15 +18,16 @@
     "saveProject": "프로젝트 저장",
     "openMonitoring": "모니터링 열기",
     "openSettings": "설정 열기",
+    "projectRequired": "시작하려면 프로젝트가 필요합니다",
+    "projectInstructions": "프로젝트를 생성하거나 열면 연결 설정으로 자동 이동합니다",
     "connectionRequired": "시작하려면 연결이 필요합니다",
     "connectionInstructions": "Unity 시뮬레이터에 연결하거나 테스트 모드를 활성화하세요",
     "openConnectionSettings": "연결 설정 열기",
     "startGuide": "시작 가이드",
     "guideSteps": [
-      "Unity Control Server 실행 (또는 Test Mode 활성화)",
-      "Unity에 표시된 IP 주소 확인",
-      "연결 설정에서 IP 주소 입력",
-      "\"Connect\" 버튼 클릭",
+      "프로젝트를 생성하거나 기존 프로젝트 열기",
+      "연결 설정에서 사용할 시뮬레이터 모드 선택",
+      "필요한 연결 정보 입력 후 연결",
       "Blockly로 코딩 시작!"
     ]
   },
@@ -34,8 +35,10 @@
     "title": "드론 군집 제어 시스템",
     "newProject": "새 프로젝트",
     "openProject": "프로젝트 열기",
+    "project": "프로젝트",
     "monitoring": "모니터링",
-    "settings": "설정"
+    "settings": "설정",
+    "connectionSettings": "연결 설정"
   },
   "navigation": {
     "connection": "연결",
@@ -168,9 +171,9 @@
     "confirmClear": "정말 모든 블록을 삭제하시겠습니까?",
     "templates": {
       "basic": "기본 비행",
-      "formation": "편대 비행",
-      "pattern": "패턴 비행",
-      "advanced": "고급 제어"
+      "repeat": "반복 실행",
+      "coordinate": "좌표 이동",
+      "blank": "빈 프로젝트"
     }
   },
   "drone": {

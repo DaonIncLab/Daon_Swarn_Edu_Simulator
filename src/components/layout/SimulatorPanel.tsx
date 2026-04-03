@@ -10,11 +10,12 @@
 
 import { useState } from "react";
 import { useConnectionStore } from "@/stores/useConnectionStore";
-import { ConnectionMode } from "@/constants/connection";
+import { ConnectionStatus, ConnectionMode } from "@/constants/connection";
 import { Drone3DView } from "@/components/visualization/Drone3DView";
 import { PlaybackControls } from "@/components/visualization/PlaybackControls";
 import { RecordingPanel } from "@/components/visualization/RecordingPanel";
 import { UnitySimulatorPanel } from "@/components/simulator/UnitySimulatorPanel";
+import { getConnectionManager } from "@/services/connection";
 import {
   useFlightRecordingStore,
   PlaybackStatus,
@@ -22,16 +23,34 @@ import {
 
 interface SimulatorPanelProps {
   className?: string;
+  onOpenConnectionSettings?: () => void;
 }
 
-export function SimulatorPanel({ className = "" }: SimulatorPanelProps) {
-  const { mode } = useConnectionStore();
+export function SimulatorPanel({
+  className = "",
+  onOpenConnectionSettings,
+}: SimulatorPanelProps) {
+  const { mode, status } = useConnectionStore();
   const { playback } = useFlightRecordingStore();
   const [showRecordingPanel, setShowRecordingPanel] = useState(false);
+  const [isEmergencyStopping, setIsEmergencyStopping] = useState(false);
 
   // Check if playback is active
   const isPlaybackActive =
     playback.recording && playback.status !== PlaybackStatus.IDLE;
+  const shouldShowEmergencyStop =
+    !isPlaybackActive &&
+    mode === ConnectionMode.UNITY_WEBGL &&
+    status !== ConnectionStatus.DISCONNECTED;
+
+  const handleEmergencyStop = async () => {
+    setIsEmergencyStopping(true);
+    try {
+      await getConnectionManager().emergencyStop();
+    } finally {
+      setIsEmergencyStopping(false);
+    }
+  };
 
   return (
     <div className={`h-full min-h-0 flex flex-col bg-gray-900 ${className}`}>
@@ -89,16 +108,28 @@ export function SimulatorPanel({ className = "" }: SimulatorPanelProps) {
           </div>
 
           {/* Recording Panel Toggle */}
-          <button
-            onClick={() => setShowRecordingPanel(!showRecordingPanel)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              showRecordingPanel
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-gray-700 hover:bg-gray-600 text-gray-200"
-            }`}
-          >
-            {showRecordingPanel ? "📹 녹화 관리 닫기" : "📹 녹화 관리"}
-          </button>
+          <div className="flex items-center gap-2">
+            {shouldShowEmergencyStop && (
+              <button
+                onClick={() => void handleEmergencyStop()}
+                disabled={isEmergencyStopping}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                {isEmergencyStopping ? "정지 중..." : "🛑 긴급 정지"}
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowRecordingPanel(!showRecordingPanel)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                showRecordingPanel
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-gray-700 hover:bg-gray-600 text-gray-200"
+              }`}
+            >
+              {showRecordingPanel ? "📹 녹화 관리 닫기" : "📹 녹화 관리"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -106,6 +137,42 @@ export function SimulatorPanel({ className = "" }: SimulatorPanelProps) {
       {showRecordingPanel ? (
         // Recording Management Panel
         <RecordingPanel />
+      ) : status === ConnectionStatus.DISCONNECTED ||
+        status === ConnectionStatus.ERROR ? (
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center max-w-md">
+            <div className="text-gray-500 mb-6">
+              <svg
+                className="w-20 h-20 mx-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M18.364 5.636a9 9 0 11-12.728 0m12.728 0L12 12m6.364-6.364A9 9 0 0012 3v9"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">
+              시뮬레이터 연결이 필요합니다
+            </h3>
+            <p className="text-gray-400 mb-6 text-sm">
+              현재 프로젝트는 유지됩니다. 연결 설정에서 모드를 선택하고 다시
+              연결하세요.
+            </p>
+            {onOpenConnectionSettings && (
+              <button
+                onClick={onOpenConnectionSettings}
+                className="px-5 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              >
+                ⚙️ 연결 설정 열기
+              </button>
+            )}
+          </div>
+        </div>
       ) : isPlaybackActive ? (
         // Playback Mode
         <div className="flex-1 min-h-0 flex flex-col">

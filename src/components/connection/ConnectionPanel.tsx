@@ -9,7 +9,11 @@ import { Button } from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { ConnectionStatus } from "./ConnectionStatus";
 
-export function ConnectionPanel() {
+interface ConnectionPanelProps {
+  onConnected?: () => void;
+}
+
+export function ConnectionPanel({ onConnected }: ConnectionPanelProps) {
   const { t } = useTranslation();
   const {
     status,
@@ -51,6 +55,7 @@ export function ConnectionPanel() {
   const [localIp, setLocalIp] = useState(ipAddress);
   const [localPort, setLocalPort] = useState(port.toString());
   const [ipError, setIpError] = useState<string>("");
+  const [hasPendingConnect, setHasPendingConnect] = useState(false);
 
   useEffect(() => {
     setLocalIp(ipAddress);
@@ -59,6 +64,23 @@ export function ConnectionPanel() {
   useEffect(() => {
     setLocalPort(port.toString());
   }, [port]);
+
+  useEffect(() => {
+    if (status === Status.CONNECTING) {
+      setHasPendingConnect(true);
+      return;
+    }
+
+    if (status === Status.CONNECTED && hasPendingConnect) {
+      setHasPendingConnect(false);
+      onConnected?.();
+      return;
+    }
+
+    if (status === Status.DISCONNECTED || status === Status.ERROR) {
+      setHasPendingConnect(false);
+    }
+  }, [hasPendingConnect, onConnected, status]);
 
   const validateIpAddress = (ip: string): boolean => {
     if (!ip) {
@@ -129,6 +151,7 @@ export function ConnectionPanel() {
     disconnect();
     clearError();
     setIpError("");
+    setHasPendingConnect(false);
   };
 
   const isConnected = status === Status.CONNECTED;

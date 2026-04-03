@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useState } from 'react'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { useBlocklyStore } from '@/stores/useBlocklyStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
@@ -6,22 +7,48 @@ import { useThemeContext } from '@/contexts/ThemeContext'
 import { ConnectionStatus } from '@/constants/connection'
 
 interface HeaderProps {
+  onOpenProject: () => void
   onOpenMonitoring: () => void
-  onOpenSettings: () => void
+  onOpenConnectionSettings: () => void
 }
 
-export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
+export function Header({
+  onOpenProject,
+  onOpenMonitoring,
+  onOpenConnectionSettings,
+}: HeaderProps) {
   const { t, i18n } = useTranslation()
-  const { currentProject, saveCurrentProject } = useProjectStore()
-  const { hasUnsavedChanges } = useBlocklyStore()
+  const { currentProject, saveCurrentProject, isLoading: isProjectLoading } = useProjectStore()
+  const { hasUnsavedChanges, workspace } = useBlocklyStore()
   const { status } = useConnectionStore()
   const { isDark, toggle } = useThemeContext()
+  const [isSavingFromHeader, setIsSavingFromHeader] = useState(false)
 
   const isConnected = status === ConnectionStatus.CONNECTED
+  const isWorkspaceReady = Boolean(workspace)
+  const canSave = Boolean(currentProject) && hasUnsavedChanges && isWorkspaceReady && !isProjectLoading && !isSavingFromHeader
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'ko' ? 'en' : 'ko'
     i18n.changeLanguage(newLang)
+  }
+
+  const handleSave = async () => {
+    if (!currentProject || !hasUnsavedChanges || !isWorkspaceReady || isProjectLoading || isSavingFromHeader) {
+      return
+    }
+
+    setIsSavingFromHeader(true)
+    try {
+      await saveCurrentProject()
+      alert('프로젝트가 저장되었습니다')
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : '프로젝트 저장 실패'
+      alert(message)
+    } finally {
+      setIsSavingFromHeader(false)
+    }
   }
 
   return (
@@ -43,31 +70,22 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
               <span className="text-sm font-medium text-[var(--project-badge-text)]">
                 📄 {currentProject.name}
               </span>
-              {hasUnsavedChanges && (
-                <span
-                  className="text-[var(--unsaved-indicator)] font-bold"
-                  title={t('project.unsaved')}
-                >
-                  ✱
-                </span>
-              )}
+              <span
+                className={`font-bold ${
+                  hasUnsavedChanges
+                    ? 'text-[var(--unsaved-indicator)]'
+                    : 'text-green-600'
+                }`}
+                title={hasUnsavedChanges ? t('project.unsaved') : t('common.success')}
+              >
+                {hasUnsavedChanges ? '*' : 'V'}
+              </span>
             </div>
           )}
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
-          {/* Save Button */}
-          {currentProject && hasUnsavedChanges && (
-            <button
-              onClick={() => saveCurrentProject()}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-              title={`${t('common.save')} (Ctrl+S)`}
-            >
-              💾 {t('common.save')}
-            </button>
-          )}
-
           {/* Connection Status */}
           <div className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-tertiary)] rounded-lg">
             <div
@@ -80,24 +98,50 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
             </span>
           </div>
 
+          {/* Save Button */}
+          {currentProject && (
+            <button
+              onClick={() => void handleSave()}
+              disabled={!canSave}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              title={
+                !isWorkspaceReady
+                  ? '워크스페이스 초기화 중'
+                  : isSavingFromHeader || isProjectLoading
+                    ? '저장 중'
+                    : `${t('common.save')} (Ctrl+S)`
+              }
+            >
+              💾 {isSavingFromHeader || isProjectLoading ? '저장 중...' : t('common.save')}
+            </button>
+          )}
+
           {/* Monitoring Button */}
           {isConnected && (
             <button
               onClick={onOpenMonitoring}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+              className="px-4 py-2 bg-white text-slate-900 rounded-lg hover:bg-slate-100 transition-colors text-sm font-medium flex items-center gap-2 border border-slate-200"
             >
               <span>📊</span>
               <span>{t('header.monitoring')}</span>
             </button>
           )}
 
-          {/* Language Toggle Button */}
           <button
-            onClick={toggleLanguage}
-            className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
-            title={i18n.language === 'ko' ? 'Switch to English' : '한국어로 전환'}
+            onClick={onOpenProject}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+            title={t('header.project')}
           >
-            <span className="text-xl">{i18n.language === 'ko' ? '🇬🇧' : '🇰🇷'}</span>
+            📁 {t('header.project')}
+          </button>
+
+          {/* Connection Settings Button */}
+          <button
+            onClick={onOpenConnectionSettings}
+            className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors text-sm font-medium"
+            title={t('header.connectionSettings')}
+          >
+            ⚙️ {t('header.connectionSettings')}
           </button>
 
           {/* Theme Toggle Button */}
@@ -109,13 +153,13 @@ export function Header({ onOpenMonitoring, onOpenSettings }: HeaderProps) {
             <span className="text-xl">{isDark ? '☀️' : '🌙'}</span>
           </button>
 
-          {/* Settings Button */}
+          {/* Language Toggle Button */}
           <button
-            onClick={onOpenSettings}
+            onClick={toggleLanguage}
             className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors"
-            title={t('header.settings')}
+            title={i18n.language === 'ko' ? 'Switch to English' : '한국어로 전환'}
           >
-            <span className="text-xl">⚙️</span>
+            <span className="text-xl">{i18n.language === 'ko' ? '🇬🇧' : '🇰🇷'}</span>
           </button>
         </div>
       </div>
