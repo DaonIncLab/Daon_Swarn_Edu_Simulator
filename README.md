@@ -115,7 +115,7 @@ Open browser at `http://localhost:5173`
 - **Error Boundary Pattern**: React error boundaries for crash recovery
 - **Adapter Pattern**: Storage abstraction (IndexedDB/localStorage)
 
-For complete architecture details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+For current runtime structure, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -124,19 +124,18 @@ For complete architecture details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.
 ### Core Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture and design patterns
+- [docs/INTERFACES.md](docs/INTERFACES.md) - Store, service, and type contracts used in day-to-day work
 - [docs/DIAGRAMS.md](docs/DIAGRAMS.md) - Visual Mermaid diagrams
-- [docs/API.md](docs/API.md) - API reference for stores and services
 - [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) - Development guidelines
 - [docs/CODING_RULES.md](docs/CODING_RULES.md) - Critical coding rules
 - [docs/DEBUG_GUIDE.md](docs/DEBUG_GUIDE.md) - Debugging guide
-- [docs/DEVELOPMENT_DIARY_30DAYS.md](docs/DEVELOPMENT_DIARY_30DAYS.md) - Development diary
 
 ### Quick Links
 
 - **Getting Started**: See [Quick Start](#quick-start)
 - **Development**: See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
-- **API Reference**: See [docs/API.md](docs/API.md)
-- **Troubleshooting**: See [Common Issues](docs/CONTRIBUTING.md#common-issues)
+- **Interfaces**: See [docs/INTERFACES.md](docs/INTERFACES.md)
+- **Troubleshooting**: See [docs/DEBUG_GUIDE.md](docs/DEBUG_GUIDE.md)
 
 ---
 
@@ -417,7 +416,7 @@ function MyComponent() {
 }
 ```
 
-For theme customization details, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#12-theme-system).
+For current theme and runtime structure, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -499,7 +498,7 @@ Ensure using TailwindCSS 4.x syntax in `index.css`:
 @import "tailwindcss";
 ```
 
-See [Common Issues](docs/CONTRIBUTING.md#common-issues) for more solutions.
+See [docs/DEBUG_GUIDE.md](docs/DEBUG_GUIDE.md) for current troubleshooting steps.
 
 ---
 
