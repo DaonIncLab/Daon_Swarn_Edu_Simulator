@@ -17,8 +17,9 @@ export function ExecutionLog() {
   const logEndRef = useRef<HTMLDivElement>(null)
   const logIdCounter = useRef(0)
 
-  const { status, currentCommandIndex, commands, error } = useExecutionStore()
+  const { status, currentNodeId, scenarioSummary, error } = useExecutionStore()
   const { status: connectionStatus, isDummyMode } = useConnectionStore()
+  const previousConnectionStatus = useRef(connectionStatus)
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -38,36 +39,40 @@ export function ExecutionLog() {
 
   // Monitor connection status
   useEffect(() => {
+    const previousStatus = previousConnectionStatus.current
+    if (previousStatus === connectionStatus) {
+      return
+    }
+
     if (connectionStatus === 'connected') {
       addLog('success', isDummyMode ? '🧪 Test mode activated' : '✅ Connected to Unity server')
-    } else if (connectionStatus === 'disconnected' && logs.length > 0) {
+    } else if (connectionStatus === 'disconnected') {
       addLog('warning', '⚠️ Disconnected from server')
     }
-  }, [connectionStatus])
+
+    previousConnectionStatus.current = connectionStatus
+  }, [connectionStatus, isDummyMode])
 
   // Monitor execution status
   useEffect(() => {
-    if (status === ExecutionStatus.RUNNING && currentCommandIndex === 0) {
-      addLog('info', `🚀 Starting execution: ${commands.length} commands`)
+    if (status === ExecutionStatus.RUNNING) {
+      addLog(
+        'info',
+        `🚀 Starting execution: ${scenarioSummary.commandNodes} scenario commands`
+      )
     } else if (status === ExecutionStatus.COMPLETED) {
       addLog('success', '✅ Execution completed successfully')
     } else if (status === ExecutionStatus.ERROR && error) {
       addLog('error', `❌ Error: ${error}`)
     }
-  }, [status])
+  }, [status, scenarioSummary.commandNodes, error])
 
-  // Monitor command progress
+  // Monitor node progress
   useEffect(() => {
-    if (status === ExecutionStatus.RUNNING && currentCommandIndex >= 0) {
-      const cmd = commands[currentCommandIndex]
-      if (cmd) {
-        addLog(
-          'info',
-          `▶️ [${currentCommandIndex + 1}/${commands.length}] Executing: ${cmd.action}`
-        )
-      }
+    if (status === ExecutionStatus.RUNNING && currentNodeId) {
+      addLog('info', `▶️ Executing scenario node: ${currentNodeId}`)
     }
-  }, [currentCommandIndex])
+  }, [status, currentNodeId])
 
   const clearLogs = () => {
     setLogs([])

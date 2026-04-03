@@ -10,9 +10,10 @@ import { validateProjectName, validateProjectDescription } from '@/utils/validat
 interface NewProjectModalProps {
   isOpen: boolean
   onClose: () => void
+  onCreated?: () => void
 }
 
-export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
+export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplateType>(ProjectTemplate.BLANK)
@@ -50,6 +51,7 @@ export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
       setDescription('')
       setSelectedTemplate(ProjectTemplate.BLANK)
       setValidationError(null)
+      onCreated?.()
       onClose()
     } catch (error) {
       log.error('NewProjectModal', 'Failed to create project', error)
@@ -72,45 +74,15 @@ export function NewProjectModal({ isOpen, onClose }: NewProjectModalProps) {
     },
     {
       value: ProjectTemplate.REPEAT_EXAMPLE,
-      label: '반복문 예제',
-      description: '반복 블록 사용 예제',
+      label: '반복 실행',
+      description: '속도 설정 후 이동과 대기를 반복하는 시작 템플릿',
       icon: '🔁',
     },
     {
-      value: ProjectTemplate.CONDITIONAL_EXAMPLE,
-      label: '조건문 예제',
-      description: 'If 조건문 사용 예제',
-      icon: '❓',
-    },
-    {
-      value: ProjectTemplate.FORMATION_EXAMPLE,
-      label: '대형 비행',
-      description: '편대 대형 설정 예제',
-      icon: '📐',
-    },
-    {
-      value: ProjectTemplate.MULTI_FORMATION,
-      label: '다중 대형',
-      description: 'Line → Circle → V-Shape 변환',
-      icon: '✨',
-    },
-    {
-      value: ProjectTemplate.CIRCLE_PATROL,
-      label: '순찰 비행',
-      description: '원형 대형으로 순찰',
-      icon: '🔄',
-    },
-    {
-      value: ProjectTemplate.SEARCH_RESCUE,
-      label: '수색 구조',
-      description: '그리드 탐색 → 집결',
-      icon: '🔍',
-    },
-    {
-      value: ProjectTemplate.CHOREOGRAPHY,
-      label: '안무 비행',
-      description: '복합 대형 변환 쇼케이스',
-      icon: '💃',
+      value: ProjectTemplate.COORDINATE_EXAMPLE,
+      label: '좌표 이동',
+      description: '개별 드론을 서로 다른 좌표로 이동시키는 시작 템플릿',
+      icon: '🎯',
     },
   ]
 

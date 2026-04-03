@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * 실행 인터프리터
  * ExecutableNode 트리를 실제로 실행하는 엔진
@@ -7,14 +8,16 @@ import {
   UnityWebGLConnectionService,
   type IConnectionService,
 } from "@/services/connection";
+import { CommandAction } from "@/constants/commands";
 import type {
   ExecutableNode,
   ExecutionResult,
   ExecutionState,
+  ScenarioConfigNode,
 } from "@/types/execution";
-import type { CommandResponse, DroneState } from "@/types/websocket";
+import type { Command, CommandResponse, DroneState } from "@/types/websocket";
 import { log } from "@/utils/logger";
-import { evaluateCondition } from "./conditionEvaluator";
+import { evaluateCondition, evaluateValueNode } from "./conditionEvaluator";
 
 /**
  * 실행 상태 변경 리스너
@@ -33,7 +36,7 @@ export class Interpreter {
   private isPaused: boolean = false;
   private resumePromise: Promise<void> | null = null;
   private resumeResolver: (() => void) | null = null;
-  private size: number;
+  private size: number = 0;
 
   constructor(connectionService: IConnectionService) {
     this.connectionService = connectionService;
@@ -47,6 +50,7 @@ export class Interpreter {
         variables: new Map(),
         functions: new Map(),
         callStack: [],
+        speed: 2,
       },
     };
   }
@@ -95,6 +99,7 @@ export class Interpreter {
         functions: new Map(),
         callStack: [],
         executionStartTime: Date.now(),
+        speed: 2,
       },
     });
 
@@ -264,6 +269,10 @@ export class Interpreter {
         executedCount = await this.executeFunctionCall(node, path);
         break;
 
+      case "scenario_config":
+        await this.executeScenarioConfig(node);
+        break;
+
       default:
         log.warn("Interpreter", "Unknown node type:", (node as any).type);
     }
@@ -279,10 +288,17 @@ export class Interpreter {
     size?: number,
     index?: number,
   ): Promise<void> {
-    log.debug("Interpreter", "Executing command:", node.command.action);
+    const originalCommand = node.command as Command;
+    const command = this.applyScenarioContext(originalCommand);
+    log.debug(
+      "Interpreter",
+      "Executing command:",
+      command.action,
+      command.params,
+    );
 
     const response: CommandResponse = await this.connectionService.sendCommand(
-      node.command,
+      command,
       size,
       index,
     );
@@ -581,11 +597,16 @@ export class Interpreter {
    * 변수 설정 노드 실행 (Phase 6-A)
    */
   private async executeVariableSet(node: any): Promise<void> {
+    const resolvedValue = evaluateValueNode(
+      node.value,
+      this.droneStates,
+      this.state.context,
+    );
     log.debug(
       "Interpreter",
-      `Setting variable ${node.variableName} = ${node.value}`,
+      `Setting variable ${node.variableName} = ${resolvedValue}`,
     );
-    this.state.context.variables.set(node.variableName, node.value);
+    this.state.context.variables.set(node.variableName, resolvedValue);
   }
 
   /**
@@ -640,6 +661,38 @@ export class Interpreter {
    */
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private async executeScenarioConfig(node: ScenarioConfigNode): Promise<void> {
+    if (typeof node.config.speed === "number") {
+      this.state.context.speed = node.config.speed;
+      log.debug("Interpreter", "Scenario speed updated", {
+        speed: this.state.context.speed,
+      });
+    }
+  }
+
+  private applyScenarioContext(command: Command): Command {
+    const speed = this.state.context.speed ?? 2;
+    if (
+      command.action !== CommandAction.MOVE_DRONE &&
+      command.action !== CommandAction.MOVE_DIRECTION &&
+      command.action !== CommandAction.MOVE_DIRECTION_ALL
+    ) {
+      return command;
+    }
+
+    if (typeof command.params.speed === "number") {
+      return command;
+    }
+
+    return {
+      ...command,
+      params: {
+        ...command.params,
+        speed,
+      },
+    };
   }
 
   /**

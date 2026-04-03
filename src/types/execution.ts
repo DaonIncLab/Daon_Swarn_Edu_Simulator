@@ -1,248 +1,167 @@
-/**
- * 실행 가능한 노드 트리 구조 정의
- * Blockly 블록을 파싱하여 생성되는 실행 트리의 타입들
- */
+import type { Command } from "./websocket";
 
-import type { Command } from './websocket'
-
-/**
- * 노드 타입
- */
 export const NodeType = {
-  /** 단일 명령 */
-  COMMAND: 'command',
-  /** 순차 실행 (여러 명령을 순서대로) */
-  SEQUENCE: 'sequence',
-  /** 반복 실행 */
-  REPEAT: 'repeat',
-  /** For 루프 */
-  FOR_LOOP: 'for_loop',
-  /** While 루프 (조건 기반) */
-  WHILE_LOOP: 'while_loop',
-  /** Repeat Until 루프 (조건이 참이 될 때까지) */
-  UNTIL_LOOP: 'until_loop',
-  /** 조건 분기 (if) */
-  IF: 'if',
-  /** 조건 분기 (if-else) */
-  IF_ELSE: 'if_else',
-  /** 대기 */
-  WAIT: 'wait',
-  /** 변수 설정 */
-  VARIABLE_SET: 'variable_set',
-  /** 변수 값 가져오기 */
-  VARIABLE_GET: 'variable_get',
-  /** 함수 정의 */
-  FUNCTION_DEF: 'function_def',
-  /** 함수 호출 */
-  FUNCTION_CALL: 'function_call',
-  /** 센서 값 조회 */
-  SENSOR_VALUE: 'sensor_value',
-  /** 수식 계산 */
-  MATH_EXPR: 'math_expr',
-  /** 논리 비교 */
-  LOGIC_COMPARE: 'logic_compare',
-  /** 논리 연산 */
-  LOGIC_OPERATION: 'logic_operation',
-  /** 논리 부정 */
-  LOGIC_NEGATE: 'logic_negate',
-} as const
+  COMMAND: "command",
+  SEQUENCE: "sequence",
+  REPEAT: "repeat",
+  FOR_LOOP: "for_loop",
+  WHILE_LOOP: "while_loop",
+  UNTIL_LOOP: "until_loop",
+  IF: "if",
+  IF_ELSE: "if_else",
+  WAIT: "wait",
+  VARIABLE_SET: "variable_set",
+  VARIABLE_GET: "variable_get",
+  FUNCTION_DEF: "function_def",
+  FUNCTION_CALL: "function_call",
+  SENSOR_VALUE: "sensor_value",
+  MATH_EXPR: "math_expr",
+  LOGIC_COMPARE: "logic_compare",
+  LOGIC_OPERATION: "logic_operation",
+  LOGIC_NEGATE: "logic_negate",
+  SCENARIO_CONFIG: "scenario_config",
+} as const;
 
-export type NodeType = typeof NodeType[keyof typeof NodeType]
+export type NodeType = (typeof NodeType)[keyof typeof NodeType];
 
-/**
- * 기본 실행 노드 인터페이스
- */
 export interface BaseNode {
-  id: string // 노드 고유 ID (디버깅용)
-  type: NodeType
+  id: string;
+  type: NodeType;
 }
 
-/**
- * 단일 명령 노드
- */
 export interface CommandNode extends BaseNode {
-  type: 'command'
-  command: Command
+  type: "command";
+  command: Command;
 }
 
-/**
- * 순차 실행 노드
- */
 export interface SequenceNode extends BaseNode {
-  type: 'sequence'
-  children: ExecutableNode[]
+  type: "sequence";
+  children: ExecutableNode[];
 }
 
-/**
- * 반복 노드
- */
 export interface RepeatNode extends BaseNode {
-  type: 'repeat'
-  times: number
-  body: ExecutableNode
+  type: "repeat";
+  times: number;
+  body: ExecutableNode;
 }
 
-/**
- * For 루프 노드
- */
 export interface ForLoopNode extends BaseNode {
-  type: 'for_loop'
-  variable: string
-  from: number
-  to: number
-  by: number
-  body: ExecutableNode
+  type: "for_loop";
+  variable: string;
+  from: number;
+  to: number;
+  by: number;
+  body: ExecutableNode;
 }
 
-/**
- * 조건 분기 노드 (if)
- */
 export interface IfNode extends BaseNode {
-  type: 'if'
-  condition: ConditionNode
-  thenBranch: ExecutableNode
+  type: "if";
+  condition: ConditionNode;
+  thenBranch: ExecutableNode;
 }
 
-/**
- * 조건 분기 노드 (if-else)
- */
 export interface IfElseNode extends BaseNode {
-  type: 'if_else'
-  condition: ConditionNode
-  thenBranch: ExecutableNode
-  elseBranch: ExecutableNode
+  type: "if_else";
+  condition: ConditionNode;
+  thenBranch: ExecutableNode;
+  elseBranch: ExecutableNode;
 }
 
-/**
- * 대기 노드
- */
 export interface WaitNode extends BaseNode {
-  type: 'wait'
-  duration: number // 초 단위
+  type: "wait";
+  duration: number;
 }
 
-/**
- * While 루프 노드
- */
 export interface WhileLoopNode extends BaseNode {
-  type: 'while_loop'
-  condition: ConditionNode
-  body: ExecutableNode
-  maxIterations?: number // 무한 루프 방지 (기본값: 1000)
+  type: "while_loop";
+  condition: ConditionNode;
+  body: ExecutableNode;
+  maxIterations?: number;
 }
 
-/**
- * Repeat Until 루프 노드
- */
 export interface UntilLoopNode extends BaseNode {
-  type: 'until_loop'
-  condition: ConditionNode
-  body: ExecutableNode
-  maxIterations?: number // 무한 루프 방지 (기본값: 1000)
+  type: "until_loop";
+  condition: ConditionNode;
+  body: ExecutableNode;
+  maxIterations?: number;
 }
 
-/**
- * 변수 설정 노드
- */
 export interface VariableSetNode extends BaseNode {
-  type: 'variable_set'
-  variableName: string
-  value: ValueNode // 직접 값, 변수 참조, 센서 값, 수식 등
+  type: "variable_set";
+  variableName: string;
+  value: ValueNode;
 }
 
-/**
- * 변수 값 가져오기 노드
- */
 export interface VariableGetNode extends BaseNode {
-  type: 'variable_get'
-  variableName: string
+  type: "variable_get";
+  variableName: string;
 }
 
-/**
- * 함수 정의 노드
- */
 export interface FunctionDefNode extends BaseNode {
-  type: 'function_def'
-  functionName: string
-  body: ExecutableNode
+  type: "function_def";
+  functionName: string;
+  body: ExecutableNode;
 }
 
-/**
- * 함수 호출 노드
- */
 export interface FunctionCallNode extends BaseNode {
-  type: 'function_call'
-  functionName: string
+  type: "function_call";
+  functionName: string;
 }
 
-/**
- * 센서 값 노드
- */
 export interface SensorValueNode extends BaseNode {
-  type: 'sensor_value'
-  sensorType: 'battery' | 'altitude' | 'elapsed_time'
-  droneId?: number // battery, altitude용 (elapsed_time는 불필요)
+  type: "sensor_value";
+  sensorType: "battery" | "altitude" | "elapsed_time";
+  droneId?: number;
 }
 
-/**
- * 수식 계산 노드
- */
 export interface MathExprNode extends BaseNode {
-  type: 'math_expr'
-  operator: 'ADD' | 'MINUS' | 'MULTIPLY' | 'DIVIDE'
-  left: ValueNode
-  right: ValueNode
+  type: "math_expr";
+  operator: "ADD" | "MINUS" | "MULTIPLY" | "DIVIDE";
+  left: ValueNode;
+  right: ValueNode;
 }
 
-/**
- * 논리 비교 노드
- */
 export interface LogicCompareNode extends BaseNode {
-  type: 'logic_compare'
-  operator: 'EQ' | 'NEQ' | 'LT' | 'LTE' | 'GT' | 'GTE'
-  left: ValueNode
-  right: ValueNode
+  type: "logic_compare";
+  operator: "EQ" | "NEQ" | "LT" | "LTE" | "GT" | "GTE";
+  left: ValueNode;
+  right: ValueNode;
 }
 
-/**
- * 논리 연산 노드
- */
 export interface LogicOperationNode extends BaseNode {
-  type: 'logic_operation'
-  operator: 'AND' | 'OR'
-  left: ConditionNode
-  right: ConditionNode
+  type: "logic_operation";
+  operator: "AND" | "OR";
+  left: ConditionNode;
+  right: ConditionNode;
 }
 
-/**
- * 논리 부정 노드
- */
 export interface LogicNegateNode extends BaseNode {
-  type: 'logic_negate'
-  operand: ConditionNode
+  type: "logic_negate";
+  operand: ConditionNode;
 }
 
-/**
- * 값 노드 (숫자를 반환하는 노드)
- */
+export interface ScenarioConfig {
+  speed?: number;
+}
+
+export interface ScenarioConfigNode extends BaseNode {
+  type: "scenario_config";
+  config: ScenarioConfig;
+}
+
 export type ValueNode =
   | number
   | VariableGetNode
   | SensorValueNode
-  | MathExprNode
+  | MathExprNode;
 
-/**
- * 조건 노드 (boolean을 반환하는 노드)
- */
 export type ConditionNode =
-  | string // 하드코딩된 조건 문자열 (기존 호환성)
+  | boolean
+  | string
   | LogicCompareNode
   | LogicOperationNode
-  | LogicNegateNode
+  | LogicNegateNode;
 
-/**
- * 실행 가능한 모든 노드 타입의 유니온
- */
 export type ExecutableNode =
   | CommandNode
   | SequenceNode
@@ -257,35 +176,44 @@ export type ExecutableNode =
   | VariableGetNode
   | FunctionDefNode
   | FunctionCallNode
+  | ScenarioConfigNode;
 
-/**
- * 실행 컨텍스트 (변수 저장소 및 함수 레지스트리)
- */
+export type ScenarioNode = ExecutableNode;
+export type ScenarioPlan = ExecutableNode;
+
 export interface ExecutionContext {
-  variables: Map<string, number> // 전역 변수 저장소
-  functions: Map<string, ExecutableNode> // 함수 정의 저장소
-  callStack: string[] // 함수 호출 스택 (무한 재귀 방지)
-  currentRepeatCount?: number // 현재 반복 횟수 (디버깅용)
-  currentLoopVariable?: { name: string; value: number } // 현재 루프 변수
-  executionStartTime?: number // 실행 시작 시간 (센서: elapsed_time 조건용)
+  variables: Map<string, number>;
+  functions: Map<string, ExecutableNode>;
+  callStack: string[];
+  currentRepeatCount?: number;
+  currentLoopVariable?: { name: string; value: number };
+  executionStartTime?: number;
+  speed?: number;
 }
 
-/**
- * 실행 상태
- */
 export interface ExecutionState {
-  status: 'idle' | 'running' | 'paused' | 'completed' | 'error'
-  currentNodeId: string | null // 현재 실행 중인 노드 ID
-  currentNodePath: number[] // 노드 경로 (중첩 레벨 추적)
-  error: string | null
-  context: ExecutionContext
+  status: "idle" | "running" | "paused" | "completed" | "error";
+  currentNodeId: string | null;
+  currentNodePath: number[];
+  error: string | null;
+  context: ExecutionContext;
 }
 
-/**
- * 실행 결과
- */
 export interface ExecutionResult {
-  success: boolean
-  error?: string
-  executedNodes: number // 실행된 노드 수
+  success: boolean;
+  error?: string;
+  executedNodes: number;
+}
+
+export interface ScenarioStep {
+  id: string;
+  label: string;
+  depth: number;
+  nodeType: ScenarioNode["type"];
+}
+
+export interface ScenarioSummary {
+  totalNodes: number;
+  commandNodes: number;
+  maxDepth: number;
 }

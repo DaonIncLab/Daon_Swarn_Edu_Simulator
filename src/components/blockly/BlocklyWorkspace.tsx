@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as Blockly from 'blockly'
-import { toolboxConfig, getCategoryBlocks } from './toolbox'
-import { generateCommands } from './generators/swarmGenerator'
+import { toolboxConfig, getCategoryBlocks, type BlocklyCategoryId } from './toolbox'
+import { parseBlocklyWorkspace } from '@/services/execution'
 import { useBlocklyStore } from '@/stores/useBlocklyStore'
 import { useExecutionStore, ExecutionStatus } from '@/stores/useExecutionStore'
+import { useProjectStore } from '@/stores/useProjectStore'
+import { xmlToWorkspace } from '@/utils/blocklyXml'
 import './blocks/swarmBlocks' // 블록 정의 import
 
 // Blockly CSS import
@@ -11,24 +13,38 @@ import 'blockly/blocks'
 
 interface BlocklyWorkspaceProps {
   className?: string
-  selectedCategory?: string
+  selectedCategory?: BlocklyCategoryId
+}
+
+function syncScenarioPlan(
+  workspace: Blockly.WorkspaceSvg,
+  setBlocklyScenarioPlan: (plan: ReturnType<typeof parseBlocklyWorkspace>) => void,
+  setExecutionScenarioPlan: (plan: ReturnType<typeof parseBlocklyWorkspace>) => void,
+) {
+  const plan = parseBlocklyWorkspace(workspace)
+  setBlocklyScenarioPlan(plan)
+  setExecutionScenarioPlan(plan)
 }
 
 export function BlocklyWorkspace({ className, selectedCategory = 'flight' }: BlocklyWorkspaceProps) {
   const blocklyDiv = useRef<HTMLDivElement>(null)
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null)
+  const loadedProjectKeyRef = useRef<string | null>(null)
+  const isProgrammaticUpdateRef = useRef(false)
+  const [workspaceReady, setWorkspaceReady] = useState(false)
+  const { currentProject } = useProjectStore()
 
-  const { setWorkspace, setGeneratedCommands, setHasUnsavedChanges } = useBlocklyStore()
+  const { setWorkspace, setScenarioPlan: setBlocklyScenarioPlan, setHasUnsavedChanges } = useBlocklyStore()
   const {
-    setCommands,
+    setScenarioPlan: setExecutionScenarioPlan,
     status,
-    commands,
+    scenarioSummary,
     executeScript,
     stopExecution
   } = useExecutionStore()
 
   const isRunning = status === ExecutionStatus.RUNNING
-  const hasCommands = commands.length > 0
+  const hasScenarioPlan = scenarioSummary.commandNodes > 0
 
   // Blockly 워크스페이스 초기화
   useEffect(() => {
@@ -59,28 +75,74 @@ export function BlocklyWorkspace({ className, selectedCategory = 'flight' }: Blo
 
     workspaceRef.current = workspace
     setWorkspace(workspace)
+    setWorkspaceReady(true)
 
     // 워크스페이스 변경 이벤트 리스너
-    const changeListener = () => {
-      // 명령 생성
-      const commands = generateCommands(workspace)
-      setGeneratedCommands(commands)
-      setCommands(commands)
+    const changeListener = (event: Blockly.Events.Abstract) => {
+      if (event.type === Blockly.Events.UI || isProgrammaticUpdateRef.current) {
+        return
+      }
+
+      syncScenarioPlan(workspace, setBlocklyScenarioPlan, setExecutionScenarioPlan)
       setHasUnsavedChanges(true)
     }
 
     workspace.addChangeListener(changeListener)
 
-    // 초기 블록 추가 (예시)
-    addInitialBlocks(workspace)
+    isProgrammaticUpdateRef.current = true
+    try {
+      if (!useProjectStore.getState().currentProject) {
+        addInitialBlocks(workspace)
+      }
+
+      syncScenarioPlan(workspace, setBlocklyScenarioPlan, setExecutionScenarioPlan)
+      setHasUnsavedChanges(false)
+    } finally {
+      isProgrammaticUpdateRef.current = false
+    }
 
     // Cleanup
     return () => {
       workspace.removeChangeListener(changeListener)
       workspace.dispose()
+      workspaceRef.current = null
       setWorkspace(null)
+      setWorkspaceReady(false)
+      loadedProjectKeyRef.current = null
+      isProgrammaticUpdateRef.current = false
     }
-  }, [setWorkspace, setGeneratedCommands, setCommands, setHasUnsavedChanges])
+  }, [setWorkspace, setBlocklyScenarioPlan, setExecutionScenarioPlan, setHasUnsavedChanges])
+
+  useEffect(() => {
+    const workspace = workspaceRef.current
+    const projectId = currentProject?.id ?? null
+    const projectWorkspaceXml = currentProject?.workspaceXml ?? null
+
+    if (!workspace || !projectId || !projectWorkspaceXml) {
+      return
+    }
+
+    const loadKey = `${projectId}:${projectWorkspaceXml}`
+    if (loadedProjectKeyRef.current === loadKey) {
+      return
+    }
+
+    isProgrammaticUpdateRef.current = true
+    try {
+      xmlToWorkspace(projectWorkspaceXml, workspace)
+      syncScenarioPlan(workspace, setBlocklyScenarioPlan, setExecutionScenarioPlan)
+      setHasUnsavedChanges(false)
+      loadedProjectKeyRef.current = loadKey
+    } finally {
+      isProgrammaticUpdateRef.current = false
+    }
+  }, [
+    currentProject?.id,
+    currentProject?.workspaceXml,
+    setBlocklyScenarioPlan,
+    setExecutionScenarioPlan,
+    setHasUnsavedChanges,
+  ])
 
   // 선택된 카테고리에 따라 flyout 업데이트
   useEffect(() => {
@@ -101,9 +163,9 @@ export function BlocklyWorkspace({ className, selectedCategory = 'flight' }: Blo
       <div className="flex items-center justify-between px-6 py-3 bg-[var(--bg-tertiary)] border-b border-[var(--border-primary)] flex-shrink-0">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold text-[var(--text-primary)]">블록 코딩</h3>
-          {hasCommands && (
+          {hasScenarioPlan && (
             <span className="px-2 py-1 bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)] text-xs font-medium rounded">
-              {commands.length}개 명령
+              {scenarioSummary.commandNodes}개 실행 명령
             </span>
           )}
         </div>
@@ -113,9 +175,9 @@ export function BlocklyWorkspace({ className, selectedCategory = 'flight' }: Blo
           {!isRunning ? (
             <button
               onClick={executeScript}
-              disabled={!hasCommands}
+              disabled={!workspaceReady || !hasScenarioPlan}
               className="flex items-center justify-center w-10 h-10 rounded-lg bg-success hover:bg-success-dark text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-2"
-              title="실행"
+              title={workspaceReady ? "실행" : "워크스페이스 초기화 중"}
             >
               <svg className="w-5 h-5" color='grey' fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
@@ -152,18 +214,18 @@ export function BlocklyWorkspace({ className, selectedCategory = 'flight' }: Blo
  * 초기 예시 블록 추가
  */
 function addInitialBlocks(workspace: Blockly.WorkspaceSvg) {
-  // 예시: 모든 드론 이륙 -> 이동 -> 착륙
+  // 예시: 모든 드론 이륙 -> 이동 -> 대기 -> 착륙
   const xml = Blockly.utils.xml.textToDom(`
     <xml xmlns="https://developers.google.com/blockly/xml">
       <block type="drone_takeoff_all" x="50" y="50">
         <field name="ALTITUDE">2</field>
         <next>
-          <block type="control_wait">
-            <field name="DURATION">2</field>
+          <block type="drone_move_direction_all">
+            <field name="DIRECTION">forward</field>
+            <field name="DISTANCE">3</field>
             <next>
-              <block type="drone_move_direction_all">
-                <field name="DIRECTION">forward</field>
-                <field name="DISTANCE">3</field>
+              <block type="control_wait">
+                <field name="DURATION">2</field>
                 <next>
                   <block type="drone_land_all"></block>
                 </next>

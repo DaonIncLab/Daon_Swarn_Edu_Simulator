@@ -1,33 +1,193 @@
 import { create } from "zustand";
 import type { Command, WSMessage, DroneState } from "@/types/websocket";
-import { MessageType } from "@/constants/commands";
+import { CommandAction, MessageType } from "@/constants/commands";
 import { wsService } from "@/services/websocket";
-import { useConnectionStore } from "./useConnectionStore";
 import { useBlocklyStore } from "./useBlocklyStore";
 import { useTelemetryStore } from "./useTelemetryStore";
 import { Interpreter } from "@/services/execution";
 import { parseBlocklyWorkspace } from "@/services/execution";
 import { getConnectionManager } from "@/services/connection/ConnectionManager";
-import type { ExecutionState } from "@/types/execution";
+import type {
+  ExecutableNode,
+  ExecutionState,
+  ScenarioPlan,
+  ScenarioSummary,
+} from "@/types/execution";
 import * as Blockly from "blockly";
 import { log } from "@/utils/logger";
 
-/**
- * Simple string hash function for cache validation
- */
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
   return hash.toString(36);
 }
 
-/**
- * 스크립트 실행 상태
- */
+function summarizeScenarioPlan(plan: ScenarioPlan | null): ScenarioSummary {
+  if (!plan) {
+    return { totalNodes: 0, commandNodes: 0, maxDepth: 0 };
+  }
+
+  const walk = (
+    node: ExecutableNode,
+    depth: number,
+  ): { total: number; command: number; depth: number } => {
+    let total = 1;
+    let command = node.type === "command" || node.type === "wait" ? 1 : 0;
+    let maxDepth = depth;
+
+    if (node.type === "sequence") {
+      for (const child of node.children) {
+        const nested = walk(child, depth + 1);
+        total += nested.total;
+        command += nested.command;
+        maxDepth = Math.max(maxDepth, nested.depth);
+      }
+    }
+
+    if (
+      node.type === "repeat" ||
+      node.type === "for_loop" ||
+      node.type === "while_loop" ||
+      node.type === "until_loop"
+    ) {
+      const nested = walk(node.body, depth + 1);
+      total += nested.total;
+      command += nested.command;
+      maxDepth = Math.max(maxDepth, nested.depth);
+    }
+
+    if (node.type === "if") {
+      const nested = walk(node.thenBranch, depth + 1);
+      total += nested.total;
+      command += nested.command;
+      maxDepth = Math.max(maxDepth, nested.depth);
+    }
+
+    if (node.type === "if_else") {
+      const thenNested = walk(node.thenBranch, depth + 1);
+      const elseNested = walk(node.elseBranch, depth + 1);
+      total += thenNested.total + elseNested.total;
+      command += thenNested.command + elseNested.command;
+      maxDepth = Math.max(maxDepth, thenNested.depth, elseNested.depth);
+    }
+
+    if (node.type === "function_def") {
+      const nested = walk(node.body, depth + 1);
+      total += nested.total;
+      command += nested.command;
+      maxDepth = Math.max(maxDepth, nested.depth);
+    }
+
+    if (node.type === "scenario_config") {
+      maxDepth = Math.max(maxDepth, depth);
+    }
+
+    return { total, command, depth: maxDepth };
+  };
+
+  const result = walk(plan, 1);
+  return {
+    totalNodes: result.total,
+    commandNodes: result.command,
+    maxDepth: result.depth,
+  };
+}
+
+function withScenarioSpeed(command: Command, speed: number): Command {
+  if (
+    command.action !== CommandAction.MOVE_DRONE &&
+    command.action !== CommandAction.MOVE_DIRECTION &&
+    command.action !== CommandAction.MOVE_DIRECTION_ALL
+  ) {
+    return command;
+  }
+
+  if (typeof command.params.speed === "number") {
+    return command;
+  }
+
+  return {
+    ...command,
+    params: {
+      ...command.params,
+      speed,
+    },
+  };
+}
+
+function extractRawCommands(plan: ScenarioPlan | null): Command[] {
+  if (!plan) {
+    return [];
+  }
+
+  const commands: Command[] = [];
+  const context = { speed: 2 };
+
+  const visit = (node: ExecutableNode) => {
+    if (node.type === "command") {
+      commands.push(withScenarioSpeed(node.command, context.speed));
+      return;
+    }
+
+    if (node.type === "scenario_config") {
+      context.speed = node.config.speed ?? context.speed;
+      return;
+    }
+
+    if (node.type === "wait") {
+      commands.push({
+        action: CommandAction.WAIT,
+        params: { duration: node.duration },
+      });
+      return;
+    }
+
+    if (node.type === "scenario_config") {
+      if (typeof node.config.speed === "number") {
+        context.speed = node.config.speed;
+      }
+      return;
+    }
+
+    if (node.type === "sequence") {
+      node.children.forEach(visit);
+      return;
+    }
+
+    if (
+      node.type === "repeat" ||
+      node.type === "for_loop" ||
+      node.type === "while_loop" ||
+      node.type === "until_loop"
+    ) {
+      visit(node.body);
+      return;
+    }
+
+    if (node.type === "if") {
+      visit(node.thenBranch);
+      return;
+    }
+
+    if (node.type === "if_else") {
+      visit(node.thenBranch);
+      visit(node.elseBranch);
+      return;
+    }
+
+    if (node.type === "function_def") {
+      visit(node.body);
+    }
+  };
+
+  visit(plan);
+  return commands;
+}
+
 export const ExecutionStatus = {
   IDLE: "idle",
   RUNNING: "running",
@@ -38,13 +198,11 @@ export const ExecutionStatus = {
 export type ExecutionStatus =
   (typeof ExecutionStatus)[keyof typeof ExecutionStatus];
 
-/**
- * 스크립트 실행 상태 관리 스토어
- */
 interface ExecutionStore {
-  // State
   status: ExecutionStatus;
   commands: Command[];
+  scenarioPlan: ScenarioPlan | null;
+  scenarioSummary: ScenarioSummary;
   currentCommandIndex: number;
   currentNodeId: string | null;
   currentNodePath: number[];
@@ -52,8 +210,8 @@ interface ExecutionStore {
   drones: DroneState[];
   interpreter: Interpreter | null;
 
-  // Actions
   setCommands: (commands: Command[]) => void;
+  setScenarioPlan: (plan: ScenarioPlan | null) => void;
   executeScript: () => Promise<void>;
   stopExecution: () => void;
   pauseExecution: () => void;
@@ -64,15 +222,15 @@ interface ExecutionStore {
 }
 
 export const useExecutionStore = create<ExecutionStore>((set, get) => {
-  // WebSocket 메시지 리스너 등록
   wsService.setMessageListener((message) => {
     get().handleMessage(message);
   });
 
   return {
-    // Initial state
     status: ExecutionStatus.IDLE,
     commands: [],
+    scenarioPlan: null,
+    scenarioSummary: { totalNodes: 0, commandNodes: 0, maxDepth: 0 },
     currentCommandIndex: -1,
     currentNodeId: null,
     currentNodePath: [],
@@ -80,12 +238,16 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
     drones: [],
     interpreter: null,
 
-    // Actions
     setCommands: (commands) => set({ commands }),
 
-    /**
-     * 스크립트 실행 (Interpreter 사용)
-     */
+    setScenarioPlan: (scenarioPlan) => {
+      set({
+        scenarioPlan,
+        scenarioSummary: summarizeScenarioPlan(scenarioPlan),
+        commands: extractRawCommands(scenarioPlan),
+      });
+    },
+
     executeScript: async () => {
       const blocklyStore = useBlocklyStore.getState();
       const workspace = blocklyStore.workspace;
@@ -95,42 +257,35 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
         return;
       }
 
-      // Calculate workspace hash for cache validation
       const workspaceXml = Blockly.Xml.domToText(
-        Blockly.Xml.workspaceToDom(workspace)
+        Blockly.Xml.workspaceToDom(workspace),
       );
       const currentHash = simpleHash(workspaceXml);
 
-      // Check if we can use cached parsed tree
-      let executionTree = null;
+      let scenarioPlan: ScenarioPlan | null = null;
       const cachedHash = blocklyStore.getWorkspaceHash();
+      const cachedPlan = blocklyStore.getScenarioPlan();
 
-      if (cachedHash === currentHash && blocklyStore.getParsedTree()) {
-        log.debug("ExecutionStore", "Using cached execution tree");
-        executionTree = blocklyStore.getParsedTree();
+      if (cachedHash === currentHash && cachedPlan) {
+        log.debug("ExecutionStore", "Using cached scenario plan");
+        scenarioPlan = cachedPlan;
       } else {
-        // Blockly 워크스페이스를 실행 트리로 파싱
-        log.debug("ExecutionStore", "Parsing workspace (cache miss)");
-        executionTree = parseBlocklyWorkspace(workspace);
-
-        if (!executionTree) {
+        log.debug("ExecutionStore", "Parsing workspace scenario plan");
+        scenarioPlan = parseBlocklyWorkspace(workspace);
+        if (!scenarioPlan) {
           set({ error: "No blocks to execute" });
           return;
         }
-
-        // Cache the parsed tree
-        blocklyStore.setCachedParsedTree(executionTree, currentHash);
-        log.debug("ExecutionStore", "Cached execution tree");
+        blocklyStore.setCachedScenarioPlan(scenarioPlan, currentHash);
       }
 
-      if (!executionTree) {
+      if (!scenarioPlan) {
         set({ error: "No blocks to execute" });
         return;
       }
 
-      log.debug("ExecutionStore", "Using execution tree:", executionTree);
+      get().setScenarioPlan(scenarioPlan);
 
-      // ConnectionManager에서 현재 연결 서비스 가져오기
       const connectionManager = getConnectionManager();
       const connectionService = connectionManager.getCurrentService();
 
@@ -139,40 +294,27 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
         return;
       }
 
-      // Interpreter 생성
       const interpreter = new Interpreter(connectionService);
-
-      // 상태 업데이트 리스너 등록
       interpreter.setStateListener((state) => {
         get().updateExecutionState(state);
       });
-
-      // 드론 상태를 인터프리터에 전달
       interpreter.updateDroneStates(get().drones);
 
-      // 인터프리터 저장
-      set({ interpreter });
-
-      // 실행 시작
       set({
+        interpreter,
         status: ExecutionStatus.RUNNING,
         error: null,
-        currentCommandIndex: 0,
+        currentCommandIndex: -1,
         currentNodeId: null,
         currentNodePath: [],
       });
 
       try {
-        const result = await interpreter.execute(executionTree);
+        const result = await interpreter.execute(scenarioPlan);
 
         if (result.success) {
-          log.info(
-            "ExecutionStore",
-            `Execution completed. Executed ${result.executedNodes} nodes.`
-          );
           set({ status: ExecutionStatus.COMPLETED });
         } else {
-          log.error("ExecutionStore", `Execution failed: ${result.error}`);
           set({
             status: ExecutionStatus.ERROR,
             error: result.error || "Execution failed",
@@ -189,9 +331,6 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
       }
     },
 
-    /**
-     * 실행 중단
-     */
     stopExecution: () => {
       const { interpreter } = get();
       if (interpreter) {
@@ -205,9 +344,6 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
       });
     },
 
-    /**
-     * 일시정지
-     */
     pauseExecution: () => {
       const { interpreter } = get();
       if (interpreter) {
@@ -215,9 +351,6 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
       }
     },
 
-    /**
-     * 재개
-     */
     resumeExecution: () => {
       const { interpreter } = get();
       if (interpreter) {
@@ -225,13 +358,12 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
       }
     },
 
-    /**
-     * 리셋
-     */
     reset: () => {
       set({
         status: ExecutionStatus.IDLE,
         commands: [],
+        scenarioPlan: null,
+        scenarioSummary: { totalNodes: 0, commandNodes: 0, maxDepth: 0 },
         currentCommandIndex: -1,
         currentNodeId: null,
         currentNodePath: [],
@@ -241,18 +373,12 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
       });
     },
 
-    /**
-     * 실행 상태 업데이트 (Interpreter로부터)
-     */
-    updateExecutionState: (state: ExecutionState) => {
-      log.debug("ExecutionStore", "State update from interpreter:", state);
-
+    updateExecutionState: (state) => {
       set({
         currentNodeId: state.currentNodeId,
         currentNodePath: state.currentNodePath,
       });
 
-      // 상태 매핑
       if (state.status === "running") {
         set({ status: ExecutionStatus.RUNNING });
       } else if (state.status === "completed") {
@@ -265,27 +391,22 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
       }
     },
 
-    /**
-     * WebSocket 메시지 핸들러
-     */
     handleMessage: (message) => {
       switch (message.type) {
-        case MessageType.TELEMETRY:
+        case MessageType.TELEMETRY: {
           const newDrones = message.drones;
           set({ drones: newDrones });
 
-          // 인터프리터에 드론 상태 업데이트
           const { interpreter } = get();
           if (interpreter) {
             interpreter.updateDroneStates(newDrones);
           }
 
-          // TelemetryStore에 데이터 자동 기록
           useTelemetryStore.getState().addTelemetryData(newDrones);
           break;
+        }
 
         case MessageType.COMMAND_FINISH:
-          // 인터프리터가 명령 완료를 직접 처리하므로 여기서는 무시
           break;
 
         case MessageType.ERROR:
@@ -293,7 +414,6 @@ export const useExecutionStore = create<ExecutionStore>((set, get) => {
           break;
 
         case MessageType.ACK:
-          // ACK received
           break;
 
         default:

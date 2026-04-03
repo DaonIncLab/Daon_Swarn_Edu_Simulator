@@ -12,18 +12,8 @@ export const ProjectTemplate = {
   BASIC_FLIGHT: 'basic_flight',
   /** Loop example */
   REPEAT_EXAMPLE: 'repeat_example',
-  /** Conditional example */
-  CONDITIONAL_EXAMPLE: 'conditional_example',
-  /** Formation flight example */
-  FORMATION_EXAMPLE: 'formation_example',
-  /** Multiple formations showcase */
-  MULTI_FORMATION: 'multi_formation',
-  /** Circle patrol pattern */
-  CIRCLE_PATROL: 'circle_patrol',
-  /** Search and rescue mission */
-  SEARCH_RESCUE: 'search_rescue',
-  /** Synchronized choreography */
-  CHOREOGRAPHY: 'choreography',
+  /** Coordinate movement example */
+  COORDINATE_EXAMPLE: 'coordinate_example',
 } as const
 
 export type ProjectTemplate = typeof ProjectTemplate[keyof typeof ProjectTemplate]

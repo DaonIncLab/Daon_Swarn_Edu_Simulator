@@ -8,8 +8,8 @@ export function ExecutionPanel() {
   const { t } = useTranslation()
   const {
     status,
-    commands,
-    currentCommandIndex,
+    scenarioPlan,
+    scenarioSummary,
     currentNodeId,
     currentNodePath,
     error,
@@ -21,7 +21,7 @@ export function ExecutionPanel() {
   const { status: connectionStatus, mode } = useConnectionStore()
   const isConnected = connectionStatus === ConnectionStatus.CONNECTED
   const isRunning = status === ExecutionStatus.RUNNING
-  const hasCommands = commands.length > 0
+  const hasScenarioPlan = Boolean(scenarioPlan) && scenarioSummary.commandNodes > 0
   const isTestMode = mode === ConnectionMode.TEST
 
   return (
@@ -42,10 +42,10 @@ export function ExecutionPanel() {
           <StatusBadge status={status} />
         </div>
 
-        {hasCommands && (
+        {hasScenarioPlan && (
           <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
             <span>{t('execution.commandCount')}:</span>
-            <span className="font-mono font-semibold">{commands.length}{t('execution.commands')}</span>
+            <span className="font-mono font-semibold">{scenarioSummary.commandNodes}{t('execution.commands')}</span>
           </div>
         )}
 
@@ -63,21 +63,13 @@ export function ExecutionPanel() {
           </div>
         )}
 
-        {isRunning && currentCommandIndex >= 0 && (
-          <div className="mt-2">
-            <div className="flex items-center justify-between text-sm text-[var(--text-secondary)] mb-1">
-              <span>{t('execution.progress')}:</span>
-              <span className="font-mono">
-                {currentCommandIndex + 1} / {commands.length}
-              </span>
+        {isRunning && (
+          <div className="mt-2 pt-2 border-t border-[var(--border-primary)] text-xs text-[var(--text-secondary)]">
+            <div>
+              Plan Nodes: <span className="font-mono">{scenarioSummary.totalNodes}</span>
             </div>
-            <div className="w-full bg-[var(--progress-bg)] rounded-full h-2">
-              <div
-                className="bg-primary-600 h-2 rounded-full transition-all"
-                style={{
-                  width: `${((currentCommandIndex + 1) / commands.length) * 100}%`
-                }}
-              />
+            <div>
+              Max Depth: <span className="font-mono">{scenarioSummary.maxDepth}</span>
             </div>
           </div>
         )}
@@ -97,7 +89,7 @@ export function ExecutionPanel() {
             variant="success"
             fullWidth
             onClick={executeScript}
-            disabled={!isConnected || !hasCommands}
+            disabled={!isConnected || !hasScenarioPlan}
           >
             ▶ {t('execution.execute')}
           </Button>
@@ -131,7 +123,7 @@ export function ExecutionPanel() {
         </div>
       )}
 
-      {isConnected && !hasCommands && (
+      {isConnected && !hasScenarioPlan && (
         <div className="mt-4 p-3 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg">
           <p className="text-sm text-[var(--info-text)]">
             💡 {t('execution.help.noCommands')}
@@ -139,7 +131,7 @@ export function ExecutionPanel() {
         </div>
       )}
 
-      {isConnected && isTestMode && hasCommands && (
+      {isConnected && isTestMode && hasScenarioPlan && (
         <div className="mt-4 p-3 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg">
           <p className="text-sm text-[var(--info-text)]">
             🧪 {t('execution.help.testModeInfo')}
@@ -148,7 +140,7 @@ export function ExecutionPanel() {
       )}
 
       {/* 제어 흐름 도움말 */}
-      {isConnected && hasCommands && !isRunning && (
+      {isConnected && hasScenarioPlan && !isRunning && (
         <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
           <p className="text-sm text-purple-800 font-medium mb-1">
             ✨ {t('execution.help.controlFlowTitle')}

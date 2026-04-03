@@ -4,6 +4,7 @@
  */
 
 import * as Blockly from 'blockly'
+import { ProjectTemplate } from '@/constants/project'
 import { log } from '@/utils/logger'
 
 /**
@@ -172,167 +173,45 @@ function countBlocksRecursive(block: Blockly.Block): number {
  */
 export function getTemplateXml(template: string): string {
   switch (template) {
-    case 'basic_flight':
+    case ProjectTemplate.BASIC_FLIGHT:
       return `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="swarm_takeoff_all" x="50" y="50">
+  <block type="drone_takeoff_all" x="50" y="50">
     <field name="ALTITUDE">2</field>
     <next>
-      <block type="swarm_move_formation">
+      <block type="drone_move_direction_all">
         <field name="DIRECTION">forward</field>
         <field name="DISTANCE">5</field>
         <next>
-          <block type="swarm_land_all"></block>
+          <block type="drone_land_all"></block>
         </next>
       </block>
     </next>
   </block>
 </xml>`
 
-    case 'repeat_example':
+    case ProjectTemplate.REPEAT_EXAMPLE:
       return `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="swarm_takeoff_all" x="50" y="50">
-    <field name="ALTITUDE">2</field>
+  <block type="drone_set_speed" x="50" y="50">
+    <field name="SPEED">2.5</field>
     <next>
-      <block type="controls_repeat">
-        <field name="TIMES">3</field>
-        <statement name="DO">
-          <block type="swarm_move_formation">
-            <field name="DIRECTION">forward</field>
-            <field name="DISTANCE">2</field>
-            <next>
-              <block type="swarm_wait">
-                <field name="DURATION">1</field>
-              </block>
-            </next>
-          </block>
-        </statement>
-        <next>
-          <block type="swarm_land_all"></block>
-        </next>
-      </block>
-    </next>
-  </block>
-</xml>`
-
-    case 'conditional_example':
-      return `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="controls_if_simple" x="50" y="50">
-    <field name="CONDITION">all_connected</field>
-    <statement name="DO">
-      <block type="swarm_takeoff_all">
+      <block type="drone_takeoff_all">
         <field name="ALTITUDE">2</field>
         <next>
-          <block type="swarm_move_formation">
-            <field name="DIRECTION">forward</field>
-            <field name="DISTANCE">3</field>
-            <next>
-              <block type="swarm_land_all"></block>
-            </next>
-          </block>
-        </next>
-      </block>
-    </statement>
-  </block>
-</xml>`
-
-    case 'formation_example':
-      return `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="swarm_takeoff_all" x="50" y="50">
-    <field name="ALTITUDE">2</field>
-    <next>
-      <block type="swarm_formation_grid">
-        <field name="ROWS">2</field>
-        <field name="COLS">5</field>
-        <field name="SPACING">2</field>
-        <next>
-          <block type="swarm_move_formation">
-            <field name="DIRECTION">forward</field>
-            <field name="DISTANCE">5</field>
-            <next>
-              <block type="swarm_land_all"></block>
-            </next>
-          </block>
-        </next>
-      </block>
-    </next>
-  </block>
-</xml>`
-
-    case 'multi_formation':
-      return `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="swarm_takeoff_all" x="50" y="50">
-    <field name="ALTITUDE">3</field>
-    <next>
-      <block type="swarm_formation_line">
-        <field name="ROWS">1</field>
-        <field name="COLS">4</field>
-        <field name="SPACING">2</field>
-        <next>
-          <block type="swarm_move_formation">
-            <field name="DIRECTION">forward</field>
-            <field name="DISTANCE">5</field>
-            <next>
-              <block type="swarm_wait">
-                <field name="DURATION">2</field>
-                <next>
-                  <block type="swarm_formation_circle">
-                    <field name="RADIUS">5</field>
-                    <field name="SPACING">3</field>
-                    <next>
-                      <block type="swarm_wait">
-                        <field name="DURATION">2</field>
-                        <next>
-                          <block type="swarm_formation_vshape">
-                            <field name="DEPTH">2</field>
-                            <field name="SPACING">2.5</field>
-                            <next>
-                              <block type="swarm_move_formation">
-                                <field name="DIRECTION">forward</field>
-                                <field name="DISTANCE">5</field>
-                                <next>
-                                  <block type="swarm_land_all"></block>
-                                </next>
-                              </block>
-                            </next>
-                          </block>
-                        </next>
-                      </block>
-                    </next>
-                  </block>
-                </next>
-              </block>
-            </next>
-          </block>
-        </next>
-      </block>
-    </next>
-  </block>
-</xml>`
-
-    case 'circle_patrol':
-      return `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="swarm_takeoff_all" x="50" y="50">
-    <field name="ALTITUDE">2.5</field>
-    <next>
-      <block type="swarm_formation_circle">
-        <field name="RADIUS">5</field>
-        <field name="SPACING">4</field>
-        <next>
-          <block type="controls_repeat">
-            <field name="TIMES">4</field>
+          <block type="control_repeat">
+            <field name="TIMES">3</field>
             <statement name="DO">
-              <block type="swarm_move_formation">
+              <block type="drone_move_direction_all">
                 <field name="DIRECTION">forward</field>
-                <field name="DISTANCE">3</field>
+                <field name="DISTANCE">2</field>
                 <next>
-                  <block type="swarm_wait">
+                  <block type="control_wait">
                     <field name="DURATION">1</field>
                   </block>
                 </next>
               </block>
             </statement>
             <next>
-              <block type="swarm_land_all"></block>
+              <block type="drone_land_all"></block>
             </next>
           </block>
         </next>
@@ -341,125 +220,27 @@ export function getTemplateXml(template: string): string {
   </block>
 </xml>`
 
-    case 'search_rescue':
+    case ProjectTemplate.COORDINATE_EXAMPLE:
       return `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="swarm_takeoff_all" x="50" y="50">
-    <field name="ALTITUDE">3</field>
-    <next>
-      <block type="swarm_formation_grid">
-        <field name="ROWS">2</field>
-        <field name="COLS">2</field>
-        <field name="SPACING">5</field>
-        <next>
-          <block type="controls_repeat">
-            <field name="TIMES">3</field>
-            <statement name="DO">
-              <block type="swarm_move_formation">
-                <field name="DIRECTION">forward</field>
-                <field name="DISTANCE">4</field>
-                <next>
-                  <block type="swarm_wait">
-                    <field name="DURATION">2</field>
-                    <next>
-                      <block type="swarm_move_formation">
-                        <field name="DIRECTION">right</field>
-                        <field name="DISTANCE">3</field>
-                        <next>
-                          <block type="swarm_wait">
-                            <field name="DURATION">2</field>
-                          </block>
-                        </next>
-                      </block>
-                    </next>
-                  </block>
-                </next>
-              </block>
-            </statement>
-            <next>
-              <block type="swarm_formation_circle">
-                <field name="RADIUS">3</field>
-                <field name="SPACING">2</field>
-                <next>
-                  <block type="swarm_wait">
-                    <field name="DURATION">3</field>
-                    <next>
-                      <block type="swarm_land_all"></block>
-                    </next>
-                  </block>
-                </next>
-              </block>
-            </next>
-          </block>
-        </next>
-      </block>
-    </next>
-  </block>
-</xml>`
-
-    case 'choreography':
-      return `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="swarm_takeoff_all" x="50" y="50">
+  <block type="drone_takeoff_all" x="50" y="50">
     <field name="ALTITUDE">2</field>
     <next>
-      <block type="controls_repeat">
-        <field name="TIMES">2</field>
-        <statement name="DO">
-          <block type="swarm_formation_line">
-            <field name="ROWS">1</field>
-            <field name="COLS">4</field>
-            <field name="SPACING">2</field>
-            <next>
-              <block type="swarm_move_formation">
-                <field name="DIRECTION">forward</field>
-                <field name="DISTANCE">3</field>
-                <next>
-                  <block type="swarm_formation_grid">
-                    <field name="ROWS">2</field>
-                    <field name="COLS">2</field>
-                    <field name="SPACING">2</field>
-                    <next>
-                      <block type="swarm_move_formation">
-                        <field name="DIRECTION">up</field>
-                        <field name="DISTANCE">1</field>
-                        <next>
-                          <block type="swarm_set_formation">
-                            <field name="FORMATION_TYPE">circle</field>
-                            <field name="ROWS">4</field>
-                            <field name="COLS">1</field>
-                            <field name="SPACING">2</field>
-                            <next>
-                              <block type="swarm_move_formation">
-                                <field name="DIRECTION">down</field>
-                                <field name="DISTANCE">1</field>
-                                <next>
-                                  <block type="swarm_wait">
-                                    <field name="DURATION">1</field>
-                                  </block>
-                                </next>
-                              </block>
-                            </next>
-                          </block>
-                        </next>
-                      </block>
-                    </next>
-                  </block>
-                </next>
-              </block>
-            </next>
-          </block>
-        </statement>
+      <block type="drone_move_xyz">
+        <field name="DRONE_ID">1</field>
+        <field name="X">2</field>
+        <field name="Y">0</field>
+        <field name="Z">1</field>
         <next>
-          <block type="swarm_set_formation">
-            <field name="FORMATION_TYPE">v_shape</field>
-            <field name="ROWS">2</field>
-            <field name="COLS">2</field>
-            <field name="SPACING">3</field>
+          <block type="drone_move_xyz">
+            <field name="DRONE_ID">2</field>
+            <field name="X">-2</field>
+            <field name="Y">0</field>
+            <field name="Z">1</field>
             <next>
-              <block type="swarm_move_formation">
-                <field name="DIRECTION">forward</field>
-                <field name="DISTANCE">5</field>
+              <block type="control_wait">
+                <field name="DURATION">1</field>
                 <next>
-                  <block type="swarm_land_all"></block>
+                  <block type="drone_land_all"></block>
                 </next>
               </block>
             </next>
@@ -470,6 +251,7 @@ export function getTemplateXml(template: string): string {
   </block>
 </xml>`
 
+    case ProjectTemplate.BLANK:
     default:
       return createEmptyWorkspaceXml()
   }

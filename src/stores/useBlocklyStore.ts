@@ -1,77 +1,62 @@
-import { create } from 'zustand'
-import * as Blockly from 'blockly'
-import type { Command } from '@/types/websocket'
-import type { ExecutableNode } from '@/types/execution'
+import { create } from "zustand";
+import * as Blockly from "blockly";
+import type { ScenarioPlan } from "@/types/execution";
 
-/**
- * Blockly 워크스페이스 상태 관리 스토어
- */
 interface BlocklyStore {
-  // State
-  workspace: Blockly.WorkspaceSvg | null
-  generatedCommands: Command[]
-  hasUnsavedChanges: boolean
+  workspace: Blockly.WorkspaceSvg | null;
+  scenarioPlan: ScenarioPlan | null;
+  hasUnsavedChanges: boolean;
+  workspaceHash: string | null;
 
-  // Caching fields
-  parsedTree: ExecutableNode | null
-  workspaceHash: string | null
+  setWorkspace: (workspace: Blockly.WorkspaceSvg | null) => void;
+  setScenarioPlan: (plan: ScenarioPlan | null) => void;
+  setHasUnsavedChanges: (hasChanges: boolean) => void;
+  clearWorkspace: () => void;
 
-  // Actions
-  setWorkspace: (workspace: Blockly.WorkspaceSvg | null) => void
-  setGeneratedCommands: (commands: Command[]) => void
-  setHasUnsavedChanges: (hasChanges: boolean) => void
-  clearWorkspace: () => void
-
-  // Cache methods
-  invalidateCache: () => void
-  getParsedTree: () => ExecutableNode | null
-  getWorkspaceHash: () => string | null
-  setCachedParsedTree: (tree: ExecutableNode | null, hash: string | null) => void
+  invalidateScenarioCache: () => void;
+  getScenarioPlan: () => ScenarioPlan | null;
+  getWorkspaceHash: () => string | null;
+  setCachedScenarioPlan: (plan: ScenarioPlan | null, hash: string | null) => void;
 }
 
 export const useBlocklyStore = create<BlocklyStore>((set, get) => ({
-  // Initial state
   workspace: null,
-  generatedCommands: [],
+  scenarioPlan: null,
   hasUnsavedChanges: false,
-  parsedTree: null,
   workspaceHash: null,
 
-  // Actions
   setWorkspace: (workspace) => set({ workspace }),
 
-  setGeneratedCommands: (commands) => set({ generatedCommands: commands }),
+  setScenarioPlan: (scenarioPlan) => set({ scenarioPlan }),
 
   setHasUnsavedChanges: (hasChanges) => {
-    set({ hasUnsavedChanges: hasChanges })
-    // Invalidate cache when workspace changes
+    set({ hasUnsavedChanges: hasChanges });
     if (hasChanges) {
-      get().invalidateCache()
+      get().invalidateScenarioCache();
     }
   },
 
   clearWorkspace: () => {
-    const { workspace } = get()
+    const { workspace } = get();
     if (workspace) {
-      workspace.clear()
-      set({ generatedCommands: [], hasUnsavedChanges: false, parsedTree: null, workspaceHash: null })
+      workspace.clear();
+      set({
+        hasUnsavedChanges: false,
+        scenarioPlan: null,
+        workspaceHash: null,
+      });
     }
   },
 
-  // Cache methods
-  invalidateCache: () => {
-    set({ parsedTree: null, workspaceHash: null })
+  invalidateScenarioCache: () => {
+    set({ scenarioPlan: null, workspaceHash: null });
   },
 
-  getParsedTree: () => {
-    return get().parsedTree
-  },
+  getScenarioPlan: () => get().scenarioPlan,
 
-  getWorkspaceHash: () => {
-    return get().workspaceHash
-  },
+  getWorkspaceHash: () => get().workspaceHash,
 
-  setCachedParsedTree: (tree, hash) => {
-    set({ parsedTree: tree, workspaceHash: hash })
+  setCachedScenarioPlan: (scenarioPlan, workspaceHash) => {
+    set({ scenarioPlan, workspaceHash });
   },
-}))
+}));

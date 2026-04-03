@@ -196,7 +196,7 @@ function blockToCommand(block: Blockly.Block): Command | null {
 
     case "drone_move_xyz":
       return {
-        action: CommandAction.MOVE_XYZ,
+        action: CommandAction.MOVE_DRONE,
         params: {
           droneId: block.getFieldValue("DRONE_ID") as number,
           x: block.getFieldValue("X") as number,
