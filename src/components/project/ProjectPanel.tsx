@@ -1,0 +1,134 @@
+import { useState } from 'react'
+import { useProjectStore } from '@/stores/useProjectStore'
+import { useBlocklyStore } from '@/stores/useBlocklyStore'
+import { Button } from '@/components/common/Button'
+import { NewProjectModal } from './NewProjectModal'
+import { ProjectListModal } from './ProjectListModal'
+import { log } from '@/utils/logger'
+
+interface ProjectPanelProps {
+  onProjectReady?: () => void
+}
+
+export function ProjectPanel({ onProjectReady }: ProjectPanelProps) {
+  const { currentProject, saveCurrentProject, exportProjectToFile, isLoading } = useProjectStore()
+  const { hasUnsavedChanges } = useBlocklyStore()
+  const [showNewModal, setShowNewModal] = useState(false)
+  const [showListModal, setShowListModal] = useState(false)
+
+  const handleSave = async () => {
+    try {
+      await saveCurrentProject()
+      alert('프로젝트가 저장되었습니다')
+    } catch (error) {
+      log.error("Save failed", { context: "ProjectPanel", error })
+      alert('저장 실패')
+    }
+  }
+
+  const handleExport = async () => {
+    if (!currentProject) return
+
+    try {
+      await exportProjectToFile(currentProject.id)
+    } catch (error) {
+      log.error("Export failed", { context: "ProjectPanel", error })
+      alert('내보내기 실패')
+    }
+  }
+
+  return (
+    <>
+      <div className="bg-[var(--bg-secondary)] rounded-lg shadow-md p-4 sm:p-6 transition-colors">
+        <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">프로젝트</h3>
+
+        {/* Current Project Info */}
+        {currentProject ? (
+          <div className="mb-4 p-3 bg-[var(--bg-tertiary)] rounded-lg">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-[var(--text-primary)] truncate">
+                    {currentProject.name}
+                  </h4>
+                  {hasUnsavedChanges && (
+                    <span className="text-[var(--unsaved-indicator)] font-bold" title="저장되지 않은 변경사항">
+                      ✱
+                    </span>
+                  )}
+                </div>
+                {currentProject.description && (
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+                    {currentProject.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 p-3 bg-[var(--bg-tertiary)] rounded-lg text-center text-sm text-[var(--text-secondary)]">
+            열린 프로젝트가 없습니다
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => setShowNewModal(true)}
+            disabled={isLoading}
+            className="hover:-translate-y-0.5 hover:shadow-md"
+          >
+            📄 새 프로젝트
+          </Button>
+
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => setShowListModal(true)}
+            disabled={isLoading}
+            className="border border-primary-500 bg-primary-50 text-primary-700 hover:-translate-y-0.5 hover:shadow-md hover:bg-primary-200 hover:text-primary-900"
+          >
+            📂 프로젝트 열기
+          </Button>
+
+          {currentProject && (
+            <>
+              <Button
+                variant="success"
+                fullWidth
+                onClick={handleSave}
+                disabled={isLoading || !hasUnsavedChanges}
+              >
+                💾 저장 {hasUnsavedChanges && '✱'}
+              </Button>
+
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={handleExport}
+                disabled={isLoading}
+              >
+                📤 내보내기
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
+      <NewProjectModal
+        isOpen={showNewModal}
+        onClose={() => setShowNewModal(false)}
+        onCreated={onProjectReady}
+      />
+
+      <ProjectListModal
+        isOpen={showListModal}
+        onClose={() => setShowListModal(false)}
+        onLoaded={onProjectReady}
+      />
+    </>
+  )
+}
