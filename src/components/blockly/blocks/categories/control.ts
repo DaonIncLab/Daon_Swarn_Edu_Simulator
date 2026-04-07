@@ -85,7 +85,7 @@ export function registerControlBlocks() {
       this.setPreviousStatement(true, null);
       this.setNextStatement(true, null);
       this.setColour(210);
-      this.setTooltip("고급 블록: 조건이 참인 동안 반복합니다.");
+      this.setTooltip("조건이 참인 동안 블록들을 반복 실행합니다.");
       this.setHelpUrl("");
     },
   };

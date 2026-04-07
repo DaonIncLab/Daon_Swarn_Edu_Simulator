@@ -5,6 +5,7 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { Interpreter } from '@/services/execution/interpreter'
 import type { IConnectionService } from '@/services/connection'
+import { MAVLinkConnectionService } from '@/services/connection/MAVLinkConnectionService'
 import type {
   ExecutableNode,
   CommandNode,
@@ -31,7 +32,7 @@ describe('Interpreter', () => {
   beforeEach(() => {
     // Mock connection service
     mockConnectionService = {
-      sendCommand: vi.fn().mockResolvedValue({ success: true } as CommandResponse),
+      sendCommands: vi.fn().mockResolvedValue({ success: true } as CommandResponse),
     } as unknown as IConnectionService
 
     interpreter = new Interpreter(mockConnectionService)
@@ -98,7 +99,7 @@ describe('Interpreter', () => {
     })
 
     test('state changes to error on failed command', async () => {
-      mockConnectionService.sendCommand = vi.fn().mockResolvedValue({
+      mockConnectionService.sendCommands = vi.fn().mockResolvedValue({
         success: false,
         error: 'Connection failed',
       })
@@ -129,8 +130,8 @@ describe('Interpreter', () => {
 
       expect(result.success).toBe(true)
       expect(result.executedNodes).toBe(1)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledWith(commandNode.command)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledWith([commandNode.command], undefined)
     })
 
     test('executes multiple commands in sequence', async () => {
@@ -159,7 +160,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(sequenceNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(3)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(3)
     })
   })
 
@@ -179,7 +180,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(repeatNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(3)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(3)
     })
 
     test('executes nested repeats correctly', async () => {
@@ -202,7 +203,62 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(nestedRepeat)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(2 * 3) // 6 times
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(2 * 3) // 6 times
+    })
+
+    test('flattens repeated commands into a single MAVLink batch', async () => {
+      const mavlinkService = new MAVLinkConnectionService()
+      const sendCommandsSpy = vi
+        .spyOn(mavlinkService, 'sendCommands')
+        .mockResolvedValue({ success: true, timestamp: Date.now() })
+
+      const mavlinkInterpreter = new Interpreter(mavlinkService)
+      mavlinkInterpreter.updateDroneStates(mockDroneStates)
+
+      const sequenceNode: SequenceNode = {
+        id: 'seq1',
+        type: 'sequence',
+        children: [
+          {
+            id: 'cmd1',
+            type: 'command',
+            command: { action: CommandAction.TAKEOFF_ALL, params: { altitude: 10 } },
+          },
+          {
+            id: 'repeat1',
+            type: 'repeat',
+            times: 2,
+            body: {
+              id: 'seq2',
+              type: 'sequence',
+              children: [
+                {
+                  id: 'cmd2',
+                  type: 'command',
+                  command: { action: CommandAction.HOVER, params: {} },
+                },
+                {
+                  id: 'cmd3',
+                  type: 'command',
+                  command: { action: CommandAction.LAND_ALL, params: {} },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      const result = await mavlinkInterpreter.execute(sequenceNode)
+
+      expect(result.success).toBe(true)
+      expect(sendCommandsSpy).toHaveBeenCalledTimes(1)
+      expect(sendCommandsSpy).toHaveBeenCalledWith([
+        { action: CommandAction.TAKEOFF_ALL, params: { altitude: 10 } },
+        { action: CommandAction.HOVER, params: {} },
+        { action: CommandAction.LAND_ALL, params: {} },
+        { action: CommandAction.HOVER, params: {} },
+        { action: CommandAction.LAND_ALL, params: {} },
+      ])
     })
   })
 
@@ -230,7 +286,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(forLoopNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(3)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(3)
     })
 
     test('for loop with decrementing variable', async () => {
@@ -251,7 +307,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(forLoopNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(5) // 5, 4, 3, 2, 1
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(5) // 5, 4, 3, 2, 1
     })
 
     test('for loop with step size > 1', async () => {
@@ -272,7 +328,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(forLoopNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(6) // 0, 2, 4, 6, 8, 10
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(6) // 0, 2, 4, 6, 8, 10
     })
   })
 
@@ -319,7 +375,7 @@ describe('Interpreter', () => {
 
       expect(result.success).toBe(true)
       // Should execute once: condition is true, then sets count to 0
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
     })
 
     test('while loop respects maxIterations', async () => {
@@ -338,7 +394,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(whileLoop)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(5) // Max 5 iterations
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(5) // Max 5 iterations
     })
 
     test('while loop exits immediately if condition is false', async () => {
@@ -357,7 +413,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(whileLoop)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).not.toHaveBeenCalled()
+      expect(mockConnectionService.sendCommands).not.toHaveBeenCalled()
     })
   })
 
@@ -378,7 +434,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(untilLoop)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1) // Executes once, then condition is true
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1) // Executes once, then condition is true
     })
 
     test('until loop repeats while condition is false', async () => {
@@ -411,7 +467,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(untilLoop)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -431,7 +487,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(ifNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
     })
 
     test('skips then branch when condition is false', async () => {
@@ -449,7 +505,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(ifNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).not.toHaveBeenCalled()
+      expect(mockConnectionService.sendCommands).not.toHaveBeenCalled()
     })
 
     test('evaluates drone state conditions', async () => {
@@ -467,7 +523,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(ifNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -492,11 +548,13 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(ifElseNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledWith({
-        action: CommandAction.TAKEOFF_ALL,
-        params: { altitude: 10 },
-      })
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledWith([
+        {
+          action: CommandAction.TAKEOFF_ALL,
+          params: { altitude: 10 },
+        },
+      ], undefined)
     })
 
     test('executes else branch when condition is false', async () => {
@@ -519,11 +577,64 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(ifElseNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledWith({
-        action: CommandAction.LAND_ALL,
-        params: {},
-      })
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledWith([
+        {
+          action: CommandAction.LAND_ALL,
+          params: {},
+        },
+      ], undefined)
+    })
+
+    test('evaluates condition before flattening MAVLink repeats', async () => {
+      const mavlinkService = new MAVLinkConnectionService()
+      const sendCommandsSpy = vi
+        .spyOn(mavlinkService, 'sendCommands')
+        .mockResolvedValue({ success: true, timestamp: Date.now() })
+
+      const mavlinkInterpreter = new Interpreter(mavlinkService)
+      mavlinkInterpreter.updateDroneStates(mockDroneStates)
+
+      const sequenceNode: SequenceNode = {
+        id: 'seq_if_repeat',
+        type: 'sequence',
+        children: [
+          {
+            id: 'ifelse1',
+            type: 'if_else',
+            condition: 'false',
+            thenBranch: {
+              id: 'cmd_then',
+              type: 'command',
+              command: { action: CommandAction.TAKEOFF_ALL, params: { altitude: 5 } },
+            },
+            elseBranch: {
+              id: 'cmd_else',
+              type: 'command',
+              command: { action: CommandAction.LAND_ALL, params: {} },
+            },
+          },
+          {
+            id: 'repeat1',
+            type: 'repeat',
+            times: 2,
+            body: {
+              id: 'cmd_hover',
+              type: 'command',
+              command: { action: CommandAction.HOVER, params: {} },
+            },
+          },
+        ],
+      }
+
+      const result = await mavlinkInterpreter.execute(sequenceNode)
+
+      expect(result.success).toBe(true)
+      expect(sendCommandsSpy).toHaveBeenCalledWith([
+        { action: CommandAction.LAND_ALL, params: {} },
+        { action: CommandAction.HOVER, params: {} },
+        { action: CommandAction.HOVER, params: {} },
+      ])
     })
   })
 
@@ -587,7 +698,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(sequenceNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -619,7 +730,7 @@ describe('Interpreter', () => {
       const result = await interpreter.execute(sequenceNode)
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(1)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(1)
     })
 
     test('throws error when calling undefined function', async () => {
@@ -689,7 +800,7 @@ describe('Interpreter', () => {
       expect(result.success).toBe(false)
       expect(result.error).toContain('stopped')
       // Should have executed fewer than 10 commands
-      expect(mockConnectionService.sendCommand).toHaveBeenCalled()
+      expect(mockConnectionService.sendCommands).toHaveBeenCalled()
     })
 
     test('pause() and resume() work correctly', async () => {
@@ -720,13 +831,13 @@ describe('Interpreter', () => {
       const result = await executionPromise
 
       expect(result.success).toBe(true)
-      expect(mockConnectionService.sendCommand).toHaveBeenCalledTimes(2)
+      expect(mockConnectionService.sendCommands).toHaveBeenCalledTimes(2)
     })
   })
 
   describe('Error Handling', () => {
     test('handles command execution errors', async () => {
-      mockConnectionService.sendCommand = vi.fn().mockResolvedValue({
+      mockConnectionService.sendCommands = vi.fn().mockResolvedValue({
         success: false,
         error: 'Drone connection lost',
       })
@@ -746,7 +857,7 @@ describe('Interpreter', () => {
 
     test('execution continues after resetting from error state', async () => {
       // First execution fails
-      mockConnectionService.sendCommand = vi.fn().mockResolvedValue({
+      mockConnectionService.sendCommands = vi.fn().mockResolvedValue({
         success: false,
         error: 'Error',
       })
@@ -761,7 +872,7 @@ describe('Interpreter', () => {
       expect(result1.success).toBe(false)
 
       // Fix the service and execute again
-      mockConnectionService.sendCommand = vi.fn().mockResolvedValue({ success: true })
+      mockConnectionService.sendCommands = vi.fn().mockResolvedValue({ success: true })
 
       const cmdNode2: CommandNode = {
         id: 'cmd2',

@@ -161,7 +161,7 @@ export const blockRegistry: BlocklyBlockMetadata[] = [
     category: "control",
     displayName: "While 반복",
     planMapping: "while_loop",
-    status: "advanced",
+    status: "active",
   },
   {
     type: "var_set",

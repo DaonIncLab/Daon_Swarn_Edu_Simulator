@@ -5,8 +5,10 @@
  */
 
 import {
+  MAVLinkConnectionService,
   UnityWebGLConnectionService,
   type IConnectionService,
+  type CommandBatchContext,
 } from "@/services/connection";
 import { CommandAction } from "@/constants/commands";
 import type {
@@ -36,7 +38,10 @@ export class Interpreter {
   private isPaused: boolean = false;
   private resumePromise: Promise<void> | null = null;
   private resumeResolver: (() => void) | null = null;
-  private size: number = 0;
+  private size: number | null = null;
+
+  private static readonly MAVLINK_WAIT_UNSUPPORTED_ERROR =
+    "WAIT nodes are not supported in MAVLink mission batches";
 
   constructor(connectionService: IConnectionService) {
     this.connectionService = connectionService;
@@ -106,7 +111,11 @@ export class Interpreter {
     let executedNodes = 0;
 
     try {
-      executedNodes = await this.executeNode(tree, [0]);
+      if (this.connectionService instanceof MAVLinkConnectionService) {
+        executedNodes = await this.executeAsMAVLinkMission(tree);
+      } else {
+        executedNodes = await this.executeNode(tree, [0]);
+      }
 
       if (this.shouldStop) {
         this.updateState({ status: "idle" });
@@ -125,6 +134,24 @@ export class Interpreter {
       this.updateState({ status: "error", error: errorMsg });
       return { success: false, error: errorMsg, executedNodes };
     }
+  }
+
+  private async executeAsMAVLinkMission(
+    tree: ExecutableNode,
+  ): Promise<number> {
+    const plan = await this.buildCommandList(tree, [0]);
+
+    if (this.shouldStop || plan.commands.length === 0) {
+      return plan.executedNodes;
+    }
+
+    const response = await this.connectionService.sendCommands(plan.commands);
+    if (!response.success) {
+      throw new Error(`Command failed: ${response.error || "Unknown error"}`);
+    }
+
+    await this.delay(100);
+    return plan.executedNodes;
   }
 
   /**
@@ -280,6 +307,76 @@ export class Interpreter {
     return executedCount;
   }
 
+  private async buildCommandList(
+    node: ExecutableNode,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    if (this.shouldStop) {
+      return { commands: [], executedNodes: 0 };
+    }
+
+    await this.checkPause();
+
+    this.updateState({ currentNodeId: node.id, currentNodePath: path });
+
+    log.debug("Interpreter", `Planning node ${node.id} (type: ${node.type})`);
+
+    switch (node.type) {
+      case "command":
+        return {
+          commands: [this.applyScenarioContext(node.command)],
+          executedNodes: 1,
+        };
+
+      case "sequence":
+        return this.buildSequenceCommandList(node, path);
+
+      case "repeat":
+        return this.buildRepeatCommandList(node, path);
+
+      case "for_loop":
+        return this.buildForLoopCommandList(node, path);
+
+      case "while_loop":
+        return this.buildWhileLoopCommandList(node, path);
+
+      case "until_loop":
+        return this.buildUntilLoopCommandList(node, path);
+
+      case "if":
+        return this.buildIfCommandList(node, path);
+
+      case "if_else":
+        return this.buildIfElseCommandList(node, path);
+
+      case "wait":
+        throw new Error(Interpreter.MAVLINK_WAIT_UNSUPPORTED_ERROR);
+
+      case "variable_set":
+        await this.executeVariableSet(node);
+        return { commands: [], executedNodes: 1 };
+
+      case "variable_get":
+        log.warn("Interpreter", "Variable get node used as statement");
+        return { commands: [], executedNodes: 1 };
+
+      case "function_def":
+        await this.executeFunctionDef(node);
+        return { commands: [], executedNodes: 1 };
+
+      case "function_call":
+        return this.buildFunctionCallCommandList(node, path);
+
+      case "scenario_config":
+        await this.executeScenarioConfig(node);
+        return { commands: [], executedNodes: 1 };
+
+      default:
+        log.warn("Interpreter", "Unknown node type:", (node as any).type);
+        return { commands: [], executedNodes: 1 };
+    }
+  }
+
   /**
    * 명령 노드 실행
    */
@@ -297,10 +394,18 @@ export class Interpreter {
       command.params,
     );
 
-    const response: CommandResponse = await this.connectionService.sendCommand(
-      command,
-      size,
-      index,
+    const batchContext: CommandBatchContext | undefined =
+      typeof size === "number" && size > 0 && typeof index === "number"
+        ? {
+            index,
+            total: size,
+            isLast: index >= size,
+          }
+        : undefined;
+
+    const response: CommandResponse = await this.connectionService.sendCommands(
+      [command],
+      batchContext,
     );
 
     if (!response.success) {
@@ -329,6 +434,26 @@ export class Interpreter {
     return totalExecuted;
   }
 
+  private async buildSequenceCommandList(
+    node: any,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    const commands: Command[] = [];
+    let executedNodes = 0;
+
+    for (let i = 0; i < node.children.length; i++) {
+      if (this.shouldStop) {
+        break;
+      }
+
+      const childPlan = await this.buildCommandList(node.children[i], [...path, i]);
+      commands.push(...childPlan.commands);
+      executedNodes += childPlan.executedNodes;
+    }
+
+    return { commands, executedNodes };
+  }
+
   /**
    * 반복 노드 실행
    */
@@ -355,6 +480,33 @@ export class Interpreter {
     }
 
     return totalExecuted;
+  }
+
+  private async buildRepeatCommandList(
+    node: any,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    log.debug("Interpreter", `Planning repeat ${node.times} times`);
+
+    const commands: Command[] = [];
+    let executedNodes = 0;
+
+    for (let i = 0; i < node.times; i++) {
+      if (this.shouldStop) {
+        break;
+      }
+
+      const oldRepeatCount = this.state.context.currentRepeatCount;
+      this.state.context.currentRepeatCount = i + 1;
+
+      const iterationPlan = await this.buildCommandList(node.body, [...path, i]);
+      commands.push(...iterationPlan.commands);
+      executedNodes += iterationPlan.executedNodes;
+
+      this.state.context.currentRepeatCount = oldRepeatCount;
+    }
+
+    return { commands, executedNodes };
   }
 
   /**
@@ -395,6 +547,42 @@ export class Interpreter {
     return totalExecuted;
   }
 
+  private async buildForLoopCommandList(
+    node: any,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    log.debug(
+      "Interpreter",
+      `Planning for loop: ${node.variable} from ${node.from} to ${node.to} by ${node.by}`,
+    );
+
+    const commands: Command[] = [];
+    let executedNodes = 0;
+    const { variable, from, to, by } = node;
+    const isIncrementing = by > 0;
+    let loopIndex = 0;
+
+    for (let i = from; isIncrementing ? i <= to : i >= to; i += by) {
+      if (this.shouldStop) {
+        break;
+      }
+
+      this.state.context.variables.set(variable, i);
+      this.state.context.currentLoopVariable = { name: variable, value: i };
+
+      const loopPlan = await this.buildCommandList(node.body, [...path, loopIndex]);
+      commands.push(...loopPlan.commands);
+      executedNodes += loopPlan.executedNodes;
+
+      loopIndex++;
+    }
+
+    this.state.context.variables.delete(variable);
+    this.state.context.currentLoopVariable = undefined;
+
+    return { commands, executedNodes };
+  }
+
   /**
    * If 노드 실행
    */
@@ -423,6 +611,33 @@ export class Interpreter {
     }
 
     return 0;
+  }
+
+  private async buildIfCommandList(
+    node: any,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    log.debug("Interpreter", `Evaluating condition: ${node.condition}`);
+
+    const conditionResult = evaluateCondition(
+      node.condition,
+      this.droneStates,
+      this.state.context,
+    );
+
+    if (conditionResult.error) {
+      log.warn(
+        "Interpreter",
+        "Condition evaluation error:",
+        conditionResult.error,
+      );
+    }
+
+    if (!conditionResult.result) {
+      return { commands: [], executedNodes: 0 };
+    }
+
+    return this.buildCommandList(node.thenBranch, [...path, 0]);
   }
 
   /**
@@ -454,6 +669,33 @@ export class Interpreter {
       const childPath = [...path, 1];
       return await this.executeNode(node.elseBranch, childPath);
     }
+  }
+
+  private async buildIfElseCommandList(
+    node: any,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    log.debug("Interpreter", `Evaluating condition: ${node.condition}`);
+
+    const conditionResult = evaluateCondition(
+      node.condition,
+      this.droneStates,
+      this.state.context,
+    );
+
+    if (conditionResult.error) {
+      log.warn(
+        "Interpreter",
+        "Condition evaluation error:",
+        conditionResult.error,
+      );
+    }
+
+    if (conditionResult.result) {
+      return this.buildCommandList(node.thenBranch, [...path, 0]);
+    }
+
+    return this.buildCommandList(node.elseBranch, [...path, 1]);
   }
 
   /**
@@ -536,6 +778,55 @@ export class Interpreter {
     return totalExecuted;
   }
 
+  private async buildWhileLoopCommandList(
+    node: any,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    const commands: Command[] = [];
+    let executedNodes = 0;
+    let iteration = 0;
+    const maxIterations = node.maxIterations || 1000;
+
+    while (iteration < maxIterations) {
+      if (this.shouldStop) {
+        break;
+      }
+
+      const conditionResult = evaluateCondition(
+        node.condition,
+        this.droneStates,
+        this.state.context,
+      );
+
+      if (conditionResult.error) {
+        log.warn(
+          "Interpreter",
+          "While condition error:",
+          conditionResult.error,
+        );
+        break;
+      }
+
+      if (!conditionResult.result) {
+        break;
+      }
+
+      const loopPlan = await this.buildCommandList(node.body, [...path, iteration]);
+      commands.push(...loopPlan.commands);
+      executedNodes += loopPlan.executedNodes;
+      iteration++;
+    }
+
+    if (iteration >= maxIterations) {
+      log.warn(
+        "Interpreter",
+        `While loop reached max iterations (${maxIterations})`,
+      );
+    }
+
+    return { commands, executedNodes };
+  }
+
   /**
    * Repeat Until 루프 노드 실행 (Phase 6-A)
    */
@@ -591,6 +882,56 @@ export class Interpreter {
     }
 
     return totalExecuted;
+  }
+
+  private async buildUntilLoopCommandList(
+    node: any,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    const commands: Command[] = [];
+    let executedNodes = 0;
+    let iteration = 0;
+    const maxIterations = node.maxIterations || 1000;
+
+    while (iteration < maxIterations) {
+      if (this.shouldStop) {
+        break;
+      }
+
+      const loopPlan = await this.buildCommandList(node.body, [...path, iteration]);
+      commands.push(...loopPlan.commands);
+      executedNodes += loopPlan.executedNodes;
+
+      const conditionResult = evaluateCondition(
+        node.condition,
+        this.droneStates,
+        this.state.context,
+      );
+
+      if (conditionResult.error) {
+        log.warn(
+          "Interpreter",
+          "Until condition error:",
+          conditionResult.error,
+        );
+        break;
+      }
+
+      if (conditionResult.result) {
+        break;
+      }
+
+      iteration++;
+    }
+
+    if (iteration >= maxIterations) {
+      log.warn(
+        "Interpreter",
+        `Until loop reached max iterations (${maxIterations})`,
+      );
+    }
+
+    return { commands, executedNodes };
   }
 
   /**
@@ -652,6 +993,33 @@ export class Interpreter {
       return executed;
     } finally {
       // 호출 스택에서 제거
+      this.state.context.callStack.pop();
+    }
+  }
+
+  private async buildFunctionCallCommandList(
+    node: any,
+    path: number[],
+  ): Promise<{ commands: Command[]; executedNodes: number }> {
+    const functionName = node.functionName;
+    const functionBody = this.state.context.functions.get(functionName);
+
+    if (!functionBody) {
+      throw new Error(`Function '${functionName}' is not defined`);
+    }
+
+    const MAX_CALL_DEPTH = 10;
+    if (this.state.context.callStack.length >= MAX_CALL_DEPTH) {
+      throw new Error(
+        `Maximum function call depth (${MAX_CALL_DEPTH}) exceeded`,
+      );
+    }
+
+    this.state.context.callStack.push(functionName);
+
+    try {
+      return await this.buildCommandList(functionBody, [...path, 0]);
+    } finally {
       this.state.context.callStack.pop();
     }
   }

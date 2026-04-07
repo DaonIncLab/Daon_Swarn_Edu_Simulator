@@ -23,6 +23,7 @@ export function ExecutionPanel() {
   const isRunning = status === ExecutionStatus.RUNNING
   const hasScenarioPlan = Boolean(scenarioPlan) && scenarioSummary.commandNodes > 0
   const isTestMode = mode === ConnectionMode.TEST
+  const isUnityMode = mode === ConnectionMode.UNITY
 
   return (
     <div className="bg-[var(--bg-secondary)] rounded-lg shadow-md p-6 transition-colors">
@@ -135,6 +136,14 @@ export function ExecutionPanel() {
         <div className="mt-4 p-3 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg">
           <p className="text-sm text-[var(--info-text)]">
             🧪 {t('execution.help.testModeInfo')}
+          </p>
+        </div>
+      )}
+
+      {isConnected && isUnityMode && hasScenarioPlan && (
+        <div className="mt-4 p-3 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg">
+          <p className="text-sm text-[var(--info-text)]">
+            🎮 Unity mode: commands will be sent to the embedded runtime.
           </p>
         </div>
       )}

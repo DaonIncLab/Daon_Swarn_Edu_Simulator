@@ -19,6 +19,7 @@ import type {
   VariableGetNode,
   VariableSetNode,
   WaitNode,
+  WhileLoopNode,
 } from "@/types/execution";
 import type { Command } from "@/types/websocket";
 import { log } from "@/utils/logger";
@@ -35,7 +36,6 @@ const REMOVED_BLOCKS = new Set([
 ]);
 
 const HIDDEN_BLOCKS = new Set([
-  "control_while",
   "sensor_pitch",
   "sensor_roll",
   "sensor_yaw",
@@ -245,6 +245,9 @@ function parseSingleBlock(block: Blockly.Block): ExecutableNode | null {
     case "control_if_else":
     case "controls_if_else":
       return parseIfElseBlock(block);
+    case "control_while":
+    case "controls_while":
+      return parseWhileLoopBlock(block);
     case "control_wait":
       return parseWaitBlock(block);
     case "var_set":
@@ -323,6 +326,21 @@ function parseWaitBlock(block: Blockly.Block): WaitNode {
     id: generateNodeId(),
     type: "wait",
     duration: Number(block.getFieldValue("DURATION") || 1),
+  };
+}
+
+function parseWhileLoopBlock(block: Blockly.Block): WhileLoopNode | null {
+  const body = parseStatementBody(block, "DO");
+  if (!body) {
+    return null;
+  }
+
+  return {
+    id: generateNodeId(),
+    type: "while_loop",
+    condition: parseCondition(block),
+    body,
+    maxIterations: 1000,
   };
 }
 
