@@ -8,19 +8,16 @@
 ### ConnectionMode
 연결 모드는 `src/services/connection/types.ts`의 상수를 기준으로 함.
 
-- `UNITY_WEBGL`
-- `SIMULATION`
-- `MAVLINK_SIMULATION`
-- `REAL_DRONE`
+- `UNITY`
+- `MAVLINK`
 - `TEST`
 
 ### ConnectionConfig
 모든 연결은 `ConnectionConfig` 하나로 시작.
 
 - `mode`: 필수
-- `websocket`: 외부 시뮬레이터 연결 정보
 - `unityWebGL`: 임베드 Unity 빌드 정보
-- `mavlink`: 시뮬레이션/실드론 연결 정보
+- `mavlink`: 실제 드론 연결 정보
 - `test`: 더미 드론 수
 
 ### IConnectionService
@@ -28,8 +25,7 @@
 
 - `connect(config)`
 - `disconnect()`
-- `sendCommand(command)`
-- `sendCommands(commands)`
+- `sendCommands(commands, context?)`
 - `getStatus()`
 - `isConnected()`
 - `setEventListeners(listeners)`
@@ -38,7 +34,10 @@
 - `reset()`
 - `cleanup()`
 
-구현체는 `UnityWebGLConnectionService`, `WebSocketConnectionService`, `MAVLinkConnectionService`, `TestConnectionService`.
+구현체는 `UnityWebGLConnectionService`, `MAVLinkConnectionService`, `TestConnectionService`.
+
+`context`는 실행기와 연결 서비스 사이에서 배치 전송 문맥을 전달할 때 사용한다.
+기본 기준은 `index`, `total`, `isLast`.
 
 ## Core Stores
 ### useConnectionStore
@@ -49,12 +48,19 @@
 - `mode`
 - `error`
 - `latestTelemetry`
-- `ipAddress`, `port`
+- `testModeDroneCount`
 - `mavlinkTransportType`, `mavlinkHost`, `mavlinkPort`, `mavlinkSerialDevice`, `mavlinkBaudRate`
 - `formationMode`
 
 주요 action:
 - `setMode(...)`
+- `setTestModeDroneCount(...)`
+- `setMavlinkTransportType(...)`
+- `setMavlinkHost(...)`
+- `setMavlinkPort(...)`
+- `setMavlinkSerialDevice(...)`
+- `setMavlinkBaudRate(...)`
+- `setFormationMode(...)`
 - `connect()`
 - `disconnect()`
 - `updateTelemetry(...)`
@@ -83,6 +89,8 @@ Blockly 실행과 인터프리터 상태 관리.
 - `resumeExecution()`
 - `handleMessage(...)`
 - `updateExecutionState(...)`
+
+`drones`는 `TEST` 모드 시뮬레이터와 `MAVLINK` 실시간 텔레메트리가 공통 `telemetry` 메시지 경계로 합류하는 현재 드론 상태의 기준값이다.
 
 ### useBlocklyStore
 Blockly 워크스페이스와 시나리오 캐시 관리.

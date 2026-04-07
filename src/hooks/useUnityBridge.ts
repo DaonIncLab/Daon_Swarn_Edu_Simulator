@@ -70,7 +70,7 @@ export function useUnityBridge({
   // Unity 로드 완료 시
   useEffect(() => {
     if (isLoaded) {
-      log.info("Unity WebGL loaded successfully", { context: "UnityBridge" });
+      // log.info("Unity WebGL loaded successfully", { context: "UnityBridge" });
       setIsReady(true);
       onReady?.();
     }

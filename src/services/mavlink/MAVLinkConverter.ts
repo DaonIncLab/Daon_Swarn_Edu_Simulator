@@ -526,6 +526,24 @@ export class MAVLinkConverter {
   }
 
   /**
+   * Normalize a partial MAVLink drone snapshot into the UI/runtime shape.
+   */
+  static normalizeDroneState(
+    droneId: number,
+    state: Partial<DroneState>,
+  ): DroneState {
+    return {
+      id: state.id ?? droneId,
+      position: state.position ?? { x: 0, y: 0, z: 0 },
+      rotation: state.rotation ?? { x: 0, y: 0, z: 0 },
+      velocity: state.velocity ?? { x: 0, y: 0, z: 0 },
+      battery: state.battery ?? 100,
+      isActive: state.isActive ?? false,
+      status: state.status ?? "landed",
+    };
+  }
+
+  /**
    * Convert position setpoint (for Virtual Leader) to MAVLink SET_POSITION_TARGET_LOCAL_NED
    *
    * This is used by the Virtual Leader Formation Controller to send individual

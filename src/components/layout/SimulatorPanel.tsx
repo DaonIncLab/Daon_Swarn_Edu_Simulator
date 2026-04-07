@@ -2,9 +2,8 @@
  * Simulator Panel Component
  *
  * Right panel that displays:
- * - Three.js 3D simulator (when in Three.js Simulator mode)
- * - 3D Preview using Three.js (when in Test mode)
- * - Connection info (when in Unity External Server mode)
+ * - Unity WebGL simulator (when in Unity mode)
+ * - 3D Preview using Three.js (when in Test or MAVLink mode)
  * - Playback mode for recorded flights
  */
 
@@ -40,7 +39,7 @@ export function SimulatorPanel({
     playback.recording && playback.status !== PlaybackStatus.IDLE;
   const shouldShowEmergencyStop =
     !isPlaybackActive &&
-    mode === ConnectionMode.UNITY_WEBGL &&
+    mode === ConnectionMode.UNITY &&
     status !== ConnectionStatus.DISCONNECTED;
 
   const handleEmergencyStop = async () => {
@@ -65,32 +64,21 @@ export function SimulatorPanel({
                   Playback
                 </span>
               </>
-            ) : mode === ConnectionMode.UNITY_WEBGL ? (
+            ) : mode === ConnectionMode.UNITY ? (
               <>
-                <h3 className="text-lg font-semibold">
-                  Unity WebGL 시뮬레이터
-                </h3>
+                <h3 className="text-lg font-semibold">Unity 시뮬레이터</h3>
                 <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
                   WebGL
                 </span>
               </>
-            ) : mode === ConnectionMode.MAVLINK_SIMULATION ? (
-              <>
-                <h3 className="text-lg font-semibold">
-                  Three.js 3D 시뮬레이터
-                </h3>
-                <span className="px-2 py-1 bg-green-600 text-xs font-medium rounded">
-                  Physics Sim
-                </span>
-              </>
             ) : mode === ConnectionMode.TEST ? (
               <>
-                <h3 className="text-lg font-semibold">3D 미리보기</h3>
-                <span className="px-2 py-1 bg-purple-600 text-xs font-medium rounded">
-                  Test Mode
+                <h3 className="text-lg font-semibold">테스트 시뮬레이터</h3>
+                <span className="px-2 py-1 bg-blue-600 text-xs font-medium rounded">
+                  Test
                 </span>
               </>
-            ) : mode === ConnectionMode.REAL_DRONE ? (
+            ) : mode === ConnectionMode.MAVLINK ? (
               <>
                 <h3 className="text-lg font-semibold">실제 드론 연결</h3>
                 <span className="px-2 py-1 bg-orange-600 text-xs font-medium rounded">
@@ -99,9 +87,9 @@ export function SimulatorPanel({
               </>
             ) : (
               <>
-                <h3 className="text-lg font-semibold">외부 Unity 서버</h3>
-                <span className="px-2 py-1 bg-blue-600 text-xs font-medium rounded">
-                  External
+                <h3 className="text-lg font-semibold">지원되지 않는 모드</h3>
+                <span className="px-2 py-1 bg-gray-600 text-xs font-medium rounded">
+                  Unsupported
                 </span>
               </>
             )}
@@ -181,12 +169,10 @@ export function SimulatorPanel({
           </div>
           <PlaybackControls />
         </div>
-      ) : mode === ConnectionMode.UNITY_WEBGL ? (
+      ) : mode === ConnectionMode.UNITY ? (
         // Unity WebGL Embed Mode
         <UnitySimulatorPanel />
-      ) : mode === ConnectionMode.MAVLINK_SIMULATION ||
-        mode === ConnectionMode.REAL_DRONE ||
-        mode === ConnectionMode.TEST ? (
+      ) : mode === ConnectionMode.MAVLINK || mode === ConnectionMode.TEST ? (
         // Three.js 3D Simulator / Test Mode / Real Drone
         <div className="h-full min-h-0 flex flex-col">
           {/* 3D View */}
@@ -198,12 +184,10 @@ export function SimulatorPanel({
           <div className="px-4 py-2 bg-gray-800 text-white border-t border-gray-700 flex items-center justify-between text-xs flex-shrink-0">
             <span className="text-gray-400">카메라: 마우스 드래그 / 휠 줌</span>
             <span className="text-gray-400">
-              {mode === ConnectionMode.MAVLINK_SIMULATION ? (
-                <>Three.js Physics Simulator • MAVLink Protocol</>
-              ) : mode === ConnectionMode.REAL_DRONE ? (
+              {mode === ConnectionMode.MAVLINK ? (
                 <>Three.js Visualization • Real Drone Telemetry</>
               ) : (
-                <>Three.js • React Three Fiber</>
+                <>Three.js Local Simulator • React Three Fiber</>
               )}
             </span>
           </div>
@@ -228,30 +212,29 @@ export function SimulatorPanel({
               </svg>
             </div>
             <h3 className="text-xl font-bold text-white mb-3">
-              외부 Unity 시뮬레이터
+              지원되지 않는 모드
             </h3>
             <p className="text-gray-400 mb-6 text-sm">
-              Unity External Server 모드에서는 Unity가 별도 창에서 실행됩니다
+              현재 빌드에서는 `unity`, `mavlink`, `test` 모드만 지원합니다.
             </p>
 
             {/* Info Card */}
             <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-left">
               <h4 className="text-sm font-semibold text-white mb-2">
-                📌 Unity 실행 방법
+                📌 연결 모드 확인
               </h4>
               <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
-                <li>Unity Control Server 프로젝트 열기</li>
-                <li>Unity Editor에서 Play 버튼 클릭</li>
-                <li>표시된 IP 주소 확인</li>
-                <li>설정에서 해당 IP로 연결</li>
+                <li>연결 설정 패널 열기</li>
+                <li>`unity`, `mavlink`, `test` 중 하나 선택</li>
+                <li>필요한 설정 확인 후 다시 연결</li>
               </ol>
             </div>
 
             <div className="mt-6 bg-green-900/30 border border-green-700/50 rounded-lg p-3 text-left">
               <p className="text-xs text-green-300">
-                💡 <strong>Tip:</strong> 브라우저에서 바로 시뮬레이터를 보려면{" "}
-                <strong>Unity WebGL</strong> 또는{" "}
-                <strong>Three.js Simulator</strong> 모드를 사용하세요
+                💡 <strong>Tip:</strong> 브라우저 안에서 확인하려면{" "}
+                <strong>Unity</strong> 또는 <strong>Test</strong> 모드를
+                사용하세요
               </p>
             </div>
           </div>

@@ -1,5 +1,5 @@
 /**
- * WebSocket 기반 연결 서비스 (Unity 시뮬레이션용)
+ * Legacy WebSocket 기반 연결 서비스
  * IConnectionService 인터페이스 구현
  */
 
@@ -8,6 +8,7 @@ import { MessageType } from '@/constants/commands'
 import type { Command } from '@/types/blockly'
 import type { IConnectionService } from './IConnectionService'
 import type {
+  CommandBatchContext,
   ConnectionConfig,
   ConnectionEventListeners,
   ReceivedMessage,
@@ -34,21 +35,8 @@ export class WebSocketConnectionService implements IConnectionService {
   /**
    * 연결 설정
    */
-  async connect(config: ConnectionConfig): Promise<void> {
-    if (!config.websocket) {
-      throw new Error('WebSocket configuration is required')
-    }
-
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      log.warn('Already connected')
-      return
-    }
-
-    const { ipAddress, port } = config.websocket
-    this.url = `ws://${ipAddress}:${port}`
-    this.reconnectAttempts = 0
-
-    return this._connect()
+  async connect(_config: ConnectionConfig): Promise<void> {
+    throw new Error('Legacy WebSocket mode has been removed. Use unity, mavlink, or test mode.')
   }
 
   /**
@@ -64,16 +52,12 @@ export class WebSocketConnectionService implements IConnectionService {
   }
 
   /**
-   * 단일 명령 전송
-   */
-  async sendCommand(command: Command): Promise<CommandResponse> {
-    return this.sendCommands([command])
-  }
-
-  /**
    * 명령 리스트 전송
    */
-  async sendCommands(commands: Command[]): Promise<CommandResponse> {
+  async sendCommands(
+    commands: Command[],
+    _context?: CommandBatchContext
+  ): Promise<CommandResponse> {
     if (this.ws?.readyState !== WebSocket.OPEN) {
       return {
         success: false,
@@ -142,7 +126,7 @@ export class WebSocketConnectionService implements IConnectionService {
       timestamp: Date.now(),
     }
 
-    return this.sendCommand(emergencyCommand)
+    return this.sendCommands([emergencyCommand])
   }
 
   /**

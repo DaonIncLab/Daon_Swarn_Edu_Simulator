@@ -1,19 +1,19 @@
 /**
  * 연결 관리자 (Strategy Pattern)
  *
- * 다양한 연결 모드(WebSocket, MAVLink, Test)를 통합 관리하며,
+ * 다양한 연결 모드(Unity, MAVLink, Test)를 통합 관리하며,
  * 런타임에 연결 방식을 동적으로 전환할 수 있습니다.
  */
 
 import type { Command } from "@/types/blockly";
 import type { IConnectionService } from "./IConnectionService";
 import type {
+  CommandBatchContext,
   ConnectionConfig,
   ConnectionMode,
   ConnectionEventListeners,
   CommandResponse,
 } from "./types";
-import { WebSocketConnectionService } from "./WebSocketConnectionService";
 import { UnityWebGLConnectionService } from "./UnityWebGLConnectionService";
 import { MAVLinkConnectionService } from "./MAVLinkConnectionService";
 import { TestConnectionService } from "./TestConnectionService";
@@ -88,24 +88,12 @@ export class ConnectionManager {
   }
 
   /**
-   * 단일 명령 전송
-   */
-  async sendCommand(command: Command): Promise<CommandResponse> {
-    if (!this.currentService) {
-      return {
-        success: false,
-        error: "No active connection",
-        timestamp: Date.now(),
-      };
-    }
-
-    return this.currentService.sendCommand(command);
-  }
-
-  /**
    * 명령 리스트 전송
    */
-  async sendCommands(commands: Command[]): Promise<CommandResponse> {
+  async sendCommands(
+    commands: Command[],
+    context?: CommandBatchContext,
+  ): Promise<CommandResponse> {
     if (!this.currentService) {
       return {
         success: false,
@@ -114,7 +102,7 @@ export class ConnectionManager {
       };
     }
 
-    return this.currentService.sendCommands(commands);
+    return this.currentService.sendCommands(commands, context);
   }
 
   /**
@@ -257,29 +245,11 @@ export class ConnectionManager {
     config?: ConnectionConfig
   ): IConnectionService {
     switch (mode) {
-      case "simulation":
-        log.info(
-          "ConnectionManager",
-          "Creating WebSocket service (Unity External Server)"
-        );
-        return new WebSocketConnectionService();
-
-      case "unity_webgl":
+      case "unity":
         log.info("ConnectionManager", "Creating Unity WebGL service");
         return new UnityWebGLConnectionService();
 
-      case "mavlink_simulation": {
-        const mavlinkDroneCount = config?.mavlink?.droneCount || 4;
-        log.info(
-          "ConnectionManager",
-          "Creating Three.js Simulator with",
-          mavlinkDroneCount,
-          "drones"
-        );
-        return new MAVLinkConnectionService(mavlinkDroneCount);
-      }
-
-      case "real_drone":
+      case "mavlink":
         log.info("ConnectionManager", "Creating MAVLink Real Drone service");
         return new MAVLinkConnectionService(1);
 

@@ -1,5 +1,15 @@
 # Debug Guide
 
+## First Checks
+연결 또는 실행 문제는 바로 수정하기 전에 현재 기준부터 확인.
+
+확인 순서:
+1. 현재 선택 모드와 연결 상태 확인
+2. 관련 스토어 state와 최신 telemetry 확인
+3. 실제 전송 경로와 서비스 구현체 확인
+4. 타입/인터페이스 계약과 현재 호출 방식 확인
+5. 그 다음 원인 분석과 수정 진행
+
 ## Connection Checks
 `useConnectionStore` 상태 확인.
 
@@ -11,7 +21,7 @@ console.log(useConnectionStore.getState().latestTelemetry)
 
 기대값:
 - `status`는 `connected`
-- `mode`는 현재 선택 모드와 일치
+- `mode`는 `unity`, `mavlink`, `test` 중 현재 선택 모드와 일치
 - telemetry가 들어오는 모드라면 `latestTelemetry`가 갱신
 
 ## Unity WebGL Path
@@ -61,6 +71,18 @@ console.log(useTelemetryStore.getState().getAllHistory())
 - 브리지 서버가 필요하면 `npm run bridge` 실행 여부 확인
 - `/mavlink` 경로와 포트 설정이 현재 코드와 맞는지 확인
 - UDP/Serial 설정값이 `useConnectionStore`와 일치하는지 확인
+- `ConnectionManager`가 실제로 `MAVLinkConnectionService`를 선택했는지 확인
+
+## Test Mode Checks
+- `testModeDroneCount`가 기대 드론 수와 일치하는지 확인
+- `TestConnectionService` 연결 후 telemetry 메시지가 지속적으로 들어오는지 확인
+
+## Contract Checks
+실행 또는 전송 문제가 있으면 다음 문서를 같이 대조.
+
+- 구조 기준: `docs/ARCHITECTURE.md`
+- 타입/계약 기준: `docs/INTERFACES.md`
+- 실제 코드는 `src/services/connection/types.ts`, `src/services/connection/IConnectionService.ts`, `src/services/connection/ConnectionManager.ts`, `src/stores/useConnectionStore.ts` 우선 확인
 
 ## When To Update This Document
 - Unity 브리지 방식 변경 시 갱신

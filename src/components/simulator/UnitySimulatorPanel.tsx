@@ -26,10 +26,10 @@ export function UnitySimulatorPanel() {
   const unityBridge = useUnityBridge({
     buildConfig: UNITY_BUILD_CONFIG,
     onMessage: (message) => {
-      log.debug("Message from Unity", {
-        context: "UnitySimulatorPanel",
-        message,
-      });
+      // log.debug("Message from Unity", {
+      //   context: "UnitySimulatorPanel",
+      //   message,
+      // });
 
       // Unity 메시지를 ConnectionService로 전달
       const manager = getConnectionManager();
@@ -41,7 +41,7 @@ export function UnitySimulatorPanel() {
       }
     },
     onReady: () => {
-      log.info("Unity WebGL ready", { context: "UnitySimulatorPanel" });
+      // log.info("Unity WebGL ready", { context: "UnitySimulatorPanel" });
 
       // Unity 브릿지를 ConnectionService에 주입
       const manager = getConnectionManager();

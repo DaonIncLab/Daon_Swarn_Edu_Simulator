@@ -6,6 +6,7 @@
 import type { ConnectionStatus } from "@/constants/connection";
 import type { Command } from "@/types/blockly";
 import type {
+  CommandBatchContext,
   CommandResponse,
   ConnectionConfig,
   ConnectionEventListeners,
@@ -30,25 +31,13 @@ export interface IConnectionService {
   disconnect(): Promise<void>;
 
   /**
-   * 명령 전송
-   * @param command 전송할 명령
-   * @returns 명령 전송 결과
-   */
-  sendCommand(
-    command: Command,
-    size?: number,
-    index?: number,
-  ): Promise<CommandResponse>;
-
-  /**
    * 명령 리스트 전송 (배치 실행)
    * @param commands 전송할 명령 리스트
    * @returns 명령 전송 결과
    */
   sendCommands(
     commands: Command[],
-    size?: number,
-    index?: number,
+    context?: CommandBatchContext,
   ): Promise<CommandResponse>;
 
   /**

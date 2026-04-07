@@ -2,11 +2,11 @@
  * MAVLink Connection Service
  *
  * Implements IConnectionService using MAVLink protocol
- * Supports both simulation and real drone connection
+ * Handles real drone connections over UDP/Serial transport
  */
 
 import { ConnectionStatus } from "@/constants/connection";
-import { CommandAction } from "@/constants/commands";
+import { CommandAction, MessageType } from "@/constants/commands";
 import {
   MAV_RESULT,
   type MissionAckMessage,
@@ -18,11 +18,11 @@ import type { Command } from "@/types/websocket";
 import type { DroneState } from "@/types/websocket";
 import type { IConnectionService } from "./IConnectionService";
 import type {
+  CommandBatchContext,
   ConnectionConfig,
   ConnectionEventListeners,
   CommandResponse,
 } from "./types";
-import { MAVLinkSimulator, type MAVLinkTelemetry } from "./MAVLinkSimulator";
 import {
   MAVLinkConverter,
   MAVLINK_POSITION_SENTINEL,
@@ -107,6 +107,13 @@ interface PendingMissionAckWaiter {
   timeoutId: number;
 }
 
+interface PendingMissionCompletionWaiter {
+  finalSeq: number;
+  resolve: (seq: number) => void;
+  reject: (error: Error) => void;
+  timeoutId: number;
+}
+
 interface MissionPositionCacheEntry {
   x: number;
   y: number;
@@ -130,10 +137,9 @@ const ROTATE_WAYPOINT_OFFSET_METERS = 0.3;
 export class MAVLinkConnectionService implements IConnectionService {
   private status: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   private listeners: ConnectionEventListeners = {};
-  private mavlinkSimulator: MAVLinkSimulator | null = null;
+  private messageListener: ((message: unknown) => void) | null = null;
   private droneCount: number = 4;
   private lastTelemetry: Map<number, Partial<DroneState>> = new Map();
-  private isSimulation: boolean = true;
 
   // Real connection infrastructure
   private transport: MAVLinkTransport | null = null;
@@ -153,6 +159,8 @@ export class MAVLinkConnectionService implements IConnectionService {
     null;
   private pendingMissionAckWaiter: PendingMissionAckWaiter | null = null;
   private pendingCommandAckWaiter: PendingCommandAckWaiter | null = null;
+  private pendingMissionCompletionWaiter: PendingMissionCompletionWaiter | null =
+    null;
 
   // Formation control
   private formationMode: FormationControlMode =
@@ -173,53 +181,13 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     this._updateStatus(ConnectionStatus.CONNECTING);
 
-    // Set home position for coordinate conversion
-    // Default fixed home is disabled to avoid conflicting with PX4-managed home.
-    // coordinateConverter.setHome(37.7749, -122.4194, 0);
-
-    // Determine connection type
-    const connType = config.mavlink.connectionType || "simulation";
-    this.isSimulation = connType === "simulation";
-
-    if (this.isSimulation) {
-      await this._initializeSimulation(config);
-    } else {
-      // Real drone connection
-      await this._initializeRealConnection(config);
-    }
+    await this._initializeRealConnection(config);
 
     this._updateStatus(ConnectionStatus.CONNECTED);
 
     if (this.listeners.onLog) {
-      this.listeners.onLog(
-        `[MAVLink] Connected (${this.isSimulation ? "Simulation" : "Real"}) with ${this.droneCount} drones`,
-      );
+      this.listeners.onLog("[MAVLink] Connected to real drone transport");
     }
-  }
-
-  /**
-   * Initialize MAVLink simulation
-   */
-  private async _initializeSimulation(config: ConnectionConfig): Promise<void> {
-    log.info("Initializing simulator...");
-
-    // Override drone count from config if provided
-    if (config.mavlink?.droneCount) {
-      this.droneCount = config.mavlink.droneCount;
-    }
-
-    // Create simulator
-    this.mavlinkSimulator = new MAVLinkSimulator(this.droneCount);
-
-    // Start telemetry streaming
-    this.mavlinkSimulator.start((telemetry: MAVLinkTelemetry[]) => {
-      this._handleTelemetry(telemetry);
-    });
-
-    // Simulate connection delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    log.info("Simulator ready");
   }
 
   /**
@@ -710,6 +678,16 @@ export class MAVLinkConnectionService implements IConnectionService {
     if (this.listeners.onLog) {
       this.listeners.onLog(`[MAVLink] Mission item reached seq ${message.seq}`);
     }
+
+    if (
+      this.pendingMissionCompletionWaiter &&
+      message.seq >= this.pendingMissionCompletionWaiter.finalSeq
+    ) {
+      clearTimeout(this.pendingMissionCompletionWaiter.timeoutId);
+      const waiter = this.pendingMissionCompletionWaiter;
+      this.pendingMissionCompletionWaiter = null;
+      waiter.resolve(message.seq);
+    }
   }
 
   private _getMavResultLabel(result: number): string {
@@ -877,16 +855,35 @@ export class MAVLinkConnectionService implements IConnectionService {
    * Emit telemetry updates to listeners
    */
   private _emitTelemetryUpdates(): void {
-    if (!this.listeners.onTelemetry) return;
+    const timestamp = Date.now();
+    const droneStates = this._buildDroneStates();
 
-    for (const [droneId, state] of this.lastTelemetry) {
-      this.listeners.onTelemetry({
-        droneId: String(droneId),
-        position: state.position,
-        battery: state.battery,
-        timestamp: Date.now(),
+    if (this.listeners.onTelemetry) {
+      for (const drone of droneStates) {
+        this.listeners.onTelemetry({
+          droneId: String(drone.id),
+          position: drone.position,
+          battery: drone.battery,
+          timestamp,
+        });
+      }
+    }
+
+    if (this.messageListener) {
+      this.messageListener({
+        type: MessageType.TELEMETRY,
+        drones: droneStates,
+        timestamp,
       });
     }
+  }
+
+  private _buildDroneStates(): DroneState[] {
+    return Array.from(this.lastTelemetry.entries())
+      .sort(([leftId], [rightId]) => leftId - rightId)
+      .map(([droneId, state]) =>
+        MAVLinkConverter.normalizeDroneState(droneId, state),
+      );
   }
 
   private _registerComponent(
@@ -949,12 +946,6 @@ export class MAVLinkConnectionService implements IConnectionService {
     // Stop heartbeat
     this._stopHeartbeat();
 
-    // Disconnect simulator
-    if (this.mavlinkSimulator) {
-      this.mavlinkSimulator.stop();
-      this.mavlinkSimulator = null;
-    }
-
     // Disconnect transport
     if (this.transport) {
       await this.transport.disconnect();
@@ -973,23 +964,24 @@ export class MAVLinkConnectionService implements IConnectionService {
     this._updateStatus(ConnectionStatus.DISCONNECTED);
   }
 
-  async sendCommand(
+  async sendCommands(
+    commands: Command[],
+    context?: CommandBatchContext,
+  ): Promise<CommandResponse> {
+    if (commands.length === 1) {
+      return this._sendSingleCommand(commands[0], context);
+    }
+
+    return this._sendMissionBatch(commands);
+  }
+
+  private async _sendSingleCommand(
     command: Command,
-    size?: number,
-    index?: number,
+    context?: CommandBatchContext,
   ): Promise<CommandResponse> {
     log.debug("Sending command", { action: command.action });
 
-    // Check connection
-    if (this.isSimulation && !this.mavlinkSimulator) {
-      return {
-        success: false,
-        error: "Simulator not initialized",
-        timestamp: Date.now(),
-      };
-    }
-
-    if (!this.isSimulation && !this.transport) {
+    if (!this.transport) {
       return {
         success: false,
         error: "Transport not connected",
@@ -1007,9 +999,7 @@ export class MAVLinkConnectionService implements IConnectionService {
       }
 
       // Convert Blockly command to MAVLink
-      const droneId = this.lastTelemetry.get(command.params.droneId)
-        ? this.lastTelemetry.get(command.params.droneId)?.id
-        : 2;
+      const droneId = this._resolveTargetSystemId(command);
 
       const mavlinkCmds = MAVLinkConverter.blocklyToMAVLink(command, droneId);
 
@@ -1021,13 +1011,12 @@ export class MAVLinkConnectionService implements IConnectionService {
         };
       }
 
-      const normalizedSize = typeof size === "number" ? size : 1;
+      const normalizedSize = context?.total ?? 1;
       const useMissionProtocol =
         normalizedSize > 1 && this._isMissionProtocolCandidate(command);
 
       if (useMissionProtocol) {
-        const normalizedIndex =
-          typeof index === "number" ? index : normalizedSize;
+        const normalizedIndex = context?.index ?? normalizedSize;
 
         for (const [seq, params] of mavlinkCmds.entries()) {
           const missionItem = this._buildMissionItemFromCommand(
@@ -1038,7 +1027,7 @@ export class MAVLinkConnectionService implements IConnectionService {
           this.pendingMissionItems.push(missionItem);
         }
 
-        if (normalizedIndex >= normalizedSize) {
+        if (context?.isLast ?? normalizedIndex >= normalizedSize) {
           await this._executeBufferedMission();
         }
 
@@ -1055,26 +1044,10 @@ export class MAVLinkConnectionService implements IConnectionService {
           command,
           params,
         );
-
-        if (this.isSimulation) {
-          // Send to simulator
-          this.mavlinkSimulator!.executeMAVLinkCommand({
-            command: resolvedParams.command,
-            targetSystem: resolvedParams.target_system || 1,
-            targetComponent: 1,
-            params: resolvedParams,
-          });
-        } else {
-          // Send to real drone via transport
-          await this._sendRealCommand(resolvedParams);
-        }
+        await this._sendRealCommand(resolvedParams);
       }
 
-      if (
-        typeof size === "number" &&
-        typeof index === "number" &&
-        index >= size
-      ) {
+      if (context?.isLast) {
         this._clearPendingMissionTargetCache();
       }
 
@@ -1091,6 +1064,25 @@ export class MAVLinkConnectionService implements IConnectionService {
         timestamp: Date.now(),
       };
     }
+  }
+
+  private _resolveTargetSystemId(command: Command): number {
+    const requestedDroneId =
+      typeof command.params.droneId === "number" ? command.params.droneId : null;
+
+    if (requestedDroneId !== null) {
+      return this.lastTelemetry.get(requestedDroneId)?.id ?? requestedDroneId;
+    }
+
+    const knownSystems = Array.from(this.lastTelemetry.keys()).sort(
+      (left, right) => left - right,
+    );
+
+    if (knownSystems.length === 1) {
+      return knownSystems[0];
+    }
+
+    return 1;
   }
 
   /**
@@ -1431,6 +1423,11 @@ export class MAVLinkConnectionService implements IConnectionService {
       clearTimeout(this.pendingCommandAckWaiter.timeoutId);
       this.pendingCommandAckWaiter = null;
     }
+
+    if (this.pendingMissionCompletionWaiter) {
+      clearTimeout(this.pendingMissionCompletionWaiter.timeoutId);
+      this.pendingMissionCompletionWaiter = null;
+    }
   }
 
   private async _executeBufferedMission(): Promise<void> {
@@ -1439,29 +1436,25 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
 
     try {
-      if (this.isSimulation) {
-        await this.mavlinkSimulator!.executeMissionItems(
-          this.pendingMissionItems,
-        );
-      } else {
-        if (!this.transport) {
-          throw new Error("Transport not connected");
-        }
-
-        const targetSystem = this.pendingMissionItems[0]?.target_system || 1;
-        const targetComponent =
-          this.pendingMissionItems[0]?.target_component ||
-          this._getTargetComponentId(targetSystem);
-
-        await this._sendMissionClearAll(targetSystem, targetComponent);
-        await this._sendMissionCount(
-          this.pendingMissionItems.length,
-          targetSystem,
-          targetComponent,
-        );
-        await this._sendBufferedMissionItems(targetSystem, targetComponent);
-        await this._sendMissionStart(targetSystem, targetComponent);
+      if (!this.transport) {
+        throw new Error("Transport not connected");
       }
+
+      const targetSystem = this.pendingMissionItems[0]?.target_system || 1;
+      const targetComponent =
+        this.pendingMissionItems[0]?.target_component ||
+        this._getTargetComponentId(targetSystem);
+      const finalSeq =
+        this.pendingMissionItems[this.pendingMissionItems.length - 1]?.seq ?? 0;
+
+      await this._sendMissionClearAll(targetSystem, targetComponent);
+      await this._sendMissionCount(
+        this.pendingMissionItems.length,
+        targetSystem,
+        targetComponent,
+      );
+      await this._sendBufferedMissionItems(targetSystem, targetComponent);
+      await this._sendMissionStart(targetSystem, targetComponent, finalSeq);
 
       this._clearMissionBuffer();
       this._clearPendingMissionTargetCache();
@@ -1540,6 +1533,7 @@ export class MAVLinkConnectionService implements IConnectionService {
   private async _sendMissionStart(
     targetSystem: number,
     targetComponent: number,
+    finalSeq: number,
   ): Promise<void> {
     if (!this.transport) {
       throw new Error("Transport not connected");
@@ -1565,6 +1559,7 @@ export class MAVLinkConnectionService implements IConnectionService {
     );
     await this.transport.sendPacket(serializePacket(missionStartPacket));
     await this._awaitCommandAck(MAV_CMD.MISSION_START);
+    await this._awaitMissionCompletion(finalSeq);
   }
 
   private _awaitMissionRequestInt(
@@ -1596,6 +1591,25 @@ export class MAVLinkConnectionService implements IConnectionService {
       }, timeoutMs);
 
       this.pendingMissionAckWaiter = {
+        resolve,
+        reject,
+        timeoutId,
+      };
+    });
+  }
+
+  private _awaitMissionCompletion(
+    finalSeq: number,
+    timeoutMs: number = 30000,
+  ): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        this.pendingMissionCompletionWaiter = null;
+        reject(new Error(`MISSION completion timeout for final seq ${finalSeq}`));
+      }, timeoutMs);
+
+      this.pendingMissionCompletionWaiter = {
+        finalSeq,
         resolve,
         reject,
         timeoutId,
@@ -1674,16 +1688,7 @@ export class MAVLinkConnectionService implements IConnectionService {
   private async _handleFormationCommand(
     command: Command,
   ): Promise<CommandResponse> {
-    // Check connection
-    if (this.isSimulation && !this.mavlinkSimulator) {
-      return {
-        success: false,
-        error: "Simulator not initialized",
-        timestamp: Date.now(),
-      };
-    }
-
-    if (!this.isSimulation && !this.transport) {
+    if (!this.transport) {
       return {
         success: false,
         error: "Transport not connected",
@@ -1725,18 +1730,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     // Execute waypoint for each drone
     for (const [droneId, params] of formationWaypoints) {
-      if (this.isSimulation) {
-        // Send to simulator
-        this.mavlinkSimulator!.executeMAVLinkCommand({
-          command: params.command,
-          targetSystem: droneId + 1,
-          targetComponent: 1,
-          params,
-        });
-      } else {
-        // Send to real drone via transport
-        await this._sendRealCommand(params);
-      }
+      await this._sendRealCommand(params);
     }
 
     if (this.listeners.onLog) {
@@ -1811,19 +1805,10 @@ export class MAVLinkConnectionService implements IConnectionService {
     };
   }
 
-  async sendCommands(commands: Command[]): Promise<CommandResponse> {
+  private async _sendMissionBatch(commands: Command[]): Promise<CommandResponse> {
     log.info("Sending command sequence", { count: commands.length });
 
-    // Check connection
-    if (this.isSimulation && !this.mavlinkSimulator) {
-      return {
-        success: false,
-        error: "Simulator not initialized",
-        timestamp: Date.now(),
-      };
-    }
-
-    if (!this.isSimulation && !this.transport) {
+    if (!this.transport) {
       return {
         success: false,
         error: "Transport not connected",
@@ -1832,32 +1817,69 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
 
     try {
+      if (commands.length === 0) {
+        return {
+          success: true,
+          timestamp: Date.now(),
+        };
+      }
+
+      this._clearMissionBuffer();
+      this._clearPendingMissionTargetCache();
+
       for (let i = 0; i < commands.length; i++) {
         const command = commands[i];
 
         if (this.listeners.onLog) {
           this.listeners.onLog(
-            `[MAVLink] Executing ${i + 1}/${commands.length}: ${command.action}`,
+            `[MAVLink] Queueing ${i + 1}/${commands.length}: ${command.action}`,
           );
         }
 
-        // Execute command
-        const response = await this.sendCommand(
+        if (
+          command.action === CommandAction.SET_FORMATION ||
+          command.action === CommandAction.MOVE_FORMATION
+        ) {
+          return {
+            success: false,
+            error: `Mission batch does not support ${command.action}`,
+            timestamp: Date.now(),
+          };
+        }
+
+        if (!this._isMissionProtocolCandidate(command)) {
+          return {
+            success: false,
+            error: `Mission batch does not support ${command.action}`,
+            timestamp: Date.now(),
+          };
+        }
+
+        const targetSystem = this._resolveTargetSystemId(command);
+        const mavlinkCmds = MAVLinkConverter.blocklyToMAVLink(
           command,
-          commands.length,
-          i + 1,
+          targetSystem,
         );
 
-        if (!response.success) {
-          return response; // Return first error
+        if (mavlinkCmds.length === 0) {
+          return {
+            success: false,
+            error: `Mission batch could not convert ${command.action}`,
+            timestamp: Date.now(),
+          };
         }
 
-        // Wait for command execution
-        const delay = this._getCommandDelay(command);
-        if (delay > 0) {
-          await new Promise((resolve) => setTimeout(resolve, delay));
+        for (const [seq, params] of mavlinkCmds.entries()) {
+          const missionItem = this._buildMissionItemFromCommand(
+            command,
+            params,
+            this.pendingMissionItems.length + seq,
+          );
+          this.pendingMissionItems.push(missionItem);
         }
       }
+
+      await this._executeBufferedMission();
 
       if (this.listeners.onLog) {
         this.listeners.onLog(
@@ -1871,6 +1893,9 @@ export class MAVLinkConnectionService implements IConnectionService {
       };
     } catch (error) {
       log.error("Command sequence error", { error });
+      this._resetMissionUploadState();
+      this._clearMissionBuffer();
+      this._clearPendingMissionTargetCache();
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -1937,45 +1962,52 @@ export class MAVLinkConnectionService implements IConnectionService {
     this.listeners = { ...this.listeners, ...listeners };
   }
 
+  setMessageListener(listener: (message: unknown) => void): void {
+    this.messageListener = listener;
+  }
+
   async emergencyStop(): Promise<CommandResponse> {
     log.warn("EMERGENCY STOP!");
 
-    if (this.mavlinkSimulator) {
-      this.mavlinkSimulator.emergencyStop();
-
-      if (this.listeners.onLog) {
-        this.listeners.onLog(
-          "[MAVLink] Emergency stop - all drones landing immediately!",
-        );
-      }
-
+    if (!this.transport) {
       return {
-        success: true,
+        success: false,
+        error: "Transport not connected",
         timestamp: Date.now(),
       };
     }
 
+    const targetSystems =
+      this.systemComponents.size > 0
+        ? Array.from(this.systemComponents.keys())
+        : [1];
+
+    for (const targetSystem of targetSystems) {
+      await this._sendRealCommand({
+        command: MAV_CMD.NAV_LAND,
+        target_system: targetSystem,
+        target_component: this._getTargetComponentId(targetSystem),
+      });
+    }
+
+    if (this.listeners.onLog) {
+      this.listeners.onLog(
+        "[MAVLink] Emergency landing command sent to all known systems",
+      );
+    }
+
     return {
-      success: false,
-      error: "Simulator not initialized",
+      success: true,
       timestamp: Date.now(),
     };
   }
 
   async ping(): Promise<number> {
-    // Simulate MAVLink ping latency
-    const latency = this.isSimulation
-      ? Math.random() * 20 + 10
-      : Math.random() * 100 + 50;
-    return Promise.resolve(latency);
+    return Promise.resolve(Math.random() * 100 + 50);
   }
 
   async reset(): Promise<CommandResponse> {
     log.info("MAVLinkConnectionService", "Resetting drone positions");
-
-    if (this.mavlinkSimulator) {
-      this.mavlinkSimulator.reset();
-    }
 
     return {
       success: true,
@@ -1986,11 +2018,6 @@ export class MAVLinkConnectionService implements IConnectionService {
   cleanup(): void {
     log.info("Cleanup");
 
-    if (this.mavlinkSimulator) {
-      this.mavlinkSimulator.stop();
-      this.mavlinkSimulator = null;
-    }
-
     if (this.virtualLeaderController) {
       this.virtualLeaderController.stop();
       this.virtualLeaderController = null;
@@ -1998,6 +2025,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     this.lastTelemetry.clear();
     this.listeners = {};
+    this.messageListener = null;
   }
 
   /**
@@ -2059,15 +2087,7 @@ export class MAVLinkConnectionService implements IConnectionService {
         yaw,
       );
 
-      // Send command
-      if (this.isSimulation && this.mavlinkSimulator) {
-        this.mavlinkSimulator.executeMAVLinkCommand({
-          command: params.command,
-          targetSystem: droneId + 1,
-          targetComponent: 1,
-          params,
-        });
-      } else if (!this.isSimulation && this.transport) {
+      if (this.transport) {
         this._sendRealCommand(params).catch((err) => {
           log.error("Failed to send position setpoint", {
             droneId,

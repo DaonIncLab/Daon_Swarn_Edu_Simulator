@@ -9,6 +9,7 @@ import { ConnectionStatus } from "@/constants/connection";
 import type { Command } from "@/types/blockly";
 import type { IConnectionService } from "./IConnectionService";
 import type {
+  CommandBatchContext,
   ConnectionConfig,
   ConnectionEventListeners,
   CommandResponse,
@@ -113,18 +114,9 @@ export class UnityWebGLConnectionService implements IConnectionService {
     this._updateStatus(ConnectionStatus.DISCONNECTED);
   }
 
-  async sendCommand(
-    command: Command,
-    index?: number,
-    size?: number,
-  ): Promise<CommandResponse> {
-    return this.sendCommands([command], index, size);
-  }
-
   async sendCommands(
     commands: Command[],
-    index?: number,
-    size?: number,
+    context?: CommandBatchContext,
   ): Promise<CommandResponse> {
     if (!this.unityBridge || !this.unityBridge.isReady) {
       return {
@@ -135,13 +127,19 @@ export class UnityWebGLConnectionService implements IConnectionService {
     }
 
     try {
-      const success = this.unityBridge.executeCommands(commands, index == size);
+      const isLast = context?.isLast ?? true;
+      const success = this.unityBridge.executeCommands(commands, isLast);
 
       if (success) {
-        if (index == size) {
-          log.info("Commands sent to Unity", { count: size });
+        if (isLast) {
+          log.info("Commands sent to Unity", {
+            count: context?.total ?? commands.length,
+          });
         } else {
-          log.info("Commands sent to ItemQueue", { count: index });
+          log.info("Commands queued in Unity", {
+            index: context?.index,
+            total: context?.total,
+          });
         }
         return {
           success: true,

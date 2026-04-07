@@ -9,7 +9,6 @@ flowchart LR
     Blockly --> Execution[Interpreter / Execution]
     Execution --> Manager[ConnectionManager]
     Manager --> Unity[Unity WebGL]
-    Manager --> WS[WebSocket Simulation]
     Manager --> MAV[MAVLink Service]
     Manager --> Test[Test Service]
 ```
@@ -41,5 +40,6 @@ flowchart TD
 
 ## Notes
 - Unity 경로는 임베드 브리지 기준
-- WebSocket은 외부 시뮬레이터 또는 브리지 경로에서만 기본 모델로 봄
+- `ConnectionManager`의 현재 연결 모델은 `Unity WebGL`, `MAVLink Service`, `Test Service`
+- 브리지 서버는 MAVLink 경로 지원용으로만 사용
 - 상세 구현 이력은 `docs/archive/` 참고

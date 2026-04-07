@@ -1,7 +1,7 @@
 /**
  * Test Connection Service
  *
- * Simulates Unity server for testing without Unity
+ * Local simulator service for testing without Unity or hardware
  * - Multiple drone simulation
  * - Command execution simulation
  * - Telemetry generation matching Unity format
@@ -12,6 +12,7 @@ import { MessageType, CommandAction } from '@/constants/commands'
 import type { Command } from '@/types/websocket'
 import type { IConnectionService } from './IConnectionService'
 import type {
+  CommandBatchContext,
   ConnectionConfig,
   ConnectionEventListeners,
   CommandResponse,
@@ -80,8 +81,11 @@ export class TestConnectionService implements IConnectionService {
     this._updateStatus(ConnectionStatus.DISCONNECTED)
   }
 
-  async sendCommand(command: Command): Promise<CommandResponse> {
-    log.debug('Command sent', { command })
+  async sendCommands(
+    commands: Command[],
+    _context?: CommandBatchContext
+  ): Promise<CommandResponse> {
+    log.info('Executing script', { commandCount: commands.length })
 
     if (!this.simulator) {
       return {
@@ -91,26 +95,15 @@ export class TestConnectionService implements IConnectionService {
       }
     }
 
-    // Execute command on simulator
-    this._executeCommand(command)
+    if (commands.length === 1) {
+      const [command] = commands
+      log.debug('Command sent', { command })
+      this._executeCommand(command)
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
-    // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    return {
-      success: true,
-      commandId: `test-${Date.now()}`,
-      timestamp: Date.now(),
-    }
-  }
-
-  async sendCommands(commands: Command[]): Promise<CommandResponse> {
-    log.info('Executing script', { commandCount: commands.length })
-
-    if (!this.simulator) {
       return {
-        success: false,
-        error: 'Simulator not initialized',
+        success: true,
+        commandId: `test-${Date.now()}`,
         timestamp: Date.now(),
       }
     }

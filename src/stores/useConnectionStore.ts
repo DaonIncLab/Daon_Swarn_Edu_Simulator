@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand'
-import { ConnectionStatus, DEFAULT_WS_PORT } from '@/constants/connection'
+import { ConnectionStatus } from '@/constants/connection'
 import {
   getConnectionManager,
   ConnectionMode,
@@ -21,12 +21,9 @@ interface ConnectionStore {
   // State
   status: ConnectionStatus
   mode: ConnectionMode
-  ipAddress: string
-  port: number
   error: string | null
   latestTelemetry: TelemetryData | null
   testModeDroneCount: number
-  mavlinkDroneCount: number // MAVLink 시뮬레이션 드론 수
 
   // Real MAVLink connection settings
   mavlinkTransportType: 'udp' | 'serial'
@@ -40,10 +37,7 @@ interface ConnectionStore {
 
   // Actions
   setMode: (mode: ConnectionMode) => void
-  setIpAddress: (ip: string) => void
-  setPort: (port: number) => void
   setTestModeDroneCount: (count: number) => void
-  setMavlinkDroneCount: (count: number) => void
   setMavlinkTransportType: (type: 'udp' | 'serial') => void
   setMavlinkHost: (host: string) => void
   setMavlinkPort: (port: number) => void
@@ -65,13 +59,10 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
   return {
     // Initial state
     status: ConnectionStatus.DISCONNECTED,
-    mode: ConnectionMode.UNITY_WEBGL, // 기본값: Unity WebGL 시뮬레이터
-    ipAddress: '',
-    port: DEFAULT_WS_PORT,
+    mode: ConnectionMode.UNITY,
     error: null,
     latestTelemetry: null,
     testModeDroneCount: 4,
-    mavlinkDroneCount: 4, // MAVLink 시뮬레이터 기본 드론 수
 
     // Real MAVLink connection initial state
     mavlinkTransportType: 'udp',
@@ -86,13 +77,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
     // Actions
     setMode: (mode) => set({ mode }),
 
-    setIpAddress: (ip) => set({ ipAddress: ip }),
-
-    setPort: (port) => set({ port }),
-
     setTestModeDroneCount: (count) => set({ testModeDroneCount: count }),
-
-    setMavlinkDroneCount: (count) => set({ mavlinkDroneCount: count }),
 
     setMavlinkTransportType: (type) => set({ mavlinkTransportType: type }),
 
@@ -120,10 +105,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
     connect: async () => {
       const {
         mode,
-        ipAddress,
-        port,
         testModeDroneCount,
-        mavlinkDroneCount,
         mavlinkTransportType,
         mavlinkHost,
         mavlinkPort,
@@ -156,30 +138,13 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => {
 
         // 모드별 설정
         switch (mode) {
-          case ConnectionMode.UNITY_WEBGL:
+          case ConnectionMode.UNITY:
             // Unity WebGL 임베드 모드 - 설정 불필요
             break
 
-          case ConnectionMode.SIMULATION:
-            if (!ipAddress) {
-              set({ error: 'Please enter IP address' })
-              return
-            }
-            config.websocket = { ipAddress, port }
-            break
-
-          case ConnectionMode.MAVLINK_SIMULATION:
-            // MAVLink 시뮬레이션 모드
-            config.mavlink = {
-              connectionType: 'simulation',
-              droneCount: mavlinkDroneCount,
-            }
-            break
-
-          case ConnectionMode.REAL_DRONE:
+          case ConnectionMode.MAVLINK:
             // MAVLink 실제 드론 연결
             config.mavlink = {
-              connectionType: mavlinkTransportType,
               transportType: mavlinkTransportType,
               host: mavlinkTransportType === 'udp' ? mavlinkHost : undefined,
               port: mavlinkTransportType === 'udp' ? mavlinkPort : undefined,

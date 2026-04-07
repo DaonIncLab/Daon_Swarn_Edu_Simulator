@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useExecutionStore, ExecutionStatus } from '@/stores/useExecutionStore'
 import { useConnectionStore } from '@/stores/useConnectionStore'
+import { ConnectionMode } from '@/services/connection'
 import { Button } from '@/components/common/Button'
 
 interface LogEntry {
@@ -18,7 +19,7 @@ export function ExecutionLog() {
   const logIdCounter = useRef(0)
 
   const { status, currentNodeId, scenarioSummary, error } = useExecutionStore()
-  const { status: connectionStatus, isDummyMode } = useConnectionStore()
+  const { status: connectionStatus, mode } = useConnectionStore()
   const previousConnectionStatus = useRef(connectionStatus)
 
   // Auto scroll to bottom
@@ -45,13 +46,19 @@ export function ExecutionLog() {
     }
 
     if (connectionStatus === 'connected') {
-      addLog('success', isDummyMode ? '🧪 Test mode activated' : '✅ Connected to Unity server')
+      const message =
+        mode === ConnectionMode.TEST
+          ? '🧪 Test mode activated'
+          : mode === ConnectionMode.MAVLINK
+            ? '🔧 Connected to MAVLink transport'
+            : '🎮 Connected to embedded Unity runtime'
+      addLog('success', message)
     } else if (connectionStatus === 'disconnected') {
-      addLog('warning', '⚠️ Disconnected from server')
+      addLog('warning', '⚠️ Connection closed')
     }
 
     previousConnectionStatus.current = connectionStatus
-  }, [connectionStatus, isDummyMode])
+  }, [connectionStatus, mode])
 
   // Monitor execution status
   useEffect(() => {

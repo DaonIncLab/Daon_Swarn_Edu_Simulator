@@ -21,12 +21,12 @@
     "projectRequired": "A Project Is Required to Start",
     "projectInstructions": "Create or open a project and you will move to connection setup automatically",
     "connectionRequired": "Connection Required to Start",
-    "connectionInstructions": "Connect to Unity simulator or enable test mode",
+    "connectionInstructions": "Connect using Unity, MAVLink, or Test mode",
     "openConnectionSettings": "Open Connection Settings",
     "startGuide": "Getting Started",
     "guideSteps": [
       "Create a project or open an existing one",
-      "Choose the simulator mode in Connection Settings",
+      "Choose the connection mode in Connection Settings",
       "Enter any required connection details and connect",
       "Start coding with Blockly!"
     ]
@@ -51,7 +51,7 @@
     "title": "Connection Settings",
     "mode": "Connection Mode",
     "realMode": "Real Connection",
-    "realModeDesc": "Connect to Unity server for real drone control",
+    "realModeDesc": "Connect to real drones over MAVLink",
     "testMode": "Test Mode",
     "testModeDesc": "Simulate commands without Unity connection",
     "serverUrl": "Server URL",
@@ -112,7 +112,7 @@
     "help": {
       "notConnected": "Please connect first",
       "noCommands": "Drag blocks from the left to create commands",
-      "testModeInfo": "Test Mode: Clicking execute will simulate commands (not sent to Unity server)",
+      "testModeInfo": "Test Mode: Clicking execute will run commands in the local simulator",
       "controlFlowTitle": "Control Flow Blocks Available",
       "controlFlowLoop": "Use loop blocks to repeat commands",
       "controlFlowIf": "Use If conditions for conditional execution",

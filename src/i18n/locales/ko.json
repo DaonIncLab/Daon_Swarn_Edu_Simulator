@@ -21,12 +21,12 @@
     "projectRequired": "시작하려면 프로젝트가 필요합니다",
     "projectInstructions": "프로젝트를 생성하거나 열면 연결 설정으로 자동 이동합니다",
     "connectionRequired": "시작하려면 연결이 필요합니다",
-    "connectionInstructions": "Unity 시뮬레이터에 연결하거나 테스트 모드를 활성화하세요",
+    "connectionInstructions": "Unity, MAVLink, 테스트 모드 중 하나로 연결하세요",
     "openConnectionSettings": "연결 설정 열기",
     "startGuide": "시작 가이드",
     "guideSteps": [
       "프로젝트를 생성하거나 기존 프로젝트 열기",
-      "연결 설정에서 사용할 시뮬레이터 모드 선택",
+      "연결 설정에서 사용할 연결 모드 선택",
       "필요한 연결 정보 입력 후 연결",
       "Blockly로 코딩 시작!"
     ]
@@ -51,7 +51,7 @@
     "title": "연결 설정",
     "mode": "연결 모드",
     "realMode": "실제 연결",
-    "realModeDesc": "Unity 서버에 연결하여 실제 드론 제어",
+    "realModeDesc": "MAVLink로 실제 드론 연결",
     "testMode": "테스트 모드",
     "testModeDesc": "Unity 연결 없이 명령 시뮬레이션",
     "serverUrl": "서버 URL",
@@ -112,7 +112,7 @@
     "help": {
       "notConnected": "먼저 연결해주세요",
       "noCommands": "왼쪽에서 블록을 드래그하여 명령을 만들어보세요",
-      "testModeInfo": "테스트 모드: 실행 버튼을 클릭하면 명령이 시뮬레이션됩니다 (Unity 서버로 전송되지 않음)",
+      "testModeInfo": "테스트 모드: 실행 버튼을 클릭하면 명령이 로컬 시뮬레이터에서 실행됩니다",
       "controlFlowTitle": "제어 흐름 블록 사용 가능",
       "controlFlowLoop": "반복 블록으로 명령 반복 실행",
       "controlFlowIf": "If 조건문으로 조건부 실행",
