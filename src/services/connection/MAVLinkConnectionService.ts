@@ -5,35 +5,23 @@
  * Handles real drone connections over UDP/Serial transport
  */
 
-import { ConnectionStatus } from "@/constants/connection";
 import { CommandAction, MessageType } from "@/constants/commands";
-import {
-  MAV_RESULT,
-  type MissionAckMessage,
-  type MissionItemIntMessage,
-  type MissionRequestMessage,
-  type MissionRequestIntMessage,
-} from "@/types/mavlink";
-import type { Command } from "@/types/websocket";
-import type { DroneState } from "@/types/websocket";
-import type { IConnectionService } from "./IConnectionService";
-import type {
-  CommandBatchContext,
-  ConnectionConfig,
-  ConnectionEventListeners,
-  CommandResponse,
-} from "./types";
-import {
-  MAVLinkConverter,
-  MAVLINK_POSITION_SENTINEL,
-} from "@/services/mavlink/MAVLinkConverter";
+import { ConnectionStatus } from "@/constants/connection";
+import type { PositionSetpointCallback } from "@/services/execution/VirtualLeaderFormation";
+import { VirtualLeaderFormationController } from "@/services/execution/VirtualLeaderFormation";
 import { coordinateConverter } from "@/services/mavlink/CoordinateConverter";
-import type { MAVLinkTransport } from "@/services/mavlink/MAVLinkTransport";
-import { UDPTransport } from "@/services/mavlink/UDPTransport";
-import { SerialTransport } from "@/services/mavlink/SerialTransport";
 import {
-  createHeartbeat,
+  createMissionItemInt as buildMissionItemInt,
+  MAV_CMD,
+  MISSION_FRAME,
+} from "@/services/mavlink/MAVLinkCommands";
+import {
+  MAVLINK_POSITION_SENTINEL,
+  MAVLinkConverter,
+} from "@/services/mavlink/MAVLinkConverter";
+import {
   createCommandLong,
+  createHeartbeat,
   createMissionClearAll,
   createMissionCount,
   createMissionItemInt,
@@ -41,24 +29,36 @@ import {
   createMissionStart,
   parseGlobalPositionInt,
   parseMissionAck,
-  parseMissionRequest,
-  parseMissionRequestInt,
   parseMissionCurrent,
   parseMissionItemReached,
+  parseMissionRequest,
+  parseMissionRequestInt,
 } from "@/services/mavlink/MAVLinkMessages";
 import {
-  serializePacket,
-  parsePacket,
   MAV_MSG_ID,
+  parsePacket,
+  serializePacket,
 } from "@/services/mavlink/MAVLinkProtocol";
-import { log } from "@/utils/logger";
-import { VirtualLeaderFormationController } from "@/services/execution/VirtualLeaderFormation";
-import type { PositionSetpointCallback } from "@/services/execution/VirtualLeaderFormation";
+import type { MAVLinkTransport } from "@/services/mavlink/MAVLinkTransport";
+import { SerialTransport } from "@/services/mavlink/SerialTransport";
+import { UDPTransport } from "@/services/mavlink/UDPTransport";
 import {
-  createMissionItemInt as buildMissionItemInt,
-  MISSION_FRAME,
-  MAV_CMD,
-} from "@/services/mavlink/MAVLinkCommands";
+  MAV_RESULT,
+  type MissionAckMessage,
+  type MissionItemIntMessage,
+  type MissionRequestIntMessage,
+  type MissionRequestMessage,
+} from "@/types/mavlink";
+import type { Command, DroneState } from "@/types/websocket";
+import { log } from "@/utils/logger";
+import type { IConnectionService } from "./IConnectionService";
+import type {
+  CommandBatchContext,
+  CommandResponse,
+  ConnectionConfig,
+  ConnectionEventListeners,
+} from "./types";
+import type { MAVLinkTelemetry } from "./MAVLinkSimulator";
 
 /**
  * Formation Control Mode
@@ -1068,7 +1068,9 @@ export class MAVLinkConnectionService implements IConnectionService {
 
   private _resolveTargetSystemId(command: Command): number {
     const requestedDroneId =
-      typeof command.params.droneId === "number" ? command.params.droneId : null;
+      typeof command.params.droneId === "number"
+        ? command.params.droneId
+        : null;
 
     if (requestedDroneId !== null) {
       return this.lastTelemetry.get(requestedDroneId)?.id ?? requestedDroneId;
@@ -1605,7 +1607,9 @@ export class MAVLinkConnectionService implements IConnectionService {
     return new Promise((resolve, reject) => {
       const timeoutId = window.setTimeout(() => {
         this.pendingMissionCompletionWaiter = null;
-        reject(new Error(`MISSION completion timeout for final seq ${finalSeq}`));
+        reject(
+          new Error(`MISSION completion timeout for final seq ${finalSeq}`),
+        );
       }, timeoutMs);
 
       this.pendingMissionCompletionWaiter = {
@@ -1805,7 +1809,9 @@ export class MAVLinkConnectionService implements IConnectionService {
     };
   }
 
-  private async _sendMissionBatch(commands: Command[]): Promise<CommandResponse> {
+  private async _sendMissionBatch(
+    commands: Command[],
+  ): Promise<CommandResponse> {
     log.info("Sending command sequence", { count: commands.length });
 
     if (!this.transport) {

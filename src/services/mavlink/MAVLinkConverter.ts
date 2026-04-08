@@ -19,34 +19,14 @@ export const MAVLINK_POSITION_SENTINEL = -999999;
  * MAVLink Converter Class
  */
 export class MAVLinkConverter {
-  private static withOptionalSpeed(
-    params: Command["params"],
-    droneId: number,
-    commands: CommandLongParams[],
-  ): CommandLongParams[] {
-    if (typeof params.speed !== "number") {
-      return commands;
-    }
-
-    return [
-      {
-        command: MAV_CMD.DO_CHANGE_SPEED,
-        param1: 1,
-        param2: params.speed,
-        param3: -1,
-        param4: 0,
-        target_system: droneId,
-      },
-      ...commands,
-    ];
-  }
-
   /**
    * Convert Blockly Command to MAVLink COMMAND_LONG message
    *
    * Note: Formation commands (SET_FORMATION, MOVE_FORMATION) return empty arrays
    * because they require multi-drone coordination handled by the simulator/service layer.
    * Use convertFormationCommand() for formation-specific conversion.
+   * Movement commands always map to a single waypoint in mission mode, even when
+   * scenario speed context is present.
    */
   static blocklyToMAVLink(
     command: Command,
@@ -97,7 +77,7 @@ export class MAVLinkConverter {
 
       case CommandAction.MOVE_DRONE:
       case CommandAction.MOVE_XYZ:
-        return this.withOptionalSpeed(params, droneId, [
+        return [
           {
             command: MAV_CMD.NAV_WAYPOINT,
             param5: params.x ?? MAVLINK_POSITION_SENTINEL,
@@ -105,14 +85,14 @@ export class MAVLinkConverter {
             param7: params.z ?? MAVLINK_POSITION_SENTINEL,
             target_system: droneId,
           },
-        ]);
+        ];
 
       case CommandAction.MOVE_DIRECTION: {
         const direction = (params.direction as Direction) || Direction.FORWARD;
         const distance = params.distance ?? 1;
         const offset = this.getDirectionOffset(direction, distance);
 
-        return this.withOptionalSpeed(params, droneId, [
+        return [
           {
             command: MAV_CMD.NAV_WAYPOINT,
             param5: offset.x,
@@ -120,7 +100,7 @@ export class MAVLinkConverter {
             param7: offset.z,
             target_system: droneId,
           },
-        ]);
+        ];
       }
 
       case CommandAction.ROTATE: {
@@ -166,8 +146,13 @@ export class MAVLinkConverter {
         return [];
 
       case CommandAction.WAIT:
-        // Wait is handled by GCS timing, not sent to drone
-        return [];
+        return [
+          {
+            command: MAV_CMD.NAV_LOITER_TIME,
+            param1: params.duration ?? 1,
+            target_system: droneId,
+          },
+        ];
 
       case CommandAction.SYNC_ALL:
       case CommandAction.WAIT_ALL:

@@ -1,10 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, test, beforeEach, vi } from "vitest";
 import { MessageType } from "@/constants/commands";
 import { MAVLinkConnectionService } from "@/services/connection/MAVLinkConnectionService";
 import type { Command } from "@/types/websocket";
 import { coordinateConverter } from "@/services/mavlink/CoordinateConverter";
 import { createGlobalPositionInt } from "@/services/mavlink/MAVLinkMessages";
-import { createMAVLinkPacket, MAV_MSG_ID, packFloat, serializePacket } from "@/services/mavlink/MAVLinkProtocol";
+import {
+  createMAVLinkPacket,
+  MAV_MSG_ID,
+  packFloat,
+  serializePacket,
+} from "@/services/mavlink/MAVLinkProtocol";
 import { MAV_MODE_FLAG, MAV_STATE } from "@/types/mavlink";
 
 function createAttitudePacket({
@@ -131,7 +137,7 @@ describe("MAVLinkConnectionService", () => {
     );
     const droneTwoBasePacket = createGlobalPositionInt(
       1000,
-      37.7750,
+      37.775,
       -122.4193,
       16,
       8,

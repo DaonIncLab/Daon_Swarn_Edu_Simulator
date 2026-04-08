@@ -40,9 +40,6 @@ export class Interpreter {
   private resumeResolver: (() => void) | null = null;
   private size: number | null = null;
 
-  private static readonly MAVLINK_WAIT_UNSUPPORTED_ERROR =
-    "WAIT nodes are not supported in MAVLink mission batches";
-
   constructor(connectionService: IConnectionService) {
     this.connectionService = connectionService;
     this.droneStates = [];
@@ -140,6 +137,7 @@ export class Interpreter {
     tree: ExecutableNode,
   ): Promise<number> {
     const plan = await this.buildCommandList(tree, [0]);
+    this.logMAVLinkMissionWarnings(plan.commands);
 
     if (this.shouldStop || plan.commands.length === 0) {
       return plan.executedNodes;
@@ -350,7 +348,15 @@ export class Interpreter {
         return this.buildIfElseCommandList(node, path);
 
       case "wait":
-        throw new Error(Interpreter.MAVLINK_WAIT_UNSUPPORTED_ERROR);
+        return {
+          commands: [
+            {
+              action: CommandAction.WAIT,
+              params: { duration: node.duration },
+            },
+          ],
+          executedNodes: 1,
+        };
 
       case "variable_set":
         await this.executeVariableSet(node);
@@ -722,6 +728,19 @@ export class Interpreter {
     await this.delay(node.duration * 1000);
   }
 
+  private logMAVLinkMissionWarnings(commands: Command[]): void {
+    const hoverIndex = commands.findIndex(
+      (command) => command.action === CommandAction.HOVER,
+    );
+
+    if (hoverIndex !== -1 && hoverIndex < commands.length - 1) {
+      log.warn(
+        "Interpreter",
+        "MAVLink hover is followed by additional commands; mission continuation depends on autopilot behavior",
+      );
+    }
+  }
+
   /**
    * While 루프 노드 실행 (Phase 6-A)
    */
@@ -1054,6 +1073,9 @@ export class Interpreter {
       return command;
     }
 
+    // Keep scenario speed on movement commands so non-MAVLink runtimes can use it.
+    // MAVLink mission conversion intentionally ignores this field to keep each move
+    // as a single mission item.
     return {
       ...command,
       params: {

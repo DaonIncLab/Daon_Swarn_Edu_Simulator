@@ -160,12 +160,26 @@ Unity 명령 변환은 `src/services/connection/unityMessage.ts` 담당.
 - Blockly 변경 리스너는 generator 기반 평면 명령을 기준으로 하지 않음
 - `parseBlocklyWorkspace()`가 단일 실행 모델(`ScenarioPlan`)을 생성
 - `drone_set_speed`는 시나리오 속도 컨텍스트로 해석되고, 이동 명령 변환 시 적용
+- MAVLink mission mode에서는 이동 명령의 `speed`가 별도 mission item으로 확장되지 않으며, 각 이동 블럭은 waypoint 1개로 유지됨
+- MAVLink 미션 모드에서 `wait`는 GCS 지연이 아니라 `NAV_LOITER_TIME`으로 내려감
+- MAVLink 미션 모드에서 `hover`는 `NAV_LOITER_UNLIM`으로 내려가며, 이후 진행 의미는 기체/오토파일럿 구현에 의존함
 
 ## Telemetry Boundary
 Telemetry는 두 층으로 구분.
 
 - 최신 연결 이벤트: `TelemetryData`
 - 드론별 누적 history: `DroneHistory`, `DroneHistoryPoint`
+
+MAVLink 3D 표시 기준:
+- MAVLink 3D heading의 주 소스는 `ATTITUDE.yaw`이며, `rotation.y`는 해당 yaw를 degree/normalized 형태로 저장
+- `ATTITUDE.yaw`는 추가 `+90도` 보정 없이 `rotation.y`로 정규화된다
+- `GLOBAL_POSITION_INT.hdg`는 첫 `ATTITUDE` 수신 전 bootstrap fallback으로만 사용되며, `65535`는 unknown sentinel로 처리
+- `Drone3DView`, 이동 계산, MAVLink 초기 카메라 배치는 같은 `rotation.y` scene yaw 기준을 사용
+- mission/command 전송 경로는 표시용 `rotation.y`를 그대로 재사용하지 않고, 별도의 raw `mavlinkHeading` 값을 사용한다
+- `MAVLinkConnectionService`의 mission cache와 planned target은 `sceneHeading`과 `mavlinkHeading`을 함께 유지하며, waypoint/rotate mission `param4`는 raw MAVLink heading 기준으로 생성된다
+- MAVLink 시뮬레이터의 초기 yaw와 이동 중 yaw 계산도 같은 scene yaw 계약을 따르며, 수평면은 `x/y`, 높이는 `z`로 취급
+- `Drone3DView`의 원뿔 mesh는 scene 전방축과 맞추기 위한 고정 회전 보정을 내부적으로 적용
+- `rotation.set(rotation.x, rotation.y, rotation.z)` 호출 구조는 유지하며, heading source는 `hdg`가 아니라 `ATTITUDE.yaw`
 
 실시간 단일 상태와 시계열 기록을 같은 개념으로 다루지 않음.
 
