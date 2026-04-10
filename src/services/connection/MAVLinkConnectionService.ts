@@ -314,7 +314,6 @@ export class MAVLinkConnectionService implements IConnectionService {
           break;
 
         case MAV_MSG_ID.HEARTBEAT:
-          // console.log(`${systemId} ${componentId}`);
           this._markPrimaryFlightComponent(systemId, componentId);
           this._processHeartbeat(state, parsed.payload);
           break;

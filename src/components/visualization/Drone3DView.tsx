@@ -24,7 +24,6 @@ import { getConnectionManager } from "@/services/connection/ConnectionManager";
 const DEFAULT_CAMERA_POSITION: [number, number, number] = [10, 8, 10];
 const MAVLINK_SIDE_VIEW_DISTANCE = 8;
 const MAVLINK_SIDE_VIEW_HEIGHT = 3;
-const MAVLINK_SIDE_VIEW_ANGLE_OFFSET_DEG = -4;
 
 interface OrbitControlsHandle {
   target: THREE.Vector3;
@@ -41,28 +40,16 @@ function getMAVLinkSideViewPose(drone: DroneState): {
   position: THREE.Vector3;
   target: THREE.Vector3;
 } {
-  const normalizedHeading = ((drone.rotation.z % 360) + 360) % 360;
-  const headingRad =
-    ((normalizedHeading + MAVLINK_SIDE_VIEW_ANGLE_OFFSET_DEG) * Math.PI) / 180;
   const target = new THREE.Vector3(
     drone.position.x,
     drone.position.z,
     -drone.position.y,
   );
 
-  // Convert MAVLink heading into the same world-space basis used by the scene:
-  // world X <- local X, world Z <- -local Y.
-  const forward = new THREE.Vector3(
-    Math.cos(headingRad),
-    0,
-    -Math.sin(headingRad),
-  ).normalize();
-  const right = new THREE.Vector3(-forward.z, 0, forward.x).normalize();
-
   const sideOffset = new THREE.Vector3(
-    right.x * MAVLINK_SIDE_VIEW_DISTANCE,
+    -MAVLINK_SIDE_VIEW_DISTANCE,
     MAVLINK_SIDE_VIEW_HEIGHT,
-    right.z * MAVLINK_SIDE_VIEW_DISTANCE,
+    0,
   );
 
   return {
@@ -88,10 +75,15 @@ const Drone3DModel = memo(
         drone.position.z,
         -drone.position.y,
       );
+
+      console.log(
+        `${drone.rotation.x}, ${drone.rotation.y}, ${drone.rotation.z}`,
+      );
+
       meshRef.current.rotation.set(
         THREE.MathUtils.degToRad(drone.rotation.x),
-        THREE.MathUtils.degToRad(drone.rotation.y),
-        THREE.MathUtils.degToRad(drone.rotation.z),
+        THREE.MathUtils.degToRad(-drone.rotation.z) - Math.PI / 2,
+        THREE.MathUtils.degToRad(-drone.rotation.y) + Math.PI / 2,
       );
     });
 
