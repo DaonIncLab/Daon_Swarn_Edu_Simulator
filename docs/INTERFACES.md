@@ -39,6 +39,15 @@
 `context`는 실행기와 연결 서비스 사이에서 배치 전송 문맥을 전달할 때 사용한다.
 기본 기준은 `index`, `total`, `isLast`.
 
+MAVLink failsafe 기준:
+- `emergencyStop()`은 MAVLink에서 "활성(최근 HEARTBEAT) + armed" 시스템만 대상으로 failsafe를 수행한다.
+  failsafe 명령 순서는 `NAV_LAND` 우선, `MISSION_CLEAR_ALL` 후속(best effort)이다.
+- 대상이 없으면 `success=false`와 명확한 오류 메시지를 반환한다.
+- MAVLink는 수동 `emergencyStop()`과 별도로 watchdog 기반 자동 failsafe를 가진다.
+  자동 기준은 "armed 상태였던 시스템의 HEARTBEAT가 3초 초과 무수신"이며 동작은 `LAND → CLEAR`.
+  동일 시스템 재전송은 최소 3초 간격으로 제한한다.
+- failsafe 진입 시 진행 중 mission upload/completion 대기자는 즉시 중단(reject)되고 pending mission 버퍼가 정리된다.
+
 ## Core Stores
 ### useConnectionStore
 연결 UI와 런타임 연결 상태의 기준 스토어.

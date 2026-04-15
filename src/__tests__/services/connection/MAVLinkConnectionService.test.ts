@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, expect, test, beforeEach, vi } from "vitest";
+import { describe, expect, test, beforeEach, afterEach, vi } from "vitest";
 import { MessageType } from "@/constants/commands";
 import { MAVLinkConnectionService } from "@/services/connection/MAVLinkConnectionService";
 import type { Command } from "@/types/websocket";
 import { coordinateConverter } from "@/services/mavlink/CoordinateConverter";
+import { MAV_CMD } from "@/services/mavlink/MAVLinkCommands";
 import { createGlobalPositionInt } from "@/services/mavlink/MAVLinkMessages";
 import {
   createMAVLinkPacket,
@@ -70,6 +71,10 @@ function createHeartbeatPacket({
 describe("MAVLinkConnectionService", () => {
   beforeEach(() => {
     coordinateConverter.resetHome();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   test("emits normalized telemetry messages from GLOBAL_POSITION_INT", () => {
@@ -357,5 +362,203 @@ describe("MAVLinkConnectionService", () => {
     (service as any)._processMissionCurrent(1, new Uint8Array([2, 0]));
 
     await expect(completionPromise).resolves.toBe(2);
+  });
+
+  test("triggers auto failsafe LAND after 3s heartbeat timeout for armed system", async () => {
+    vi.useFakeTimers();
+
+    const service = new MAVLinkConnectionService();
+    (service as any).transport = {
+      isOpen: () => true,
+    };
+    const sendRealCommandSpy = vi
+      .spyOn(service as any, "_sendRealCommand")
+      .mockResolvedValue(undefined);
+    const sendMissionClearAllSpy = vi
+      .spyOn(service as any, "_sendMissionClearAll")
+      .mockResolvedValue(undefined);
+
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, MAV_MODE_FLAG.SAFETY_ARMED, 0, 0]),
+    );
+    (service as any)._startFailsafeWatchdog();
+
+    await vi.advanceTimersByTimeAsync(4000);
+
+    expect(sendRealCommandSpy).toHaveBeenCalledTimes(1);
+    expect(sendRealCommandSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: MAV_CMD.NAV_LAND,
+        target_system: 1,
+      }),
+    );
+    expect(sendMissionClearAllSpy).toHaveBeenCalledTimes(1);
+    expect(sendRealCommandSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      sendMissionClearAllSpy.mock.invocationCallOrder[0],
+    );
+    (service as any)._stopFailsafeWatchdog();
+  });
+
+  test("does not trigger auto failsafe for disarmed system", async () => {
+    vi.useFakeTimers();
+
+    const service = new MAVLinkConnectionService();
+    (service as any).transport = {
+      isOpen: () => true,
+    };
+    const sendRealCommandSpy = vi
+      .spyOn(service as any, "_sendRealCommand")
+      .mockResolvedValue(undefined);
+
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    );
+    (service as any)._startFailsafeWatchdog();
+
+    await vi.advanceTimersByTimeAsync(6000);
+
+    expect(sendRealCommandSpy).not.toHaveBeenCalled();
+    (service as any)._stopFailsafeWatchdog();
+  });
+
+  test("retries auto failsafe with minimum 3s interval", async () => {
+    vi.useFakeTimers();
+
+    const service = new MAVLinkConnectionService();
+    (service as any).transport = {
+      isOpen: () => true,
+    };
+    const sendRealCommandSpy = vi
+      .spyOn(service as any, "_sendRealCommand")
+      .mockResolvedValue(undefined);
+    vi.spyOn(service as any, "_sendMissionClearAll").mockResolvedValue(
+      undefined,
+    );
+
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, MAV_MODE_FLAG.SAFETY_ARMED, 0, 0]),
+    );
+    (service as any)._startFailsafeWatchdog();
+
+    await vi.advanceTimersByTimeAsync(4000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(sendRealCommandSpy).toHaveBeenCalledTimes(2);
+    (service as any)._stopFailsafeWatchdog();
+  });
+
+  test("manual failsafe targets only active armed systems", async () => {
+    vi.useFakeTimers();
+
+    const service = new MAVLinkConnectionService();
+    (service as any).transport = {
+      isOpen: () => true,
+    };
+    const sendRealCommandSpy = vi
+      .spyOn(service as any, "_sendRealCommand")
+      .mockResolvedValue(undefined);
+    const sendMissionClearAllSpy = vi
+      .spyOn(service as any, "_sendMissionClearAll")
+      .mockResolvedValue(undefined);
+
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, MAV_MODE_FLAG.SAFETY_ARMED, 0, 0]),
+    );
+    (service as any)._processHeartbeat(
+      2,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    );
+
+    const result = await service.emergencyStop();
+
+    expect(result.success).toBe(true);
+    expect(sendRealCommandSpy).toHaveBeenCalledTimes(1);
+    expect(sendRealCommandSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: MAV_CMD.NAV_LAND,
+        target_system: 1,
+      }),
+    );
+    expect(sendMissionClearAllSpy).toHaveBeenCalledTimes(1);
+    expect(sendRealCommandSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      sendMissionClearAllSpy.mock.invocationCallOrder[0],
+    );
+  });
+
+  test("keeps LAND failsafe even when mission clear fails", async () => {
+    const service = new MAVLinkConnectionService();
+    (service as any).transport = {
+      isOpen: () => true,
+    };
+    const sendRealCommandSpy = vi
+      .spyOn(service as any, "_sendRealCommand")
+      .mockResolvedValue(undefined);
+    vi.spyOn(service as any, "_sendMissionClearAll").mockRejectedValue(
+      new Error("clear failed"),
+    );
+
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, MAV_MODE_FLAG.SAFETY_ARMED, 0, 0]),
+    );
+
+    const result = await service.emergencyStop();
+
+    expect(result.success).toBe(true);
+    expect(sendRealCommandSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: MAV_CMD.NAV_LAND,
+        target_system: 1,
+      }),
+    );
+  });
+
+  test("aborts pending mission completion waiter on failsafe", async () => {
+    const service = new MAVLinkConnectionService();
+    (service as any).transport = {
+      isOpen: () => true,
+    };
+    vi.spyOn(service as any, "_sendRealCommand").mockResolvedValue(undefined);
+    vi.spyOn(service as any, "_sendMissionClearAll").mockResolvedValue(
+      undefined,
+    );
+
+    const completionPromise = (service as any)._awaitMissionCompletion(
+      2,
+      1,
+      10000,
+    );
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, MAV_MODE_FLAG.SAFETY_ARMED, 0, 0]),
+    );
+
+    await service.emergencyStop();
+
+    await expect(completionPromise).rejects.toThrow(/failsafe/i);
+  });
+
+  test("manual failsafe returns failure when no active armed targets exist", async () => {
+    const service = new MAVLinkConnectionService();
+    (service as any).transport = {
+      isOpen: () => true,
+    };
+
+    const result = await service.emergencyStop();
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("No active armed systems");
   });
 });

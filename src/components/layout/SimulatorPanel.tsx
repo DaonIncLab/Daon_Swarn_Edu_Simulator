@@ -39,7 +39,7 @@ export function SimulatorPanel({
     playback.recording && playback.status !== PlaybackStatus.IDLE;
   const shouldShowEmergencyStop =
     !isPlaybackActive &&
-    mode === ConnectionMode.UNITY &&
+    (mode === ConnectionMode.UNITY || mode === ConnectionMode.MAVLINK) &&
     status !== ConnectionStatus.DISCONNECTED;
 
   const handleEmergencyStop = async () => {

@@ -138,6 +138,9 @@ interface PlannedTargetPosition {
 }
 
 const ROTATE_WAYPOINT_OFFSET_METERS = 0.3;
+const FAILSAFE_HEARTBEAT_TIMEOUT_MS = 3000;
+const FAILSAFE_MIN_RETRY_INTERVAL_MS = 3000;
+const FAILSAFE_WATCHDOG_INTERVAL_MS = 1000;
 
 /**
  * MAVLink Connection Service
@@ -152,6 +155,11 @@ export class MAVLinkConnectionService implements IConnectionService {
   // Real connection infrastructure
   private transport: MAVLinkTransport | null = null;
   private heartbeatInterval: number | null = null;
+  private failsafeWatchdogInterval: number | null = null;
+  private isFailsafeWatchdogRunning = false;
+  private lastHeartbeatAtBySystem: Map<number, number> = new Map();
+  private lastArmedStateBySystem: Map<number, boolean> = new Map();
+  private lastFailsafeSentAtBySystem: Map<number, number> = new Map();
   private systemId: number = 255; // GCS system ID
   private componentId: number = 190; // GCS component ID
   private systemComponents: Map<number, Map<number, MAVLinkComponentRef>> =
@@ -241,6 +249,7 @@ export class MAVLinkConnectionService implements IConnectionService {
     this.transport.onDisconnect(() => {
       log.info("Transport disconnected");
       this._stopHeartbeat();
+      this._stopFailsafeWatchdog();
       this._updateStatus(ConnectionStatus.DISCONNECTED);
     });
 
@@ -274,6 +283,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     // Start heartbeat (1Hz as per MAVLink spec)
     this._startHeartbeat();
+    this._startFailsafeWatchdog();
 
     log.info("Real connection established");
   }
@@ -544,6 +554,8 @@ export class MAVLinkConnectionService implements IConnectionService {
     this._updateMissionProgressState(systemId, {
       isArmed,
     });
+    this.lastHeartbeatAtBySystem.set(systemId, Date.now());
+    this.lastArmedStateBySystem.set(systemId, isArmed);
     this._tryResolveMissionCompletionFromProgress(systemId);
 
     console.log("[MAVLink][HEARTBEAT]", {
@@ -830,6 +842,151 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
   }
 
+  private _startFailsafeWatchdog(): void {
+    if (this.failsafeWatchdogInterval !== null) {
+      return;
+    }
+
+    this.failsafeWatchdogInterval = window.setInterval(() => {
+      if (this.isFailsafeWatchdogRunning) {
+        return;
+      }
+
+      this.isFailsafeWatchdogRunning = true;
+      this._evaluateAutoFailsafe()
+        .catch((error) => {
+          log.error("[MAVLink][FAILSAFE] Watchdog error", { error });
+        })
+        .finally(() => {
+          this.isFailsafeWatchdogRunning = false;
+        });
+    }, FAILSAFE_WATCHDOG_INTERVAL_MS);
+  }
+
+  private _stopFailsafeWatchdog(): void {
+    if (this.failsafeWatchdogInterval !== null) {
+      clearInterval(this.failsafeWatchdogInterval);
+      this.failsafeWatchdogInterval = null;
+    }
+    this.isFailsafeWatchdogRunning = false;
+  }
+
+  private _getActiveArmedSystems(now: number = Date.now()): number[] {
+    return Array.from(this.lastHeartbeatAtBySystem.entries())
+      .filter(([systemId, lastHeartbeatAt]) => {
+        const isArmed = this.lastArmedStateBySystem.get(systemId) ?? false;
+        const isHeartbeatFresh =
+          now - lastHeartbeatAt <= FAILSAFE_HEARTBEAT_TIMEOUT_MS;
+        return isArmed && isHeartbeatFresh;
+      })
+      .map(([systemId]) => systemId);
+  }
+
+  private _getAutoFailsafeTargetSystems(now: number = Date.now()): number[] {
+    return Array.from(this.lastHeartbeatAtBySystem.entries())
+      .filter(([systemId, lastHeartbeatAt]) => {
+        const isArmed = this.lastArmedStateBySystem.get(systemId) ?? false;
+        if (!isArmed || now - lastHeartbeatAt <= FAILSAFE_HEARTBEAT_TIMEOUT_MS) {
+          return false;
+        }
+
+        const lastSentAt = this.lastFailsafeSentAtBySystem.get(systemId);
+        if (!lastSentAt) {
+          return true;
+        }
+
+        return now - lastSentAt >= FAILSAFE_MIN_RETRY_INTERVAL_MS;
+      })
+      .map(([systemId]) => systemId);
+  }
+
+  private _terminateMissionStateForFailsafe(source: "AUTO" | "MANUAL"): void {
+    const reason = `[MAVLink][FAILSAFE] Mission flow aborted by ${source} failsafe`;
+    this._resetMissionUploadState(reason);
+    this._clearMissionBuffer();
+    this._clearPendingMissionTargetCache();
+  }
+
+  private async _sendFailsafeLanding(
+    targetSystems: number[],
+    source: "AUTO" | "MANUAL",
+  ): Promise<{ landedSystems: number[]; clearedSystems: number[] }> {
+    this._terminateMissionStateForFailsafe(source);
+
+    const now = Date.now();
+    const landedSystems: number[] = [];
+    const clearedSystems: number[] = [];
+
+    for (const targetSystem of targetSystems) {
+      try {
+        await this._sendRealCommand({
+          command: MAV_CMD.NAV_LAND,
+          target_system: targetSystem,
+          target_component: this._getTargetComponentId(targetSystem),
+        });
+        landedSystems.push(targetSystem);
+        this.lastFailsafeSentAtBySystem.set(targetSystem, now);
+      } catch (error) {
+        log.error("[MAVLink][FAILSAFE] LAND command failed", {
+          source,
+          targetSystem,
+          error,
+        });
+      }
+    }
+
+    for (const targetSystem of targetSystems) {
+      const targetComponent = this._getTargetComponentId(targetSystem);
+      try {
+        await this._sendMissionClearAll(targetSystem, targetComponent);
+        clearedSystems.push(targetSystem);
+      } catch (error) {
+        log.warn("[MAVLink][FAILSAFE] MISSION_CLEAR_ALL failed (best effort)", {
+          source,
+          targetSystem,
+          targetComponent,
+          error,
+        });
+      }
+    }
+
+    const logMessage =
+      source === "AUTO"
+        ? `[MAVLink][FAILSAFE][AUTO_FAILSAFE_TRIGGERED] LAND→CLEAR (landed: ${landedSystems.join(", ") || "none"}, cleared: ${clearedSystems.join(", ") || "none"})`
+        : `[MAVLink][FAILSAFE][MANUAL_FAILSAFE_TRIGGERED] LAND→CLEAR (landed: ${landedSystems.join(", ") || "none"}, cleared: ${clearedSystems.join(", ") || "none"})`;
+
+    log.warn(logMessage);
+    if (this.listeners.onLog) {
+      this.listeners.onLog(logMessage);
+    }
+
+    return {
+      landedSystems,
+      clearedSystems,
+    };
+  }
+
+  private async _evaluateAutoFailsafe(): Promise<void> {
+    if (!this.transport || !this.transport.isOpen()) {
+      return;
+    }
+
+    const targetSystems = this._getAutoFailsafeTargetSystems(Date.now());
+    if (targetSystems.length === 0) {
+      return;
+    }
+
+    const { landedSystems } = await this._sendFailsafeLanding(
+      targetSystems,
+      "AUTO",
+    );
+    if (landedSystems.length === 0) {
+      throw new Error(
+        "[MAVLink][FAILSAFE] Auto failsafe could not send LAND to any system",
+      );
+    }
+  }
+
   /**
    * Handle incoming MAVLink telemetry messages
    */
@@ -1014,6 +1171,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     // Stop heartbeat
     this._stopHeartbeat();
+    this._stopFailsafeWatchdog();
 
     // Disconnect transport
     if (this.transport) {
@@ -1023,6 +1181,9 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     this.lastTelemetry.clear();
     this.systemComponents.clear();
+    this.lastHeartbeatAtBySystem.clear();
+    this.lastArmedStateBySystem.clear();
+    this.lastFailsafeSentAtBySystem.clear();
     this.missionProgressBySystem.clear();
     this.missionPositionCache.clear();
     this.pendingMissionTargetCache.clear();
@@ -1480,25 +1641,41 @@ export class MAVLinkConnectionService implements IConnectionService {
     this.pendingMissionTargetCache.clear();
   }
 
-  private _resetMissionUploadState(): void {
+  private _resetMissionUploadState(abortReason?: string): void {
     if (this.pendingMissionRequestWaiter) {
+      const waiter = this.pendingMissionRequestWaiter;
       clearTimeout(this.pendingMissionRequestWaiter.timeoutId);
       this.pendingMissionRequestWaiter = null;
+      if (abortReason) {
+        waiter.reject(new Error(abortReason));
+      }
     }
 
     if (this.pendingMissionAckWaiter) {
+      const waiter = this.pendingMissionAckWaiter;
       clearTimeout(this.pendingMissionAckWaiter.timeoutId);
       this.pendingMissionAckWaiter = null;
+      if (abortReason) {
+        waiter.reject(new Error(abortReason));
+      }
     }
 
     if (this.pendingCommandAckWaiter) {
+      const waiter = this.pendingCommandAckWaiter;
       clearTimeout(this.pendingCommandAckWaiter.timeoutId);
       this.pendingCommandAckWaiter = null;
+      if (abortReason) {
+        waiter.reject(new Error(abortReason));
+      }
     }
 
     if (this.pendingMissionCompletionWaiter) {
+      const waiter = this.pendingMissionCompletionWaiter;
       clearTimeout(this.pendingMissionCompletionWaiter.timeoutId);
       this.pendingMissionCompletionWaiter = null;
+      if (abortReason) {
+        waiter.reject(new Error(abortReason));
+      }
     }
   }
 
@@ -2062,23 +2239,31 @@ export class MAVLinkConnectionService implements IConnectionService {
       };
     }
 
-    const targetSystems =
-      this.systemComponents.size > 0
-        ? Array.from(this.systemComponents.keys())
-        : [1];
-
-    for (const targetSystem of targetSystems) {
-      await this._sendRealCommand({
-        command: MAV_CMD.NAV_LAND,
-        target_system: targetSystem,
-        target_component: this._getTargetComponentId(targetSystem),
-      });
+    const targetSystems = this._getActiveArmedSystems(Date.now());
+    if (targetSystems.length === 0) {
+      const message =
+        "[MAVLink][FAILSAFE] No active armed systems available for manual failsafe";
+      log.warn(message);
+      if (this.listeners.onLog) {
+        this.listeners.onLog(message);
+      }
+      return {
+        success: false,
+        error: "No active armed systems available for failsafe",
+        timestamp: Date.now(),
+      };
     }
 
-    if (this.listeners.onLog) {
-      this.listeners.onLog(
-        "[MAVLink] Emergency landing command sent to all known systems",
-      );
+    const { landedSystems } = await this._sendFailsafeLanding(
+      targetSystems,
+      "MANUAL",
+    );
+    if (landedSystems.length === 0) {
+      return {
+        success: false,
+        error: "Failsafe could not send LAND to any target system",
+        timestamp: Date.now(),
+      };
     }
 
     return {
@@ -2102,6 +2287,8 @@ export class MAVLinkConnectionService implements IConnectionService {
 
   cleanup(): void {
     log.info("Cleanup");
+    this._stopHeartbeat();
+    this._stopFailsafeWatchdog();
 
     if (this.virtualLeaderController) {
       this.virtualLeaderController.stop();
@@ -2109,6 +2296,9 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
 
     this.lastTelemetry.clear();
+    this.lastHeartbeatAtBySystem.clear();
+    this.lastArmedStateBySystem.clear();
+    this.lastFailsafeSentAtBySystem.clear();
     this.missionProgressBySystem.clear();
     this.listeners = {};
     this.messageListener = null;
