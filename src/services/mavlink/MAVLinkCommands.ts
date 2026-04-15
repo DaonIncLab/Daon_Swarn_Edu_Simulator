@@ -271,7 +271,7 @@ export function createMissionItemInt(params: MissionItemIntParams) {
     param1: params.param1 ?? 0,
     param2: params.param2 ?? 0,
     param3: params.param3 ?? 0,
-    param4: params.param4 ?? 0,
+    param4: params.param4 ?? NaN,
     x: params.x,
     y: params.y,
     z: params.z,

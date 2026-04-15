@@ -286,8 +286,75 @@ describe("MAVLinkConnectionService", () => {
   test("resolves mission completion when final item is reached", async () => {
     const service = new MAVLinkConnectionService();
 
-    const completionPromise = (service as any)._awaitMissionCompletion(2, 1000);
-    (service as any)._processMissionItemReached(new Uint8Array([2, 0]));
+    const completionPromise = (service as any)._awaitMissionCompletion(
+      2,
+      1,
+      1000,
+    );
+    (service as any)._processMissionItemReached(1, new Uint8Array([2, 0]));
+
+    await expect(completionPromise).resolves.toBe(2);
+  });
+
+  test("does not resolve mission completion when MISSION_CURRENT reaches final seq but still armed", async () => {
+    const service = new MAVLinkConnectionService();
+
+    const completionPromise = (service as any)._awaitMissionCompletion(
+      2,
+      1,
+      50,
+    );
+
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, MAV_MODE_FLAG.SAFETY_ARMED, 0, 0]),
+    );
+    (service as any)._processMissionCurrent(1, new Uint8Array([2, 0]));
+
+    await expect(completionPromise).rejects.toThrow(/MISSION completion timeout/);
+  });
+
+  test("resolves mission completion when MISSION_CURRENT reaches final seq and heartbeat is disarmed", async () => {
+    const service = new MAVLinkConnectionService();
+
+    const completionPromise = (service as any)._awaitMissionCompletion(
+      2,
+      1,
+      1000,
+    );
+
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, MAV_MODE_FLAG.SAFETY_ARMED, 0, 0]),
+    );
+    (service as any)._processMissionCurrent(1, new Uint8Array([2, 0]));
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    );
+
+    await expect(completionPromise).resolves.toBe(2);
+  });
+
+  test("resolves mission completion when disarmed first and final mission current arrives later", async () => {
+    const service = new MAVLinkConnectionService();
+
+    const completionPromise = (service as any)._awaitMissionCompletion(
+      2,
+      1,
+      1000,
+    );
+
+    (service as any)._processHeartbeat(
+      1,
+      {},
+      new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    );
+    (service as any)._processMissionCurrent(1, new Uint8Array([1, 0]));
+    (service as any)._processMissionCurrent(1, new Uint8Array([2, 0]));
 
     await expect(completionPromise).resolves.toBe(2);
   });

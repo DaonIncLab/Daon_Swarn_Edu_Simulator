@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * MAVLink Connection Service
  *
@@ -109,9 +110,16 @@ interface PendingMissionAckWaiter {
 
 interface PendingMissionCompletionWaiter {
   finalSeq: number;
+  targetSystem: number;
   resolve: (seq: number) => void;
   reject: (error: Error) => void;
   timeoutId: number;
+}
+
+interface MissionProgressState {
+  currentSeq: number;
+  isArmed: boolean;
+  lastUpdatedAt: number;
 }
 
 interface MissionPositionCacheEntry {
@@ -161,6 +169,7 @@ export class MAVLinkConnectionService implements IConnectionService {
   private pendingCommandAckWaiter: PendingCommandAckWaiter | null = null;
   private pendingMissionCompletionWaiter: PendingMissionCompletionWaiter | null =
     null;
+  private missionProgressBySystem: Map<number, MissionProgressState> = new Map();
 
   // Formation control
   private formationMode: FormationControlMode =
@@ -315,7 +324,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
         case MAV_MSG_ID.HEARTBEAT:
           this._markPrimaryFlightComponent(systemId, componentId);
-          this._processHeartbeat(state, parsed.payload);
+          this._processHeartbeat(systemId, state, parsed.payload);
           break;
 
         case MAV_MSG_ID.BATTERY_STATUS:
@@ -335,11 +344,11 @@ export class MAVLinkConnectionService implements IConnectionService {
           break;
 
         case MAV_MSG_ID.MISSION_CURRENT:
-          this._processMissionCurrent(parsed.payload);
+          this._processMissionCurrent(systemId, parsed.payload);
           break;
 
         case MAV_MSG_ID.MISSION_ITEM_REACHED:
-          this._processMissionItemReached(parsed.payload);
+          this._processMissionItemReached(systemId, parsed.payload);
           break;
 
         case MAV_MSG_ID.COMMAND_ACK:
@@ -516,6 +525,7 @@ export class MAVLinkConnectionService implements IConnectionService {
    * Process HEARTBEAT message
    */
   private _processHeartbeat(
+    systemId: number,
     state: Partial<DroneState>,
     payload: Uint8Array,
   ): void {
@@ -527,9 +537,14 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     const baseMode = view.getUint8(6);
     const systemStatus = view.getUint8(8);
+    const isArmed = (baseMode & 0x80) !== 0;
 
     state.status = MAVLinkConverter.mavStateTodroneStatus(systemStatus);
-    state.isActive = (baseMode & 0x80) !== 0; // MAV_MODE_FLAG_SAFETY_ARMED
+    state.isActive = isArmed; // MAV_MODE_FLAG_SAFETY_ARMED
+    this._updateMissionProgressState(systemId, {
+      isArmed,
+    });
+    this._tryResolveMissionCompletionFromProgress(systemId);
 
     console.log("[MAVLink][HEARTBEAT]", {
       status: state.status,
@@ -652,10 +667,15 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
   }
 
-  private _processMissionCurrent(payload: Uint8Array): void {
+  private _processMissionCurrent(systemId: number, payload: Uint8Array): void {
     const message = parseMissionCurrent(payload);
+    this._updateMissionProgressState(systemId, {
+      currentSeq: message.seq,
+    });
+    this._tryResolveMissionCompletionFromProgress(systemId);
 
     console.log("[MAVLink][MISSION_CURRENT]", {
+      systemId,
       seq: message.seq,
       missionState: message.mission_state,
       missionMode: message.mission_mode,
@@ -667,25 +687,75 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
   }
 
-  private _processMissionItemReached(payload: Uint8Array): void {
+  private _processMissionItemReached(
+    systemId: number,
+    payload: Uint8Array,
+  ): void {
     const message = parseMissionItemReached(payload);
 
-    console.log("[MAVLink][MISSION_ITEM_REACHED]", {
-      seq: message.seq,
-    });
+    // console.log("[MAVLink][MISSION_ITEM_REACHED]", {
+    //   seq: message.seq,
+    // });
 
-    if (this.listeners.onLog) {
-      this.listeners.onLog(`[MAVLink] Mission item reached seq ${message.seq}`);
-    }
+    // if (this.listeners.onLog) {
+    //   this.listeners.onLog(`[MAVLink] Mission item reached seq ${message.seq}`);
+    // }
 
     if (
       this.pendingMissionCompletionWaiter &&
+      this.pendingMissionCompletionWaiter.targetSystem === systemId &&
       message.seq >= this.pendingMissionCompletionWaiter.finalSeq
     ) {
       clearTimeout(this.pendingMissionCompletionWaiter.timeoutId);
       const waiter = this.pendingMissionCompletionWaiter;
       this.pendingMissionCompletionWaiter = null;
+      log.info("[MAVLink] Mission completion resolved by MISSION_ITEM_REACHED", {
+        systemId,
+        seq: message.seq,
+        finalSeq: waiter.finalSeq,
+      });
       waiter.resolve(message.seq);
+    }
+  }
+
+  private _updateMissionProgressState(
+    systemId: number,
+    partial: Partial<MissionProgressState>,
+  ): void {
+    const previous = this.missionProgressBySystem.get(systemId);
+    this.missionProgressBySystem.set(systemId, {
+      currentSeq: partial.currentSeq ?? previous?.currentSeq ?? -1,
+      isArmed: partial.isArmed ?? previous?.isArmed ?? false,
+      lastUpdatedAt: Date.now(),
+    });
+  }
+
+  private _tryResolveMissionCompletionFromProgress(systemId: number): void {
+    if (
+      !this.pendingMissionCompletionWaiter ||
+      this.pendingMissionCompletionWaiter.targetSystem !== systemId
+    ) {
+      return;
+    }
+
+    const progress = this.missionProgressBySystem.get(systemId);
+    if (!progress) {
+      return;
+    }
+
+    if (
+      progress.currentSeq >= this.pendingMissionCompletionWaiter.finalSeq &&
+      !progress.isArmed
+    ) {
+      clearTimeout(this.pendingMissionCompletionWaiter.timeoutId);
+      const waiter = this.pendingMissionCompletionWaiter;
+      this.pendingMissionCompletionWaiter = null;
+      log.info("[MAVLink] Mission completion resolved by MISSION_CURRENT + DISARM", {
+        systemId,
+        seq: progress.currentSeq,
+        finalSeq: waiter.finalSeq,
+      });
+      waiter.resolve(progress.currentSeq);
     }
   }
 
@@ -953,6 +1023,7 @@ export class MAVLinkConnectionService implements IConnectionService {
 
     this.lastTelemetry.clear();
     this.systemComponents.clear();
+    this.missionProgressBySystem.clear();
     this.missionPositionCache.clear();
     this.pendingMissionTargetCache.clear();
     this.isHomePositionInitialized = false;
@@ -1560,7 +1631,10 @@ export class MAVLinkConnectionService implements IConnectionService {
     );
     await this.transport.sendPacket(serializePacket(missionStartPacket));
     await this._awaitCommandAck(MAV_CMD.MISSION_START);
-    await this._awaitMissionCompletion(finalSeq);
+    this._updateMissionProgressState(targetSystem, {
+      currentSeq: -1,
+    });
+    await this._awaitMissionCompletion(finalSeq, targetSystem);
   }
 
   private _awaitMissionRequestInt(
@@ -1601,22 +1675,28 @@ export class MAVLinkConnectionService implements IConnectionService {
 
   private _awaitMissionCompletion(
     finalSeq: number,
+    targetSystem: number,
     timeoutMs: number = 30000,
   ): Promise<number> {
     return new Promise((resolve, reject) => {
       const timeoutId = window.setTimeout(() => {
         this.pendingMissionCompletionWaiter = null;
         reject(
-          new Error(`MISSION completion timeout for final seq ${finalSeq}`),
+          new Error(
+            `MISSION completion timeout for system ${targetSystem} final seq ${finalSeq}`,
+          ),
         );
       }, timeoutMs);
 
       this.pendingMissionCompletionWaiter = {
         finalSeq,
+        targetSystem,
         resolve,
         reject,
         timeoutId,
       };
+
+      this._tryResolveMissionCompletionFromProgress(targetSystem);
     });
   }
 
@@ -2029,6 +2109,7 @@ export class MAVLinkConnectionService implements IConnectionService {
     }
 
     this.lastTelemetry.clear();
+    this.missionProgressBySystem.clear();
     this.listeners = {};
     this.messageListener = null;
   }

@@ -76,10 +76,6 @@ const Drone3DModel = memo(
         -drone.position.y,
       );
 
-      console.log(
-        `${drone.rotation.x}, ${drone.rotation.y}, ${drone.rotation.z}`,
-      );
-
       meshRef.current.rotation.set(
         THREE.MathUtils.degToRad(drone.rotation.x),
         THREE.MathUtils.degToRad(-drone.rotation.z) - Math.PI / 2,
